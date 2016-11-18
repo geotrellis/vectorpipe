@@ -14,7 +14,7 @@ import spire.syntax.order._
   * use `Graph.fromEdges` to construct a Graph.
   */
 class Graph[K: Order, V](
-  graph: Vector[Seq[Vertex]],
+  outgoing: Vector[Seq[Vertex]],
   getNode: Vertex => (K, V, Seq[K]),
   getVert: K => Option[Vertex]
 ) {
@@ -28,6 +28,9 @@ class Graph[K: Order, V](
 
   /** Given a key value, retrieve the corresponding node value, if it exists. */
   def get(key: K): Option[V] = vertex(key).map(v => node(v)._2)
+
+  /** The number of nodes in this Graph. */
+  def size: Int = outgoing.length
 
   /** A topological sort of this Graph. */
   def topSort: Seq[Vertex] = ???

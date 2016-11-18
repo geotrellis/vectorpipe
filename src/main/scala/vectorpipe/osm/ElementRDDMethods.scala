@@ -63,19 +63,19 @@ class ElementRDDMethods(val self: RDD[Element]) extends MethodExtensions[RDD[Ele
     val lineLinks: RDD[(Long, Feature[Line, Tree[ElementData]])] =
       lines.map(f => (f.data.root.meta.id, f))
 
+    /* All Polygons, Lines and Relations bound by their IDs */
     val grouped =
-      polys.map(f => (f.data.root.meta.id, f)).cogroup(lineLinks, relLinks)
+      polys.map(f => (f.data.root.meta.id, f)).cogroup(lineLinks, relLinks).map(_._2)
 
     val multipolys = grouped
       /* Assumption: Polygons and Lines exist in at most one "multipolygon" Relation */
       .flatMap({
-        case (_, (ps, _, rs)) if !rs.isEmpty && !ps.isEmpty => Some((rs.head, Left(ps.head)))
-        case (_, (_, ls, rs)) if !rs.isEmpty && !ls.isEmpty => Some((rs.head, Right(ls.head)))
+        case (ps, _, rs) if !rs.isEmpty && !ps.isEmpty => Some((rs.head, Left(ps.head)))
+        case (_, ls, rs) if !rs.isEmpty && !ls.isEmpty => Some((rs.head, Right(ls.head)))
         case _ => None
       })
       .groupByKey
       .map({ case (r, gs) =>
-
         /* Fuse Lines into Polygons */
         val ls: Vector[Feature[Line, Tree[ElementData]]] = gs.flatMap({
           case Right(l) => Some(l)
@@ -115,13 +115,13 @@ class ElementRDDMethods(val self: RDD[Element]) extends MethodExtensions[RDD[Ele
 
     /* Lines which were part of no Relation */
     val openLines = grouped.flatMap({
-      case (_, (ps, ls, rs)) if ps.isEmpty && rs.isEmpty => Some(ls.head)
+      case (ps, ls, rs) if ps.isEmpty && rs.isEmpty => Some(ls.head)
       case _ => None
     })
 
     /* Polygons which were part of no Relation */
     val plainPolys = grouped.flatMap({
-      case (_, (ps, ls, rs)) if ls.isEmpty && rs.isEmpty => Some(ps.head)
+      case (ps, ls, rs) if ls.isEmpty && rs.isEmpty => Some(ps.head)
       case _ => None
     })
 
@@ -243,12 +243,16 @@ class ElementRDDMethods(val self: RDD[Element]) extends MethodExtensions[RDD[Ele
     /* You're a long way from finishing this operation. */
     val links: RDD[(Long, Way)] = ways.flatMap(w => w.nodes.map(n => (n, w)))
 
-    val grouped: RDD[(Long, (Iterable[Node], Iterable[Way]))] =
-      nodes.map(n => (n.data.meta.id, n)).cogroup(links)
+    /* Nodes and Ways bound by the Node ID. Independent Nodes appear here
+     * as well, but with an empty Iterable of Ways.
+     */
+    val grouped: RDD[(Iterable[Node], Iterable[Way])] =
+      nodes.map(n => (n.data.meta.id, n)).cogroup(links).map(_._2)
 
     val linesPolys: RDD[Either[Feature[Line, Tree[ElementData]], Feature[Polygon, Tree[ElementData]]]] =
       grouped
-        .flatMap({ case (_, (ns, ws)) =>
+        .flatMap({ case (ns, ws) =>
+          /* ASSUMPTION: `ns` is always length 1 because of the `cogroup` */
           val n = ns.head
 
           ws.map(w => (w, n))
@@ -258,7 +262,9 @@ class ElementRDDMethods(val self: RDD[Element]) extends MethodExtensions[RDD[Ele
           /* De facto maximum of 2000 Nodes */
           val sorted: Vector[Node] = ns.toVector.sortBy(n => n.data.meta.id)
 
-          /* `get` is safe, the BTree is guaranteed to be populated */
+          /* `get` is safe, the BTree is guaranteed to be populated,
+           * since `ns` is guaranteed to be non-empty.
+           */
           val tree: BTree[Node] = BTree.fromSortedSeq(sorted).get
 
           /* A binary search branch predicate */
@@ -279,6 +285,7 @@ class ElementRDDMethods(val self: RDD[Element]) extends MethodExtensions[RDD[Ele
               .map(n => ((n.lat, n.lon), n.data))
               .unzip
 
+          /* Segregate by which are purely Lines, and which form Polygons */
           if (w.isLine) {
             Left(Feature(Line(points), Tree(w.data, data.map(d => Tree.singleton(d)))))
           } else {
@@ -286,7 +293,7 @@ class ElementRDDMethods(val self: RDD[Element]) extends MethodExtensions[RDD[Ele
           }
         })
 
-    // TODO: More inefficient RDD splitting.
+    // TODO: Improve this inefficient RDD splitting.
     val lines: RDD[Feature[Line, Tree[ElementData]]] = linesPolys.flatMap({
       case Left(l) => Some(l)
       case _ => None
@@ -298,7 +305,7 @@ class ElementRDDMethods(val self: RDD[Element]) extends MethodExtensions[RDD[Ele
     })
 
     /* Single Nodes unused in any Way */
-    val points: RDD[Feature[Point, Tree[ElementData]]] = grouped.flatMap({ case (_, (ns, ws)) =>
+    val points: RDD[Feature[Point, Tree[ElementData]]] = grouped.flatMap({ case (ns, ws) =>
       if (ws.isEmpty) {
         val n = ns.head
 

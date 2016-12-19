@@ -9,7 +9,9 @@ import geotrellis.util._
   */
 case class Tree[T](root: T, children: Seq[Tree[T]]) {
   /** The elements of the tree in pre-order. */
-  def flatten: Seq[T] = root +: children.flatMap(_.flatten)
+  def preorder: Seq[T] = root +: children.flatMap(_.preorder)
+
+  def postorder: Seq[T] = children.flatMap(_.postorder) :+ root
 }
 
 object Tree {

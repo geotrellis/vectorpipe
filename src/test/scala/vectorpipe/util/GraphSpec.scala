@@ -62,10 +62,14 @@ class GraphSpec extends FunSpec with Matchers {
         (1, 1, Seq(2,3)),
         (2, 2, Seq(4)),
         (3, 3, Seq(4)),
-        (4, 4, Seq())
+        (4, 4, Seq()),
+        (5, 5, Seq(6, 7)),
+        (6, 6, Seq(8)),
+        (7, 7, Seq(8)),
+        (8, 8, Seq())
       ))
 
-      g.topSort shouldBe Seq(1,3,2,4)
+      g.topSort.map(v => g.node(v)._1) shouldBe Seq(5,7,6,8,1,3,2,4)
     }
   }
 }

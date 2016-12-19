@@ -23,10 +23,10 @@ class Graph[K: Order, V](
   /** Possibly find a node that corresponds to a given key. */
   private def vertex(key: K): Option[Vertex] = getVert(key)
 
-  /** Retrieve the full node information given a [[Vertex]].
+  /** Use [[get]]. Retrieve the full node information given a [[Vertex]].
     * Vertex validity (bounds) is not checked.
     */
-  private def node(v: Vertex): (K, V, Seq[K]) = getNode(v)
+  def node(v: Vertex): (K, V, Seq[K]) = getNode(v)
 
   /** Given a key value, retrieve the corresponding node value, if it exists. */
   def get(key: K): Option[V] = vertex(key).map(v => node(v)._2)
@@ -37,21 +37,7 @@ class Graph[K: Order, V](
   // --- ALGORITHM: Topological Sort --- //
 
   /** A topological sort of this Graph. */
-  def topSort: Seq[Vertex] = postOrd.reverse
-
-  private def postOrd: Seq[Vertex] = postorderF(dff)(Seq())
-
-  private def postorderF[A](forest: Seq[Tree[A]]): Seq[A] => Seq[A] = { list =>
-    val fs: Seq[Seq[A] => Seq[A]] = forest.map(postorder)
-
-    val g: Seq[A] => Seq[A] = fs.reduce({ (f, acc) => f.compose(acc) })
-
-    g(list)
-  }
-
-  private def postorder[A](tree: Tree[A]): Seq[A] => Seq[A] = { list =>
-    postorderF(tree.children)(tree.root +: list)
-  }
+  def topSort: Seq[Vertex] = dff.map(_.postorder).flatten.reverse
 
   // --- ALGORITHM: Spanning Forest --- //
 

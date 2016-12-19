@@ -1,6 +1,7 @@
 package vectorpipe.util
 
-import geotrellis.util._
+import scalaz.Functor
+import scalaz.syntax.functor._
 
 // --- //
 
@@ -19,10 +20,10 @@ object Tree {
   def singleton[T](t: T): Tree[T] = Tree(t, Seq.empty[Tree[T]])
 
   /** Trees are mappable. */
-  implicit class TreeFunctor[T](val self: Tree[T]) extends Functor[Tree, T] {
-    def map[S](f: T => S): Tree[S] = Tree(
-      f(self.root),
-      self.children.map(t => t.map(f))
+  implicit val treeFunctor: Functor[Tree] = new Functor[Tree] {
+    def map[A, B](fa: Tree[A])(f: A => B): Tree[B] = Tree(
+      f(fa.root),
+      fa.children.map(t => t.map(f))
     )
   }
 }

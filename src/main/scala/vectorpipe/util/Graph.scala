@@ -3,6 +3,8 @@ package vectorpipe.util
 import spire.algebra._
 import spire.std.any._
 import spire.syntax.order._
+import scalaz.State
+import scalaz.syntax.applicative._
 
 // --- //
 
@@ -19,12 +21,12 @@ class Graph[K: Order, V](
   getVert: K => Option[Vertex]
 ) {
   /** Possibly find a node that corresponds to a given key. */
-  def vertex(key: K): Option[Vertex] = getVert(key)
+  private def vertex(key: K): Option[Vertex] = getVert(key)
 
   /** Retrieve the full node information given a [[Vertex]].
     * Vertex validity (bounds) is not checked.
     */
-  def node(v: Vertex): (K, V, Seq[K]) = getNode(v)
+  private def node(v: Vertex): (K, V, Seq[K]) = getNode(v)
 
   /** Given a key value, retrieve the corresponding node value, if it exists. */
   def get(key: K): Option[V] = vertex(key).map(v => node(v)._2)
@@ -32,8 +34,29 @@ class Graph[K: Order, V](
   /** The number of nodes in this Graph. */
   def size: Int = outgoing.length
 
+  // --- ALGORITHM: Topological Sort --- //
+
   /** A topological sort of this Graph. */
-  def topSort: Seq[Vertex] = ???
+  def topSort: Seq[Vertex] = postOrd.reverse
+
+  private def postOrd: Seq[Vertex] = postorderF(dff)(Seq())
+
+  private def postorderF[A](forest: Seq[Tree[A]]): Seq[A] => Seq[A] = { list =>
+    val fs: Seq[Seq[A] => Seq[A]] = forest.map(postorder)
+
+    val g: Seq[A] => Seq[A] = fs.reduce({ (f, acc) => f.compose(acc) })
+
+    g(list)
+  }
+
+  private def postorder[A](tree: Tree[A]): Seq[A] => Seq[A] = { list =>
+    postorderF(tree.children)(tree.root +: list)
+  }
+
+  // --- ALGORITHM: Spanning Forest --- //
+
+  /** Some spanning Forest of this Graph. */
+  def dff: Forest[Vertex] = spanningForest((0 until outgoing.length))
 
   /** Perform a depth-first search on this Graph based on some order
     * of vertices to produce a spanning forest of this Graph.
@@ -41,7 +64,32 @@ class Graph[K: Order, V](
     * Passing the result of `topSort` will yield a forest where each
     * [[Tree]] follows a topological hierarchy.
     */
-  def spanningForest(vs: Seq[Vertex]): Seq[Tree[Vertex]] = ???
+  def spanningForest(vs: Seq[Vertex]): Forest[Vertex] = prune(vs.map(generate))
+
+  /** Generate potentially infinite-depth [[Tree]]s for later pruning.
+    * We use `toStream` here to avoid infinite recursion.
+    */
+  private def generate(v: Vertex): Tree[Vertex] = Tree(v, outgoing(v).toStream.map(generate))
+
+  /** Prune unnecessary connections. */
+  private def prune(vs: Forest[Vertex]): Forest[Vertex] = chop(vs).eval(Set.empty[Vertex])
+
+  /** An alias to massage the `Applicative` use in [[chop]]. */
+  type SetState[T] = State[Set[Vertex], T]
+
+  private def chop(vs: Forest[Vertex]): SetState[Forest[Vertex]] = vs match {
+    case Seq() => Seq.empty[Tree[Vertex]].point[SetState]
+    case tree +: rest => State.get[Set[Vertex]].flatMap({
+      case set if set.contains(tree.root) => chop(rest) /* We've been here already */
+      case set => for {
+        _  <- State.put(set + tree.root)
+        as <- chop(tree.children)
+        bs <- chop(rest)
+      } yield {
+        Tree(tree.root, as) +: bs
+      }
+    })
+  }
 }
 
 object Graph {
@@ -72,7 +120,9 @@ object Graph {
       work(0, maxV)
     }
 
-    val graph = sorted.map({ case (_, _, ks) => ks.flatMap(k => getVert(k)) }).toVector
+    /* `flatMap` has the effect of ignoring target nodes which don't exist */
+    val graph: Vector[Seq[Int]] =
+      sorted.map({ case (_, _, ks) => ks.flatMap(k => getVert(k)) }).toVector
 
     new Graph(graph, { v: Vertex => vertMap(v) }, getVert)
   }

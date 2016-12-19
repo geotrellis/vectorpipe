@@ -55,4 +55,17 @@ class GraphSpec extends FunSpec with Matchers {
       g.get(10) shouldBe Some('j')
     }
   }
+
+  describe("Graph Algorithms") {
+    it("Topological Sort") {
+      val g = Graph.fromEdges(Seq(
+        (1, 1, Seq(2,3)),
+        (2, 2, Seq(4)),
+        (3, 3, Seq(4)),
+        (4, 4, Seq())
+      ))
+
+      g.topSort shouldBe Seq(1,3,2,4)
+    }
+  }
 }

@@ -1,0 +1,1 @@
+ensimeIgnoreMissingDirectories in ThisBuild := true

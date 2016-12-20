@@ -9,12 +9,13 @@ import scalaz.syntax.monad._
   *  Scala's standard library.
   */
 case class Tree[T](root: T, children: Seq[Tree[T]]) {
-  /** The elements of the tree in pre-order. */
+  /** The flattened elements of the tree in pre-order. */
   def preorder: Seq[T] = root +: children.flatMap(_.preorder)
 
+  /** The flattened elements of the tree in post-order. */
   def postorder: Seq[T] = children.flatMap(_.postorder) :+ root
 
-    /* Adapted from: http://stackoverflow.com/a/8948691/643684 */
+  /** A nicer `toString`. Adapted from: http://stackoverflow.com/a/8948691/643684 */
   def pretty: String = {
     def work(tree: Tree[T], prefix: String, isTail: Boolean): String = {
       val (line, bar) = if (isTail) ("└── ", " ") else ("├── ", "│")

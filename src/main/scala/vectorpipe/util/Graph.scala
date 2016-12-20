@@ -14,6 +14,42 @@ import scalaz.syntax.applicative._
   *
   * Do not attempt to `new Graph(...)` yourself. In all cases,
   * use `Graph.fromEdges` to construct a Graph.
+  *
+  * ===Usage===
+  * The two main methods of interest are `get`:
+  * {{{
+  * // Try to find a node value that corresponds to a given key.
+  * Graph.get: K => Option[V]
+  * }}}
+  * and `topologicalForest`. Given the disconnected Graph:
+  * {{{
+  *    5      1
+  *   / \    / \
+  *  6   7  2   3
+  *   \ /    \ /
+  *    8      4
+  * }}}
+  * `topologicalForest` converts this into a [[Forest]] of topologically
+  * sorted spanning [[Tree]]s:
+  * {{{
+  * val g: Graph = ...  // From above.
+  *
+  * g.topologicalForest.foreach(t => println(t.pretty))
+  *
+  * // The above prints:
+  * └── 5
+  *     ├── 6
+  *     │   └── 8
+  *     │       └── ∅
+  *     └── 7
+  *         └── ∅
+  * └── 1
+  *     ├── 2
+  *     │   └── 4
+  *     │       └── ∅
+  *     └── 3
+  *         └── ∅
+  * }}}
   */
 class Graph[K: Order, V](
   outgoing: Vector[Seq[Vertex]],
@@ -34,7 +70,7 @@ class Graph[K: Order, V](
   /** The number of nodes in this Graph. */
   def size: Int = outgoing.length
 
-  /** A [[Forest]] of node values, arranged by the topology of this [[Graph]]. */
+  /** A [[Forest]] of node values, arranged by the topology of this Graph. */
   def topologicalForest: Forest[V] = {
     spanningForest(topSort).map(t => t.map(v => node(v)._2))
   }
@@ -66,7 +102,7 @@ class Graph[K: Order, V](
   private def prune(vs: Forest[Vertex]): Forest[Vertex] = chop(vs).eval(Set.empty[Vertex])
 
   /** An alias to massage the `Applicative` use in [[chop]]. */
-  type SetState[T] = State[Set[Vertex], T]
+  private type SetState[T] = State[Set[Vertex], T]
 
   private def chop(vs: Forest[Vertex]): SetState[Forest[Vertex]] = vs match {
     case Seq() => Seq.empty[Tree[Vertex]].point[SetState]

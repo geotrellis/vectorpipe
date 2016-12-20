@@ -47,20 +47,16 @@ class ElementRDDMethods(val self: RDD[Element]) extends MethodExtensions[RDD[Ele
   }
 
   private def multipolygons(
-    lines: RDD[Feature[Line, Tree[ElementData]]],
-    polys: RDD[Feature[Polygon, Tree[ElementData]]],
+    lines: RDD[OSMLine],
+    polys: RDD[OSMPolygon],
     relations: RDD[Relation]
-  ): (
-    RDD[Feature[MultiPolygon, Tree[ElementData]]],
-    RDD[Feature[Line, Tree[ElementData]]],
-    RDD[Feature[Polygon, Tree[ElementData]]]
-  ) = {
+  ): (RDD[OSMMultiPoly], RDD[OSMLine], RDD[OSMPolygon]) = {
     // filter out polys that are used in relations
     // merge RDDs back together
     val relLinks: RDD[(Long, Relation)] =
       relations.flatMap(r => r.members.map(m => (m.ref, r)))
 
-    val lineLinks: RDD[(Long, Feature[Line, Tree[ElementData]])] =
+    val lineLinks: RDD[(Long, OSMLine)] =
       lines.map(f => (f.data.root.meta.id, f))
 
     /* All Polygons, Lines and Relations bound by their IDs */
@@ -77,12 +73,12 @@ class ElementRDDMethods(val self: RDD[Element]) extends MethodExtensions[RDD[Ele
       .groupByKey
       .map({ case (r, gs) =>
         /* Fuse Lines into Polygons */
-        val ls: Vector[Feature[Line, Tree[ElementData]]] = gs.flatMap({
+        val ls: Vector[OSMLine] = gs.flatMap({
           case Right(l) => Some(l)
           case _ => None
         }).toVector
 
-        val ps: Vector[Feature[Polygon, Tree[ElementData]]] = gs.flatMap({
+        val ps: Vector[OSMPolygon] = gs.flatMap({
           case Left(p) => Some(p)
           case _ => None
         }).toVector ++ fuseLines(spatialSort(ls.map(f => (f.geom.centroid.as[Point].get, f))).map(_._2))
@@ -200,8 +196,8 @@ class ElementRDDMethods(val self: RDD[Element]) extends MethodExtensions[RDD[Ele
    *  This borrows [[fuseLines]]'s assumptions.
    */
   private def fuseOne(
-    v: Vector[Feature[Line, Tree[ElementData]]]
-  ): (Line, Seq[Tree[ElementData]], Vector[Feature[Line, Tree[ElementData]]]) = {
+    v: Vector[OSMLine]
+  ): (Line, Seq[Tree[ElementData]], Vector[OSMLine]) = {
     val h = v.head
     val t = v.tail
 
@@ -235,11 +231,7 @@ class ElementRDDMethods(val self: RDD[Element]) extends MethodExtensions[RDD[Ele
   private def geometries(
     nodes: RDD[Node],
     ways: RDD[Way]
-  ): (
-    RDD[Feature[Point, Tree[ElementData]]],
-    RDD[Feature[Line, Tree[ElementData]]],
-    RDD[Feature[Polygon, Tree[ElementData]]]
-  ) = {
+  ): (RDD[OSMPoint], RDD[OSMLine], RDD[OSMPolygon]) = {
     /* You're a long way from finishing this operation. */
     val links: RDD[(Long, Way)] = ways.flatMap(w => w.nodes.map(n => (n, w)))
 
@@ -249,7 +241,7 @@ class ElementRDDMethods(val self: RDD[Element]) extends MethodExtensions[RDD[Ele
     val grouped: RDD[(Iterable[Node], Iterable[Way])] =
       nodes.map(n => (n.data.meta.id, n)).cogroup(links).map(_._2)
 
-    val linesPolys: RDD[Either[Feature[Line, Tree[ElementData]], Feature[Polygon, Tree[ElementData]]]] =
+    val linesPolys: RDD[Either[OSMLine, OSMPolygon]] =
       grouped
         .flatMap({ case (ns, ws) =>
           /* ASSUMPTION: `ns` is always length 1 because of the `cogroup` */
@@ -294,18 +286,18 @@ class ElementRDDMethods(val self: RDD[Element]) extends MethodExtensions[RDD[Ele
         })
 
     // TODO: Improve this inefficient RDD splitting.
-    val lines: RDD[Feature[Line, Tree[ElementData]]] = linesPolys.flatMap({
+    val lines: RDD[OSMLine] = linesPolys.flatMap({
       case Left(l) => Some(l)
       case _ => None
     })
 
-    val polys: RDD[Feature[Polygon, Tree[ElementData]]] = linesPolys.flatMap({
+    val polys: RDD[OSMPolygon] = linesPolys.flatMap({
       case Right(p) => Some(p)
       case _ => None
     })
 
     /* Single Nodes unused in any Way */
-    val points: RDD[Feature[Point, Tree[ElementData]]] = grouped.flatMap({ case (ns, ws) =>
+    val points: RDD[OSMPoint] = grouped.flatMap({ case (ns, ws) =>
       if (ws.isEmpty) {
         val n = ns.head
 

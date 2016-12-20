@@ -1,7 +1,7 @@
 package vectorpipe.util
 
-import scalaz.Functor
-import scalaz.syntax.functor._
+import scalaz.{Functor, Applicative, Monad}
+import scalaz.syntax.monad._
 
 // --- //
 
@@ -47,5 +47,27 @@ object Tree {
       f(fa.root),
       fa.children.map(t => t.map(f))
     )
+  }
+
+  /** Trees are Applicative Functors. */
+  implicit val treeApplicative: Applicative[Tree] = new Applicative[Tree] {
+    def point[A](a: => A): Tree[A] = singleton(a)
+
+    def ap[A, B](fa: => Tree[A])(tf: => Tree[A => B]): Tree[B] = {
+      val Tree(f, tfs) = tf
+
+      Tree(f(fa.root), fa.children.map(t => t.map(f)) ++ tfs.map(t => fa <*> t))
+    }
+  }
+
+  /** Trees are also Monads. */
+  implicit val treeMonad: Monad[Tree] = new Monad[Tree] {
+    def point[A](a: => A): Tree[A] = treeApplicative.point(a)
+
+    def bind[A, B](fa: Tree[A])(f: A => Tree[B]): Tree[B] = {
+      val Tree(r2, k2) = f(fa.root)
+
+      Tree(r2, k2 ++ fa.children.map(t => t >>= f))
+    }
   }
 }

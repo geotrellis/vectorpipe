@@ -57,19 +57,38 @@ class GraphSpec extends FunSpec with Matchers {
   }
 
   describe("Graph Algorithms") {
+    val g = Graph.fromEdges(Seq(
+      (1, 1, Seq(2,3)),
+      (2, 2, Seq(4)),
+      (3, 3, Seq(4)),
+      (4, 4, Seq()),
+      (5, 5, Seq(6, 7)),
+      (6, 6, Seq(8)),
+      (7, 7, Seq(8)),
+      (8, 8, Seq())
+    ))
+
     it("Topological Sort") {
-      val g = Graph.fromEdges(Seq(
-        (1, 1, Seq(2,3)),
-        (2, 2, Seq(4)),
-        (3, 3, Seq(4)),
-        (4, 4, Seq()),
-        (5, 5, Seq(6, 7)),
-        (6, 6, Seq(8)),
-        (7, 7, Seq(8)),
-        (8, 8, Seq())
+      g.topSort.map(v => g.node(v)._1) shouldBe Seq(5,7,6,8,1,3,2,4)
+    }
+
+    /*
+    it("Topological Forest") {
+      g.topologicalForest.foreach(t => println(t.pretty))
+    }
+     */
+
+    it("Baarle-Nassau Topological Forest") {
+      val bng = Graph.fromEdges(Seq(
+        (52411, 52411, Seq(53136, 53134)),
+        (53136, 53136, Seq(53134)),
+        (53134, 53134, Seq(53114)),
+        (53114, 53114, Seq(2524404)),
+        (2524404, 2524404, Seq(53137)),
+        (53137, 53137, Seq())
       ))
 
-      g.topSort.map(v => g.node(v)._1) shouldBe Seq(5,7,6,8,1,3,2,4)
+      bng.topologicalForest.head.preorder shouldBe Seq(52411, 53136, 53134, 53114, 2524404, 53137)
     }
   }
 }

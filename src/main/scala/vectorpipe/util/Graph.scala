@@ -34,6 +34,11 @@ class Graph[K: Order, V](
   /** The number of nodes in this Graph. */
   def size: Int = outgoing.length
 
+  /** A [[Forest]] of node values, arranged by the topology of this [[Graph]]. */
+  def topologicalForest: Forest[V] = {
+    spanningForest(topSort).map(t => t.map(v => node(v)._2))
+  }
+
   // --- ALGORITHM: Topological Sort --- //
 
   /** A topological sort of this Graph. */

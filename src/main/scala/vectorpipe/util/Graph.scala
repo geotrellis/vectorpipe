@@ -55,7 +55,7 @@ class Graph[K: Order, V](
   outgoing: Vector[Seq[Vertex]],
   getNode: Vertex => (K, V, Seq[K]),
   getVert: K => Option[Vertex]
-) {
+) extends Serializable {
   /** Possibly find a node that corresponds to a given key. */
   private def vertex(key: K): Option[Vertex] = getVert(key)
 

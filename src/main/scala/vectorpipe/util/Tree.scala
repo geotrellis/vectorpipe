@@ -8,7 +8,7 @@ import scalaz.syntax.monad._
 /** A typical immutable Tree implementation, mysteriously absent from
   *  Scala's standard library.
   */
-case class Tree[T](root: T, children: Seq[Tree[T]]) {
+case class Tree[T](root: T, children: Seq[Tree[T]]) extends Serializable {
   /** The flattened elements of the tree in pre-order. */
   def preorder: Seq[T] = root +: children.flatMap(_.preorder)
 

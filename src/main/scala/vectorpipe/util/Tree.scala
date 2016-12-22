@@ -15,6 +15,11 @@ case class Tree[T](root: T, children: Seq[Tree[T]]) extends Serializable {
   /** The flattened elements of the tree in post-order. */
   def postorder: Seq[T] = children.flatMap(_.postorder) :+ root
 
+  /** The values of all leaves (nodes with no children) in the Tree. */
+  def leaves: Seq[T] = {
+    if (children.isEmpty) Seq(root) else children.flatMap(_.leaves)
+  }
+
   /** A nicer `toString`. Adapted from: http://stackoverflow.com/a/8948691/643684 */
   def pretty: String = {
     def work(tree: Tree[T], prefix: String, isTail: Boolean): String = {

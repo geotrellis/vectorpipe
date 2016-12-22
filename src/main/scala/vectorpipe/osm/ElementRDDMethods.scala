@@ -8,23 +8,150 @@ import geotrellis.vector._
 import com.vividsolutions.jts.operation.linemerge.LineMerger
 import com.vividsolutions.jts.geom.LineString
 import org.apache.spark.rdd._
+import scalaz.syntax.applicative._
+import spire.std.any._
 
 // --- //
 
+/* TODOS
+ *
+ * - Destroy all Relations and spread their metadata across their children.
+ * How to do that? Well, we need to find all Relations-of-Relations. If these form Graphs,
+ * break them into Trees. Then,
+ *
+ * Hell, but what about relations that have mixed member types? (ways + other relations)
+ * See Relation #47796. It has ways, single nodes, and a relation labelled a "subarea".
+ *
+ * We need a rigourous way to test Relation-graph validity. Can't really do it with
+ * the type system, since the data is dynamic.
+ *
+ */
+
 class ElementRDDMethods(val self: RDD[Element]) extends MethodExtensions[RDD[Element]] {
+  private def relations: RDD[Relation] = self.flatMap({
+    case e: Relation => Some(e)
+    case _ => None
+  })
+
+  /** All Relation [[Tree]]s, broken from their original Graph structure
+    * via a topological sort.
+    */
+  private def relForest: Forest[Relation] = {
+    /* Relations which link out to other ones.
+     * ASSUMPTION: This Seq will have only a few thousand elements.
+     */
+    val hasOutgoing: Seq[(Long, Relation, Seq[Long])] =
+      relations.filter(r => r.subrelations.length > 0)
+        .map(r => (r.data.meta.id, r, r.subrelations))
+        .collect
+        .toSeq
+
+    /* A giantish Forest of all OSM Relations which link to other relations.
+     * Note: The "leaves" are missing, which the next step finds.
+     */
+    val forest: Forest[Relation] = Graph.fromEdges(hasOutgoing).topologicalForest
+
+    /* Relations which could be leaves in a Relation Tree */
+    val singletons: RDD[(Long, Relation)] =
+      relations.filter(r => r.subrelations.isEmpty).keyBy(r => r.data.meta.id)
+
+    /* Find all leaves, and reconstruct the Trees */
+    forest.flatMap({t =>
+      /* Leaf Relations that weren't already in this Tree */
+      val leaves: Seq[Relation] = t.leaves
+        .flatMap(_.subrelations)
+        .flatMap(rid => singletons.lookup(rid))
+
+      /* The real way to do this would be to use lenses to "set" the leaves.
+       * Haskell: `tree & deep (filtered (null . subForest) . subForest) %~ foo`
+       * where `foo` (in Scala) would do the RDD lookups.
+       */
+      Graph.fromEdges((t.preorder ++ leaves).map(r => (r.data.meta.id, r, r.subrelations)))
+        .topologicalForest
+        .map(cull)
+    })
+  }
+
+  /** Sanitize a Relation Tree, such that it doesn't contain any "refs"
+    * to a Relation which isn't a child of it in the Tree.
+    */
+  private def cull(t: Tree[Relation]): Tree[Relation] = {
+    val childIds: Set[Long] = t.children.map(_.root.data.meta.id).toSet
+
+    Tree(
+      t.root.copy(members = t.root.members.filter({ m: Member =>
+        m.memType != "relation" || childIds.contains(m.ref)
+      })),
+      t.children.map(cull)
+    )
+  }
+
+  /** The average Relation-to-Relation outdegree in this RDD. */
+  def averageOutdegree: Double = {
+    val r: RDD[Relation] = relations
+
+    r.map(r => r.subrelations.length).fold(0)(_ + _).toDouble / r.count().toDouble
+  }
+
+  /*
+   * - Form all Relation Graphs
+   * - Break into a Relation Forest, then RDD[Tree[Relation]]
+   * - Reduce this to RDD[(Relation, Tree[ElementData])]
+   * - ???
+   * - Cull any members who are relations, but aren't children in the tree
+   * - For every Relation, copy its metadata to any member which isn't a relation.
+   */
+
+  // TODO: These two functions below need to be given any parent Relation metadata.
+
+  /** All OSM Nodes. */
+  private def nodes: RDD[Node] = self.flatMap({
+    case e: Node => Some(e)
+    case _ => None
+  })
+
+  /** All OSM Ways. */
+  private def ways: RDD[Way] = self.flatMap({
+    case e: Way => Some(e)
+    case _ => None
+  })
+
+  /** Convert an RDD of raw OSM [[Element]]s into interpreted GeoTrellis
+    * [[Feature]]s. In order to mix the various subtypes together, they've
+    * been upcasted internally to [[Geometry]]. Note:
+    * {{{
+    * type OSMFeature = Feature[Geometry, Tree[ElementData]]
+    * }}}
+    *
+    * ===Behaviour===
+    * This algorithm aims to losslessly "sanitize" its input data,
+    * in that it will break down malformed Relation structures, as
+    * well as cull member references to Elements which no longer
+    * exist (or exist outside the subset of data you're working
+    * on). Mathematically speaking, there should exist a function
+    * to reverse this conversion. This theoretical function and
+    * `toFeatures` form an isomorphism if the source data is
+    * correct. In other words, given:
+    * {{{
+    * parse: XML => RDD[Element]
+    * toFeatures: RDD[Element] => RDD[OSMFeature]
+    * restore: RDD[OSMFeature] => RDD[Element]
+    * unparse: RDD[Element] => XML
+    * }}}
+    * then:
+    * {{{
+    * unparse(restore(toFeatures(parse(xml: XML))))
+    * }}}
+    * will yield a body of semantically correct OSM data.
+    *
+    * To achieve this sanity, the algorithm has the following behaviour:
+    *   - Graphs of [[Relation]]s will be broken into spanning [[Tree]]s.
+    *   - It doesn't make sense to represent non-multipolygon Relations as
+    *     GeoTrellis `Geometry`s, so Relation metadata is disseminated
+    *     across its child members. Otherwise, Relations are "dropped"
+    *     from the output.
+    */
   def toFeatures: RDD[OSMFeature] = {
-
-    /* All OSM Nodes */
-    val nodes: RDD[Node] = self.flatMap({
-      case e: Node => Some(e)
-      case _ => None
-    })
-
-    /* All OSM Ways */
-    val ways: RDD[Way] = self.flatMap({
-      case e: Way => Some(e)
-      case _ => None
-    })
 
     // Inefficient to do the flatMap thrice!
     // A function `split: RDD[Element] => (RDD[Node], RDD[Way], RDD[Relation])
@@ -43,7 +170,95 @@ class ElementRDDMethods(val self: RDD[Element]) extends MethodExtensions[RDD[Ele
     points.asInstanceOf[RDD[OSMFeature]] ++
       lines.asInstanceOf[RDD[OSMFeature]] ++
       polys.asInstanceOf[RDD[OSMFeature]] ++
-      multiPolys.asInstanceOf[RDD[OSMFeature]]
+    multiPolys.asInstanceOf[RDD[OSMFeature]]
+  }
+
+  /**
+   * Every OSM Node and Way converted to GeoTrellis Geometries.
+   *  This includes Points, Lines, and Polygons which have no holes.
+   *  Holed polygons are handled by [[multipolygons]], as they are represented
+   *  by OSM Relations.
+   */
+  private def geometries(
+    nodes: RDD[Node],
+    ways: RDD[Way]
+  ): (RDD[OSMPoint], RDD[OSMLine], RDD[OSMPolygon]) = {
+    /* You're a long way from finishing this operation. */
+    val links: RDD[(Long, Way)] = ways.flatMap(w => w.nodes.map(n => (n, w)))
+
+    /* Nodes and Ways bound by the Node ID. Independent Nodes appear here
+     * as well, but with an empty Iterable of Ways.
+     */
+    val grouped: RDD[(Iterable[Node], Iterable[Way])] =
+      nodes.map(n => (n.data.meta.id, n)).cogroup(links).map(_._2)
+
+    val linesPolys: RDD[Either[OSMLine, OSMPolygon]] =
+      grouped
+        .flatMap({ case (ns, ws) =>
+          /* ASSUMPTION: `ns` is always length 1 because of the `cogroup` */
+          val n = ns.head
+
+          ws.map(w => (w, n))
+        })
+        .groupByKey
+        .map({ case (w, ns) =>
+          /* De facto maximum of 2000 Nodes */
+          val sorted: Vector[Node] = ns.toVector.sortBy(n => n.data.meta.id)
+
+          /* `get` is safe, the BTree is guaranteed to be populated,
+           * since `ns` is guaranteed to be non-empty.
+           */
+          val tree: BTree[Node] = BTree.fromSortedSeq(sorted).get
+
+          /* A binary search branch predicate */
+          val pred: (Long, BTree[Node]) => Either[Option[BTree[Node]], Node] = { (n, tree) =>
+            if (n == tree.value.data.meta.id) {
+              Right(tree.value)
+            } else if (n < tree.value.data.meta.id) {
+              Left(tree.left)
+            } else {
+              Left(tree.right)
+            }
+          }
+
+          /* The actual node coordinates in the correct order */
+          val (points, data) =
+            w.nodes
+              .flatMap(n => tree.searchWith(n, pred))
+              .map(n => ((n.lat, n.lon), n.data))
+              .unzip
+
+          /* Segregate by which are purely Lines, and which form Polygons */
+          if (w.isLine) {
+            Left(Feature(Line(points), Tree(w.data, data.map(_.pure[Tree]))))
+          } else {
+            Right(Feature(Polygon(points), Tree(w.data, data.map(_.pure[Tree]))))
+          }
+        })
+
+    // TODO: Improve this inefficient RDD splitting.
+    val lines: RDD[OSMLine] = linesPolys.flatMap({
+      case Left(l) => Some(l)
+      case _ => None
+    })
+
+    val polys: RDD[OSMPolygon] = linesPolys.flatMap({
+      case Right(p) => Some(p)
+      case _ => None
+    })
+
+    /* Single Nodes unused in any Way */
+    val points: RDD[OSMPoint] = grouped.flatMap({ case (ns, ws) =>
+      if (ws.isEmpty) {
+        val n = ns.head
+
+        Some(Feature(Point(n.lat, n.lon), Tree.singleton(n.data)))
+      } else {
+        None
+      }
+    })
+
+    (points, lines, polys)
   }
 
   private def multipolygons(
@@ -220,93 +435,5 @@ class ElementRDDMethods(val self: RDD[Element]) extends MethodExtensions[RDD[Ele
 
     /* As every Line _must_ fuse, this should never be reached */
     ???
-  }
-
-  /**
-   * Every OSM Node and Way converted to GeoTrellis Geometries.
-   *  This includes Points, Lines, and Polygons which have no holes.
-   *  Holed polygons are handled by [[multipolygons]], as they are represented
-   *  by OSM Relations.
-   */
-  private def geometries(
-    nodes: RDD[Node],
-    ways: RDD[Way]
-  ): (RDD[OSMPoint], RDD[OSMLine], RDD[OSMPolygon]) = {
-    /* You're a long way from finishing this operation. */
-    val links: RDD[(Long, Way)] = ways.flatMap(w => w.nodes.map(n => (n, w)))
-
-    /* Nodes and Ways bound by the Node ID. Independent Nodes appear here
-     * as well, but with an empty Iterable of Ways.
-     */
-    val grouped: RDD[(Iterable[Node], Iterable[Way])] =
-      nodes.map(n => (n.data.meta.id, n)).cogroup(links).map(_._2)
-
-    val linesPolys: RDD[Either[OSMLine, OSMPolygon]] =
-      grouped
-        .flatMap({ case (ns, ws) =>
-          /* ASSUMPTION: `ns` is always length 1 because of the `cogroup` */
-          val n = ns.head
-
-          ws.map(w => (w, n))
-        })
-        .groupByKey
-        .map({ case (w, ns) =>
-          /* De facto maximum of 2000 Nodes */
-          val sorted: Vector[Node] = ns.toVector.sortBy(n => n.data.meta.id)
-
-          /* `get` is safe, the BTree is guaranteed to be populated,
-           * since `ns` is guaranteed to be non-empty.
-           */
-          val tree: BTree[Node] = BTree.fromSortedSeq(sorted).get
-
-          /* A binary search branch predicate */
-          val pred: (Long, BTree[Node]) => Either[Option[BTree[Node]], Node] = { (n, tree) =>
-            if (n == tree.value.data.meta.id) {
-              Right(tree.value)
-            } else if (n < tree.value.data.meta.id) {
-              Left(tree.left)
-            } else {
-              Left(tree.right)
-            }
-          }
-
-          /* The actual node coordinates in the correct order */
-          val (points, data) =
-            w.nodes
-              .flatMap(n => tree.searchWith(n, pred))
-              .map(n => ((n.lat, n.lon), n.data))
-              .unzip
-
-          /* Segregate by which are purely Lines, and which form Polygons */
-          if (w.isLine) {
-            Left(Feature(Line(points), Tree(w.data, data.map(d => Tree.singleton(d)))))
-          } else {
-            Right(Feature(Polygon(points), Tree(w.data, data.map(d => Tree.singleton(d)))))
-          }
-        })
-
-    // TODO: Improve this inefficient RDD splitting.
-    val lines: RDD[OSMLine] = linesPolys.flatMap({
-      case Left(l) => Some(l)
-      case _ => None
-    })
-
-    val polys: RDD[OSMPolygon] = linesPolys.flatMap({
-      case Right(p) => Some(p)
-      case _ => None
-    })
-
-    /* Single Nodes unused in any Way */
-    val points: RDD[OSMPoint] = grouped.flatMap({ case (ns, ws) =>
-      if (ws.isEmpty) {
-        val n = ns.head
-
-        Some(Feature(Point(n.lat, n.lon), Tree.singleton(n.data)))
-      } else {
-        None
-      }
-    })
-
-    (points, lines, polys)
   }
 }

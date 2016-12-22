@@ -44,7 +44,10 @@ case class Way(
 case class Relation(
   members: Seq[Member],
   data: ElementData
-) extends Element
+) extends Element {
+  /** The IDs of sub-relations that this Relation points to. */
+  def subrelations: Seq[Long] = members.filter(_.memType == "relation").map(_.ref)
+}
 
 case class Member(
   memType: String, // TODO Use a sum type?

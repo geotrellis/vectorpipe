@@ -5,11 +5,13 @@ import vectorpipe.util._
 import geotrellis.util._
 import geotrellis.vector._
 
-import com.vividsolutions.jts.operation.linemerge.LineMerger
 import com.vividsolutions.jts.geom.LineString
+import com.vividsolutions.jts.operation.linemerge.LineMerger
 import org.apache.spark.rdd._
 import scalaz.syntax.applicative._
 import spire.std.any._
+
+import scala.collection.parallel.ParSeq
 
 // --- //
 
@@ -28,20 +30,55 @@ import spire.std.any._
  */
 
 class ElementRDDMethods(val self: RDD[Element]) extends MethodExtensions[RDD[Element]] {
-  private def relations: RDD[Relation] = self.flatMap({
+  /** All [[Relation]] [[Element]]s, not doctored in any way. */
+  def rawRelations: RDD[Relation] = self.flatMap({
     case e: Relation => Some(e)
     case _ => None
   })
 
+  /** Crush Relation Trees into groups of concrete, geometric Elements
+    * with all their parent metadata disseminated.
+    *
+    * Return type justification:
+    *   - Relations form Trees, so any given one will be pointed to by at most one other.
+    *   - Nodes and Ways can be pointed to by any number of Relations, and those
+    *     Relations can be part of different Trees. So the `Long` keys for
+    *     the Nodes and Ways may not be unique. Such Lists should be fused into
+    *     a Tree later by Spark.
+    */
+  private def flatForest(forest: Forest[Relation]): ParSeq[(Long, Seq[ElementData])] = {
+    forest.par.flatMap(t => flatTree(Seq.empty[ElementData], t))
+  }
+
+  /* Assumptions:
+   *   - Multipolygons do not point to other relations.
+   *   - No geometric relations exist in relation trees (CAUTION: likely false).
+   */
+  private def flatTree(
+    parentData: Seq[ElementData],
+    tree: Tree[Relation]
+  ): Seq[(Long, Seq[ElementData])] = {
+    val data: Seq[ElementData] = tree.root.data +: parentData
+
+    // TODO: This String comparison is aweful! Use a sumtype!
+    val refs = tree.root.members.foldRight(Seq.empty[(Long, Seq[ElementData])])({
+      case (m, acc) if Set("node", "way").contains(m.memType) => (m.ref, data) +: acc
+      case (_, acc) => acc
+    })
+
+    /* Recurse across children, with this Relation's metadata passed down */
+    refs ++ tree.children.flatMap(t => flatTree(data, t))
+  }
+
   /** All Relation [[Tree]]s, broken from their original Graph structure
     * via a topological sort.
     */
-  private def relForest: Forest[Relation] = {
+  private def relForest(rs: RDD[Relation]): Forest[Relation] = {
     /* Relations which link out to other ones.
      * ASSUMPTION: This Seq will have only a few thousand elements.
      */
     val hasOutgoing: Seq[(Long, Relation, Seq[Long])] =
-      relations.filter(r => r.subrelations.length > 0)
+      rs.filter(r => r.subrelations.length > 0)
         .map(r => (r.data.meta.id, r, r.subrelations))
         .collect
         .toSeq
@@ -53,10 +90,10 @@ class ElementRDDMethods(val self: RDD[Element]) extends MethodExtensions[RDD[Ele
 
     /* Relations which could be leaves in a Relation Tree */
     val singletons: RDD[(Long, Relation)] =
-      relations.filter(r => r.subrelations.isEmpty).keyBy(r => r.data.meta.id)
+      rs.filter(r => r.subrelations.isEmpty).keyBy(r => r.data.meta.id)
 
     /* Find all leaves, and reconstruct the Trees */
-    forest.flatMap({t =>
+    forest.flatMap({ t =>
       /* Leaf Relations that weren't already in this Tree */
       val leaves: Seq[Relation] = t.leaves
         .flatMap(_.subrelations)
@@ -88,7 +125,7 @@ class ElementRDDMethods(val self: RDD[Element]) extends MethodExtensions[RDD[Ele
 
   /** The average Relation-to-Relation outdegree in this RDD. */
   def averageOutdegree: Double = {
-    val r: RDD[Relation] = relations
+    val r: RDD[Relation] = rawRelations
 
     r.map(r => r.subrelations.length).fold(0)(_ + _).toDouble / r.count().toDouble
   }
@@ -104,14 +141,14 @@ class ElementRDDMethods(val self: RDD[Element]) extends MethodExtensions[RDD[Ele
 
   // TODO: These two functions below need to be given any parent Relation metadata.
 
-  /** All OSM Nodes. */
-  private def nodes: RDD[Node] = self.flatMap({
+  /** All [[Node]] [[Element]]s, not doctored in any way. */
+  def rawNodes: RDD[Node] = self.flatMap({
     case e: Node => Some(e)
     case _ => None
   })
 
-  /** All OSM Ways. */
-  private def ways: RDD[Way] = self.flatMap({
+  /** All [[Way]] [[Element]]s, not doctored in any way. */
+  def rawWays: RDD[Way] = self.flatMap({
     case e: Way => Some(e)
     case _ => None
   })
@@ -153,24 +190,23 @@ class ElementRDDMethods(val self: RDD[Element]) extends MethodExtensions[RDD[Ele
     */
   def toFeatures: RDD[OSMFeature] = {
 
-    // Inefficient to do the flatMap thrice!
-    // A function `split: RDD[Element] => (RDD[Node], RDD[Way], RDD[Relation])
-    // would be nice.
-    /* All OSM Relations */
-    val relations: RDD[Relation] = self.flatMap({
-      /* Baby steps. Limit to handling multipolys for now */
-      case e: Relation if e.data.tagMap.get("type") == Some("multipolygon") => Some(e)
-      case _ => None
+    /* All Geometric OSM Relations.
+     * A (likely false) assumption made in the `flatTree` function is that
+     * Geometric Relations never appear in Relation Graphs. Therefore we can
+     * naively grab them all here.
+     */
+    val geomRelations: RDD[Relation] = rawRelations.filter({ r =>
+      r.data.tagMap.get("type") == Some("multipolygon")
     })
 
-    val (points, rawLines, rawPolys) = geometries(nodes, ways)
+    val (points, rawLines, rawPolys) = geometries(rawNodes, rawWays)
 
-    val (multiPolys, lines, polys) = multipolygons(rawLines, rawPolys, relations)
+    val (multiPolys, lines, polys) = multipolygons(rawLines, rawPolys, geomRelations)
 
     points.asInstanceOf[RDD[OSMFeature]] ++
       lines.asInstanceOf[RDD[OSMFeature]] ++
       polys.asInstanceOf[RDD[OSMFeature]] ++
-    multiPolys.asInstanceOf[RDD[OSMFeature]]
+      multiPolys.asInstanceOf[RDD[OSMFeature]]
   }
 
   /**

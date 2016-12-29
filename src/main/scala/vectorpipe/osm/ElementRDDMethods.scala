@@ -17,15 +17,8 @@ import scala.collection.parallel.ParSeq
 
 /* TODOS
  *
- * - Destroy all Relations and spread their metadata across their children.
- * How to do that? Well, we need to find all Relations-of-Relations. If these form Graphs,
- * break them into Trees. Then,
- *
  * Hell, but what about relations that have mixed member types? (ways + other relations)
  * See Relation #47796. It has ways, single nodes, and a relation labelled a "subarea".
- *
- * We need a rigourous way to test Relation-graph validity. Can't really do it with
- * the type system, since the data is dynamic.
  *
  */
 
@@ -198,6 +191,9 @@ class ElementRDDMethods(val self: RDD[Element]) extends MethodExtensions[RDD[Ele
     val geomRelations: RDD[Relation] = rawRelations.filter({ r =>
       r.data.tagMap.get("type") == Some("multipolygon")
     })
+
+    // TODO Use the results on this!
+    val toDisseminate: ParSeq[(Long, Seq[ElementData])] = flatForest(relForest(rawRelations))
 
     val (points, rawLines, rawPolys) = geometries(rawNodes, rawWays)
 

@@ -1,5 +1,7 @@
 package vectorpipe.osm
 
+import io.dylemma.spac._
+
 import java.time.ZonedDateTime
 
 // --- //
@@ -7,6 +9,57 @@ import java.time.ZonedDateTime
 /** A sum type for OSM Elements. All Element types share some common attributes. */
 sealed trait Element {
   def data: ElementData
+}
+
+object Element {
+  implicit val elementMeta: Parser[Any, ElementMeta] = (
+    Parser.forMandatoryAttribute("id").map(_.toLong) ~
+      Parser.forMandatoryAttribute("user") ~
+      Parser.forMandatoryAttribute("uid") ~
+      Parser.forMandatoryAttribute("changeset").map(_.toInt) ~
+      Parser.forMandatoryAttribute("version").map(_.toInt) ~
+      Parser.forMandatoryAttribute("timestamp").map(ZonedDateTime.parse) ~
+      Parser.forMandatoryAttribute("visible").map(_.toBoolean)
+  ).as(ElementMeta)
+
+  /* <tag k='access' v='permissive' /> */
+  implicit val tag: Parser[Any, (String, String)] = (
+    Parser.forMandatoryAttribute("k") ~ Parser.forMandatoryAttribute("v")
+  ).as({ case (k,v) => (k,v) }) // Hand-holding the typesystem.
+
+  implicit val elementData: Parser[Any, ElementData] = (
+    elementMeta ~
+      Splitter(* \ "tag").asListOf[(String, String)].map(_.toMap)
+  ).as(ElementData)
+
+  /*
+  <node id='1424152815' timestamp='2013-12-23T15:59:00Z' uid='1808955' user='MrSelfdestruct' visible='true' version='3' changeset='19602558' lat='49.5135613' lon='6.0095049'>
+ */
+  implicit val node: Parser[Any, Node] = (
+    Parser.forMandatoryAttribute("lat").map(_.toDouble) ~
+      Parser.forMandatoryAttribute("lon").map(_.toDouble) ~
+      elementData
+  ).as(Node)
+
+  implicit val way: Parser[Any, Way] = (
+    Splitter(* \ "nd")
+      .through(Parser.forMandatoryAttribute("ref").map(_.toLong))
+      .parseToList
+      .map(_.toVector) ~
+      elementData
+  ).as(Way)
+
+  /* <member type='way' ref='22902411' role='outer' /> */
+  implicit val member: Parser[Any, Member] = (
+    Parser.forMandatoryAttribute("type") ~
+      Parser.forMandatoryAttribute("ref").map(_.toLong) ~
+      Parser.forMandatoryAttribute("role")
+  ).as(Member)
+
+  implicit val relation: Parser[Any, Relation] = (
+    Splitter(* \ "member").asListOf[Member] ~
+      elementData
+  ).as(Relation)
 }
 
 /** Some point in the world, which could represent a location or small object

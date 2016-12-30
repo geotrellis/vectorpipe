@@ -32,15 +32,19 @@ object Element {
       Splitter(* \ "tag").asListOf[(String, String)].map(_.toMap)
   ).as(ElementData)
 
-  /*
-  <node id='1424152815' timestamp='2013-12-23T15:59:00Z' uid='1808955' user='MrSelfdestruct' visible='true' version='3' changeset='19602558' lat='49.5135613' lon='6.0095049'>
- */
+  /* <node lat='49.5135613' lon='6.0095049' ... > */
   implicit val node: Parser[Any, Node] = (
     Parser.forMandatoryAttribute("lat").map(_.toDouble) ~
       Parser.forMandatoryAttribute("lon").map(_.toDouble) ~
       elementData
   ).as(Node)
 
+  /*
+   <way ... >
+    <nd ref='3867860331'/>
+    ...
+   </way>
+   */
   implicit val way: Parser[Any, Way] = (
     Splitter(* \ "nd")
       .through(Parser.forMandatoryAttribute("ref").map(_.toLong))
@@ -57,9 +61,25 @@ object Element {
   ).as(Member)
 
   implicit val relation: Parser[Any, Relation] = (
-    Splitter(* \ "member").asListOf[Member] ~
-      elementData
+    Splitter(* \ "member").asListOf[Member] ~ elementData
   ).as(Relation)
+
+  /** The master parser.
+    *
+    * ===Usage===
+    * {{{
+    * val xml: InputStream = new FileInputStream("somefile.osm")
+    *
+    * val res: Try[(List[Node], List[Way], List[Relation])] = Element.elements.parse(xml)
+    * }}}
+    */
+  val elements: Parser[Any, (List[Node], List[Way], List[Relation])] = (
+    Splitter("osm" \ "node").asListOf[Node] ~
+      Splitter("osm" \ "way").asListOf[Way] ~
+      Splitter("osm" \ "relation").asListOf[Relation]
+  ).as({ case (ns, ws, rs) =>
+    (ns, ws, rs)
+  })
 }
 
 /** Some point in the world, which could represent a location or small object

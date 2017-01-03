@@ -14,8 +14,8 @@ sealed trait Element {
 object Element {
   implicit val elementMeta: Parser[Any, ElementMeta] = (
     Parser.forMandatoryAttribute("id").map(_.toLong) ~
-      Parser.forMandatoryAttribute("user") ~
-      Parser.forMandatoryAttribute("uid") ~
+      Parser.forOptionalAttribute("user").map(_.getOrElse("anonymous")) ~
+      Parser.forOptionalAttribute("uid").map(_.getOrElse("anonymous")) ~
       Parser.forMandatoryAttribute("changeset").map(_.toInt) ~
       Parser.forMandatoryAttribute("version").map(_.toInt) ~
       Parser.forMandatoryAttribute("timestamp").map(ZonedDateTime.parse) ~

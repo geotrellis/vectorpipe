@@ -318,7 +318,7 @@ class ElementRDDMethods(val self: RDD[Element]) extends MethodExtensions[RDD[Ele
         case _ => None
       })
       .groupByKey
-      .map({ case (r, gs) =>
+      .flatMap({ case (r, gs) =>
         /* Fuse Lines into Polygons */
         val ls: Vector[OSMLine] = gs.flatMap({
           case Right(l) => Some(l)
@@ -342,18 +342,20 @@ class ElementRDDMethods(val self: RDD[Element]) extends MethodExtensions[RDD[Ele
           )
         })
 
-        /* It is suggested by OSM that multipoly tag data should be stored in
-         *  the Relation, not its constituent parts. Hence we take `r.data`
-         *  as the root `ElementData` here.
-         *
-         *  However, "inner" Ways can have meaningful tags, such as a lake in
-         *  the middle of a forest.
-         *
-         *  Furthermore, winding order doesn't matter in OSM, but it does
-         *  in VectorTiles.
-         *  TODO: Make sure winding order is handled correctly.
-         */
-        Feature(MultiPolygon(fused), Tree(r.data, outers.map(_.data) ++ inners.map(_.data)))
+        if (fused.isEmpty) None else {
+          /* It is suggested by OSM that multipoly tag data should be stored in
+           *  the Relation, not its constituent parts. Hence we take `r.data`
+           *  as the root `ElementData` here.
+           *
+           *  However, "inner" Ways can have meaningful tags, such as a lake in
+           *  the middle of a forest.
+           *
+           *  Furthermore, winding order doesn't matter in OSM, but it does
+           *  in VectorTiles.
+           *  TODO: Make sure winding order is handled correctly.
+           */
+          Some(Feature(MultiPolygon(fused), Tree(r.data, outers.map(_.data) ++ inners.map(_.data))))
+        }
       })
 
     /* Lines which were part of no Relation */
@@ -466,6 +468,6 @@ class ElementRDDMethods(val self: RDD[Element]) extends MethodExtensions[RDD[Ele
     }
 
     /* As every Line _must_ fuse, this should never be reached */
-    ???
+    throw new IllegalArgumentException(s"Unable to fuse ${h.geom} from ${h.data.root.meta}")
   }
 }

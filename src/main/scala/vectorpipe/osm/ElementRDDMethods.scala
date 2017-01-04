@@ -257,7 +257,7 @@ class ElementRDDMethods(val self: RDD[Element]) extends MethodExtensions[RDD[Ele
           val (points, data) =
             w.nodes
               .flatMap(n => tree.searchWith(n, pred))
-              .map(n => ((n.lat, n.lon), n.data))
+              .map(n => ((n.lon, n.lat), n.data))
               .unzip
 
           /* Segregate by which are purely Lines, and which form Polygons */
@@ -284,7 +284,7 @@ class ElementRDDMethods(val self: RDD[Element]) extends MethodExtensions[RDD[Ele
       if (ws.isEmpty) {
         val n = ns.head
 
-        Some(Feature(Point(n.lat, n.lon), Tree.singleton(n.data)))
+        Some(Feature(Point(n.lon, n.lat), Tree.singleton(n.data)))
       } else {
         None
       }

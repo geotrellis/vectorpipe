@@ -105,7 +105,7 @@ class Graph[K: Order, V](
   private type SetState[T] = State[Set[Vertex], T]
 
   private def chop(vs: Forest[Vertex]): SetState[Forest[Vertex]] = vs match {
-    case Seq() => Seq.empty[Tree[Vertex]].point[SetState]
+    case Seq() => Seq.empty[Tree[Vertex]].pure[SetState]
     case tree +: rest => State.get[Set[Vertex]].flatMap({
       case set if set.contains(tree.root) => chop(rest) /* We've been here already */
       case set => for {

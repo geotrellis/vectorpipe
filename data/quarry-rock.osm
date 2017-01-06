@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<osm version="0.6" generator="CGImap 0.5.8 (11895 thorn-02.openstreetmap.org)" copyright="OpenStreetMap and contributors" attribution="http://www.openstreetmap.org/copyright" license="http://opendatacommons.org/licenses/odbl/1-0/">
+ <bounds minlat="49.3330500" minlon="-122.9385000" maxlat="49.3341900" maxlon="-122.9357800"/>
+ <node id="691148635" visible="true" version="1" changeset="4379135" timestamp="2010-04-10T03:58:43Z" user="Marcott" uid="173927" lat="49.3336498" lon="-122.9371501"/>
+ <node id="691148636" visible="true" version="1" changeset="4379135" timestamp="2010-04-10T03:58:43Z" user="Marcott" uid="173927" lat="49.3335380" lon="-122.9370106"/>
+ <node id="691148637" visible="true" version="1" changeset="4379135" timestamp="2010-04-10T03:58:43Z" user="Marcott" uid="173927" lat="49.3333772" lon="-122.9370428"/>
+ <node id="691148638" visible="true" version="1" changeset="4379135" timestamp="2010-04-10T03:58:43Z" user="Marcott" uid="173927" lat="49.3332723" lon="-122.9370535"/>
+ <node id="691148639" visible="true" version="1" changeset="4379135" timestamp="2010-04-10T03:58:43Z" user="Marcott" uid="173927" lat="49.3332653" lon="-122.9368711"/>
+ <node id="691148640" visible="true" version="1" changeset="4379135" timestamp="2010-04-10T03:58:43Z" user="Marcott" uid="173927" lat="49.3333422" lon="-122.9366780"/>
+ <node id="691148641" visible="true" version="1" changeset="4379135" timestamp="2010-04-10T03:58:43Z" user="Marcott" uid="173927" lat="49.3334820" lon="-122.9364742"/>
+ <node id="691148642" visible="true" version="1" changeset="4379135" timestamp="2010-04-10T03:58:44Z" user="Marcott" uid="173927" lat="49.3336498" lon="-122.9364098"/>
+ <node id="691148643" visible="true" version="1" changeset="4379135" timestamp="2010-04-10T03:58:44Z" user="Marcott" uid="173927" lat="49.3337617" lon="-122.9362596"/>
+ <node id="691148644" visible="true" version="1" changeset="4379135" timestamp="2010-04-10T03:58:44Z" user="Marcott" uid="173927" lat="49.3339295" lon="-122.9361416"/>
+ <node id="691148645" visible="true" version="1" changeset="4379135" timestamp="2010-04-10T03:58:44Z" user="Marcott" uid="173927" lat="49.3339854" lon="-122.9362811"/>
+ <node id="691148646" visible="true" version="1" changeset="4379135" timestamp="2010-04-10T03:58:44Z" user="Marcott" uid="173927" lat="49.3338736" lon="-122.9364420"/>
+ <node id="691148647" visible="true" version="1" changeset="4379135" timestamp="2010-04-10T03:58:44Z" user="Marcott" uid="173927" lat="49.3337687" lon="-122.9365707"/>
+ <node id="691148648" visible="true" version="1" changeset="4379135" timestamp="2010-04-10T03:58:44Z" user="Marcott" uid="173927" lat="49.3338805" lon="-122.9366351"/>
+ <node id="691148649" visible="true" version="1" changeset="4379135" timestamp="2010-04-10T03:58:44Z" user="Marcott" uid="173927" lat="49.3339924" lon="-122.9365922"/>
+ <node id="691148650" visible="true" version="1" changeset="4379135" timestamp="2010-04-10T03:58:44Z" user="Marcott" uid="173927" lat="49.3339714" lon="-122.9367424"/>
+ <node id="691148651" visible="true" version="1" changeset="4379135" timestamp="2010-04-10T03:58:44Z" user="Marcott" uid="173927" lat="49.3339994" lon="-122.9369248"/>
+ <node id="691148652" visible="true" version="1" changeset="4379135" timestamp="2010-04-10T03:58:44Z" user="Marcott" uid="173927" lat="49.3339854" lon="-122.9371179"/>
+ <node id="691148653" visible="true" version="1" changeset="4379135" timestamp="2010-04-10T03:58:44Z" user="Marcott" uid="173927" lat="49.3338386" lon="-122.9370857"/>
+ <node id="716379094" visible="true" version="1" changeset="4581287" timestamp="2010-05-02T06:18:05Z" user="Marcott" uid="173927" lat="49.3337031" lon="-122.9365864"/>
+ <node id="716379097" visible="true" version="1" changeset="4581287" timestamp="2010-05-02T06:18:05Z" user="Marcott" uid="173927" lat="49.3338359" lon="-122.9365650"/>
+ <node id="716379101" visible="true" version="1" changeset="4581287" timestamp="2010-05-02T06:18:05Z" user="Marcott" uid="173927" lat="49.3339338" lon="-122.9365328"/>
+ <node id="716379104" visible="true" version="2" changeset="29169352" timestamp="2015-03-01T02:55:39Z" user="mbiker" uid="431056" lat="49.3340425" lon="-122.9365581"/>
+ <node id="485344662" visible="true" version="3" changeset="31536995" timestamp="2015-05-28T17:03:13Z" user="pathym" uid="689176" lat="49.3343135" lon="-122.9365573"/>
+ <node id="3377385635" visible="true" version="1" changeset="29169705" timestamp="2015-03-01T04:07:48Z" user="mbiker" uid="431056" lat="49.3332037" lon="-122.9368635"/>
+ <node id="3377385636" visible="true" version="1" changeset="29169705" timestamp="2015-03-01T04:07:48Z" user="mbiker" uid="431056" lat="49.3332070" lon="-122.9371090"/>
+ <node id="3377385637" visible="true" version="1" changeset="29169705" timestamp="2015-03-01T04:07:48Z" user="mbiker" uid="431056" lat="49.3333709" lon="-122.9364338"/>
+ <node id="3377385638" visible="true" version="1" changeset="29169705" timestamp="2015-03-01T04:07:48Z" user="mbiker" uid="431056" lat="49.3338356" lon="-122.9360811"/>
+ <node id="691148663" visible="true" version="3" changeset="29169705" timestamp="2015-03-01T04:07:52Z" user="mbiker" uid="431056" lat="49.3335869" lon="-122.9366566">
+  <tag k="name" v="Quarry Rock Lookout"/>
+  <tag k="tourism" v="viewpoint"/>
+  <tag k="wheelchair" v="no"/>
+ </node>
+ <node id="716379107" visible="true" version="3" changeset="31536995" timestamp="2015-05-28T17:03:14Z" user="pathym" uid="689176" lat="49.3341304" lon="-122.9365314"/>
+ <node id="3712939489" visible="true" version="1" changeset="33560860" timestamp="2015-08-25T02:45:27Z" user="Dalesy" uid="3026975" lat="49.3325076" lon="-122.9385357"/>
+ <node id="3712939506" visible="true" version="1" changeset="33560860" timestamp="2015-08-25T02:45:27Z" user="Dalesy" uid="3026975" lat="49.3345191" lon="-122.9371507"/>
+ <node id="3712941164" visible="true" version="1" changeset="33560925" timestamp="2015-08-25T02:55:34Z" user="Dalesy" uid="3026975" lat="49.3327623" lon="-122.9384251"/>
+ <node id="3712941165" visible="true" version="1" changeset="33560925" timestamp="2015-08-25T02:55:34Z" user="Dalesy" uid="3026975" lat="49.3330978" lon="-122.9389669"/>
+ <node id="3712941166" visible="true" version="1" changeset="33560925" timestamp="2015-08-25T02:55:34Z" user="Dalesy" uid="3026975" lat="49.3333600" lon="-122.9386397"/>
+ <node id="3712941167" visible="true" version="1" changeset="33560925" timestamp="2015-08-25T02:55:34Z" user="Dalesy" uid="3026975" lat="49.3335942" lon="-122.9386880"/>
+ <node id="3712941168" visible="true" version="1" changeset="33560925" timestamp="2015-08-25T02:55:34Z" user="Dalesy" uid="3026975" lat="49.3338285" lon="-122.9384734"/>
+ <node id="3712941169" visible="true" version="1" changeset="33560925" timestamp="2015-08-25T02:55:34Z" user="Dalesy" uid="3026975" lat="49.3339054" lon="-122.9382213"/>
+ <node id="3712941170" visible="true" version="1" changeset="33560925" timestamp="2015-08-25T02:55:34Z" user="Dalesy" uid="3026975" lat="49.3338494" lon="-122.9381569"/>
+ <node id="3712941171" visible="true" version="1" changeset="33560925" timestamp="2015-08-25T02:55:34Z" user="Dalesy" uid="3026975" lat="49.3339508" lon="-122.9380818"/>
+ <node id="3712941172" visible="true" version="1" changeset="33560925" timestamp="2015-08-25T02:55:34Z" user="Dalesy" uid="3026975" lat="49.3340802" lon="-122.9378994"/>
+ <node id="3712941173" visible="true" version="1" changeset="33560925" timestamp="2015-08-25T02:55:34Z" user="Dalesy" uid="3026975" lat="49.3341081" lon="-122.9376902"/>
+ <node id="3712941174" visible="true" version="1" changeset="33560925" timestamp="2015-08-25T02:55:34Z" user="Dalesy" uid="3026975" lat="49.3342130" lon="-122.9373201"/>
+ <node id="3712941175" visible="true" version="1" changeset="33560925" timestamp="2015-08-25T02:55:34Z" user="Dalesy" uid="3026975" lat="49.3342479" lon="-122.9371269"/>
+ <node id="4001582336" visible="true" version="1" changeset="37157691" timestamp="2016-02-11T22:46:52Z" user="Marcott" uid="173927" lat="49.3324316" lon="-122.9386544"/>
+ <way id="54928404" visible="true" version="1" changeset="4379135" timestamp="2010-04-10T03:58:44Z" user="Marcott" uid="173927">
+  <nd ref="691148635"/>
+  <nd ref="691148636"/>
+  <nd ref="691148637"/>
+  <nd ref="691148638"/>
+  <nd ref="691148639"/>
+  <nd ref="691148640"/>
+  <nd ref="691148641"/>
+  <nd ref="691148642"/>
+  <nd ref="691148643"/>
+  <nd ref="691148644"/>
+  <nd ref="691148645"/>
+  <nd ref="691148646"/>
+  <nd ref="691148647"/>
+  <nd ref="691148648"/>
+  <nd ref="691148649"/>
+  <nd ref="691148650"/>
+  <nd ref="691148651"/>
+  <nd ref="691148652"/>
+  <nd ref="691148653"/>
+  <nd ref="691148635"/>
+ </way>
+ <way id="57767301" visible="true" version="3" changeset="8602154" timestamp="2011-07-01T19:18:20Z" user="WBSKI" uid="14351">
+  <nd ref="716379094"/>
+  <nd ref="716379097"/>
+  <nd ref="716379101"/>
+  <nd ref="716379104"/>
+  <nd ref="716379107"/>
+  <nd ref="485344662"/>
+  <tag k="highway" v="path"/>
+  <tag k="sac_scale" v="hiking"/>
+  <tag k="surface" v="dirt"/>
+ </way>
+ <way id="330741438" visible="true" version="1" changeset="29169705" timestamp="2015-03-01T04:07:48Z" user="mbiker" uid="431056">
+  <nd ref="3377385636"/>
+  <nd ref="3377385635"/>
+  <nd ref="3377385637"/>
+  <nd ref="3377385638"/>
+  <tag k="natural" v="cliff"/>
+ </way>
+ <way id="367362308" visible="true" version="2" changeset="39672314" timestamp="2016-05-30T18:44:50Z" user="keithonearth" uid="154287">
+  <nd ref="4001582336"/>
+  <nd ref="3712939489"/>
+  <nd ref="3712941164"/>
+  <nd ref="3712941165"/>
+  <nd ref="3712941166"/>
+  <nd ref="3712941167"/>
+  <nd ref="3712941168"/>
+  <nd ref="3712941169"/>
+  <nd ref="3712941170"/>
+  <nd ref="3712941171"/>
+  <nd ref="3712941172"/>
+  <nd ref="3712941173"/>
+  <nd ref="3712941174"/>
+  <nd ref="3712941175"/>
+  <nd ref="3712939506"/>
+  <tag k="access" v="private"/>
+  <tag k="highway" v="path"/>
+  <tag k="name" v="Quarry Rock Lower Access"/>
+ </way>
+ <relation id="549971" visible="true" version="2" changeset="4379439" timestamp="2010-04-10T05:58:16Z" user="Marcott" uid="173927">
+  <member type="way" ref="54928207" role="outer"/>
+  <member type="way" ref="54928404" role="inner"/>
+  <tag k="type" v="multipolygon"/>
+ </relation>
+</osm>

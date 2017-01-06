@@ -1,17 +1,16 @@
 package vectorpipe.osm
 
-import vectorpipe.util._
-
-import geotrellis.util._
-import geotrellis.vector._
+import scala.collection.parallel.ParSeq
 
 import com.vividsolutions.jts.geom.LineString
 import com.vividsolutions.jts.operation.linemerge.LineMerger
+import geotrellis.util._
+import geotrellis.vector._
 import org.apache.spark.rdd._
+import scalaz.State
 import scalaz.syntax.applicative._
 import spire.std.any._
-
-import scala.collection.parallel.ParSeq
+import vectorpipe.util._
 
 // --- //
 
@@ -43,7 +42,7 @@ class ElementRDDMethods(val self: RDD[Element]) extends MethodExtensions[RDD[Ele
     forest.par.flatMap(t => flatTree(Seq.empty[ElementData], t))
   }
 
-  /* Assumptions:
+  /** Assumptions:
    *   - Multipolygons do not point to other relations.
    *   - No geometric relations exist in relation trees (CAUTION: likely false).
    */
@@ -257,7 +256,7 @@ class ElementRDDMethods(val self: RDD[Element]) extends MethodExtensions[RDD[Ele
           val (points, data) =
             w.nodes
               .flatMap(n => tree.searchWith(n, pred))
-              .map(n => ((n.lat, n.lon), n.data))
+              .map(n => ((n.lon, n.lat), n.data))
               .unzip
 
           /* Segregate by which are purely Lines, and which form Polygons */
@@ -284,7 +283,7 @@ class ElementRDDMethods(val self: RDD[Element]) extends MethodExtensions[RDD[Ele
       if (ws.isEmpty) {
         val n = ns.head
 
-        Some(Feature(Point(n.lat, n.lon), Tree.singleton(n.data)))
+        Some(Feature(Point(n.lon, n.lat), Tree.singleton(n.data)))
       } else {
         None
       }
@@ -318,17 +317,22 @@ class ElementRDDMethods(val self: RDD[Element]) extends MethodExtensions[RDD[Ele
         case _ => None
       })
       .groupByKey
-      .map({ case (r, gs) =>
+      .flatMap({ case (r, gs) =>
         /* Fuse Lines into Polygons */
         val ls: Vector[OSMLine] = gs.flatMap({
           case Right(l) => Some(l)
           case _ => None
         }).toVector
 
+        val (dumpedLineCount, fusedLines) =
+          fuseLines(spatialSort(ls.map(f => (f.geom.centroid.as[Point].get, f))).map(_._2)).run(0)
+
+        println(s"LINES DUMPED BY fuseLines: ${dumpedLineCount}")
+
         val ps: Vector[OSMPolygon] = gs.flatMap({
           case Left(p) => Some(p)
           case _ => None
-        }).toVector ++ fuseLines(spatialSort(ls.map(f => (f.geom.centroid.as[Point].get, f))).map(_._2))
+        }).toVector ++ fusedLines
 
         val outerIds: Set[Long] = r.members.partition(_.role == "outer")._1.map(_.ref).toSet
 
@@ -342,18 +346,20 @@ class ElementRDDMethods(val self: RDD[Element]) extends MethodExtensions[RDD[Ele
           )
         })
 
-        /* It is suggested by OSM that multipoly tag data should be stored in
-         *  the Relation, not its constituent parts. Hence we take `r.data`
-         *  as the root `ElementData` here.
-         *
-         *  However, "inner" Ways can have meaningful tags, such as a lake in
-         *  the middle of a forest.
-         *
-         *  Furthermore, winding order doesn't matter in OSM, but it does
-         *  in VectorTiles.
-         *  TODO: Make sure winding order is handled correctly.
-         */
-        Feature(MultiPolygon(fused), Tree(r.data, outers.map(_.data) ++ inners.map(_.data)))
+        if (fused.isEmpty) None else {
+          /* It is suggested by OSM that multipoly tag data should be stored in
+           * the Relation, not its constituent parts. Hence we take `r.data`
+           * as the root `ElementData` here.
+           *
+           * However, "inner" Ways can have meaningful tags, such as a lake in
+           * the middle of a forest.
+           *
+           * Furthermore, winding order doesn't matter in OSM, but it does
+           * in VectorTiles.
+           * TODO: Make sure winding order is handled correctly.
+           */
+          Some(Feature(MultiPolygon(fused), Tree(r.data, outers.map(_.data) ++ inners.map(_.data))))
+        }
       })
 
     /* Lines which were part of no Relation */
@@ -414,37 +420,47 @@ class ElementRDDMethods(val self: RDD[Element]) extends MethodExtensions[RDD[Ele
     }
   }
 
+  /* Code smell to massage the Applicative use below */
+  private type IntState[T] = State[Int, T]
+
   /**
    * ASSUMPTIONS:
-   *    - Every Line in the given Vector can be fused
+   *    - In the full dataset, every Line in the given Vector can be fused
+   *    - In a partial dataset, not all Lines are guaranteed to fuse. UNFUSED LINES ARE DUMPED.
    *    - The final result of all fusions will be a set of Polygons
    *
    *  Time complexity (raw): O(n^2)
    *
    *  Time complexity (sorted): O(n)
+   *
+   * Note: The [[State]] monad usage here is for counting Lines which couldn't
+   * be fused.
    */
   private def fuseLines(
     v: Vector[Feature[Line, Tree[ElementData]]]
-  ): Vector[Feature[Polygon, Tree[ElementData]]] = v match {
-    case Vector() => Vector.empty
-    case v if v.length == 1 => throw new IllegalArgumentException("Single unfusable Line remaining.")
+  ): State[Int, Vector[Feature[Polygon, Tree[ElementData]]]] = v match {
+    case Vector() => Vector.empty.pure[IntState]
+    case v if v.length == 1 => State.modify[Int](_ + 1).map(_ => Vector.empty)
     case v => {
-      val (f, d, rest) = fuseOne(v)
-
-      if (f.isClosed)
-        Feature(Polygon(f), Tree(d.head.root, d)) +: fuseLines(rest)
-      else
-        fuseLines(Feature(f, Tree(d.head.root, d)) +: rest)
+      fuseOne(v).flatMap({
+        case None => fuseLines(v.tail)
+        case Some((f, d, rest)) => {
+          if (f.isClosed)
+            fuseLines(rest).map(c => Feature(Polygon(f), Tree(d.head.root, d)) +: c)
+          else
+            fuseLines(Feature(f, Tree(d.head.root, d)) +: rest)
+        }
+      })
     }
   }
 
   /**
    * Fuse the head Line in the Vector with the first other Line possible.
-   *  This borrows [[fuseLines]]'s assumptions.
+   * This borrows [[fuseLines]]'s assumptions.
    */
   private def fuseOne(
     v: Vector[OSMLine]
-  ): (Line, Seq[Tree[ElementData]], Vector[OSMLine]) = {
+  ): State[Int, Option[(Line, Seq[Tree[ElementData]], Vector[OSMLine])]] = {
     val h = v.head
     val t = v.tail
 
@@ -460,12 +476,15 @@ class ElementRDDMethods(val self: RDD[Element]) extends MethodExtensions[RDD[Ele
 
         val (a, b) = t.splitAt(i)
 
+        /* Hand-hold the typechecker */
+        val res: Option[(Line, Seq[Tree[ElementData]], Vector[OSMLine])] =
+          Some((line, Seq(h.data, f.data), a ++ b.tail))
+
         /* Return early */
-        return (line, Seq(h.data, f.data), a ++ b.tail)
+        return res.pure[IntState]
       }
     }
 
-    /* As every Line _must_ fuse, this should never be reached */
-    ???
+    State.modify[Int](_ + 1).map(_ => None)
   }
 }

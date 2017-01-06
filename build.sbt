@@ -13,7 +13,9 @@ libraryDependencies ++= Seq(
 //  "com.github.julien-truffaut"  %% "monocle-core"          % "1.4.0-M1",
 //  "com.github.julien-truffaut"  %% "monocle-law"           % "1.4.0-M1" % "test",
 //  "com.github.julien-truffaut"  %% "monocle-macro"         % "1.4.0-M1",
-  "org.apache.spark"            %% "spark-core"            % "2.0.2" % "provided",
+  "io.dylemma"                  %% "xml-spac"              % "0.3-SNAPSHOT",  // Published locally
+  "org.apache.spark"            %% "spark-core"            % "2.1.0",  // TODO add "provided" later
+  "org.locationtech.geotrellis" %% "geotrellis-spark"      % "1.0.0",
   "org.locationtech.geotrellis" %% "geotrellis-util"       % "1.0.0",
   "org.locationtech.geotrellis" %% "geotrellis-vector"     % "1.0.0",
   "org.locationtech.geotrellis" %% "geotrellis-vectortile" % "1.0.0",

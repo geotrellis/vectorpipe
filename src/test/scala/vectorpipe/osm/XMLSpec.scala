@@ -23,6 +23,14 @@ class XMLSpec extends FunSpec with Matchers {
   }
 
   describe("XML Parsing") {
+    it("Little Diomede") {
+      parseOSM("data/diomede.osm")
+    }
+
+    it("India-Pakistan Border") {
+      parseOSM("data/india-pakistan.osm")
+    }
+
     it("8-shaped Multipolygon") {
       parseOSM("data/8shapedmultipolygon.osm")
     }
@@ -31,11 +39,23 @@ class XMLSpec extends FunSpec with Matchers {
       parseOSM("data/quarry-rock.osm")
     }
 
+    /*
+    it("Heidelberg Castle") {
+      parseOSM("data/heidelberger-schloss.osm")
+    }
+
+    it("Yufuin, Japan") {
+      parseOSM("data/yufuin.osm")
+    }
+
     it("Stanley Park") {
       parseOSM("data/stanley-park.osm")
     }
 
-    /*
+    it("Queen Elizabeth Park") {
+      parseOSM("data/queen-elizabeth-park.osm")
+    }
+
     it("North Van") {
       parseOSM("data/north-van.osm")
     }

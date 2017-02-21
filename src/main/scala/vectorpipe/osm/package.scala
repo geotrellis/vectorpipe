@@ -16,5 +16,6 @@ package object osm {
   type OSMMultiPoly = Feature[MultiPolygon, Tree[ElementData]]
 
   implicit class injectElementRDDMethods(rdd: RDD[Element]) extends ElementRDDMethods(rdd)
+  implicit class injectFeatureRDDMethods(rdd: RDD[OSMFeature]) extends FeatureRDDMethods(rdd)
 
 }

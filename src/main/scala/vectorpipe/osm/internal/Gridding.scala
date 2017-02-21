@@ -1,0 +1,74 @@
+package vectorpipe.osm.internal
+
+import geotrellis.raster.TileLayout
+import geotrellis.spark._
+import geotrellis.spark.tiling._
+import geotrellis.vector.Extent
+
+import scalaz.std.stream._
+import scalaz.syntax.applicative._
+
+// --- //
+
+/**
+  * Internal mechanics for gridding a collection of [[OSMFeature]].
+  */
+object Gridding {
+
+  /** Create the physical grid of [[SpatialKey]]s. */
+  def grid(ld: LayoutDefinition): Stream[SpatialKey] = {
+    val maxCols = ld.tileLayout.layoutCols
+    val maxRows = ld.tileLayout.layoutRows
+
+    (Stream.range(0, maxCols) |@| Stream.range(0, maxRows)) { SpatialKey(_, _) }
+  }
+
+  /**
+    * Expands the dimensions of a [[LayoutDefinition]] such that its
+    * [[TileLayout]] dimensions are powers of 2. The [[Extent]] is expanded to
+    * match this as well.
+    */
+  def inflate(ld: LayoutDefinition): LayoutDefinition = {
+
+    /* --- Inflate the TileLayout --- */
+
+    /* Note that this doesn't necessarily expand the Tile grid into a square,
+     * only to some rectangle whose side lengths are both perfect squares.
+     */
+    val tileLayout: TileLayout = TileLayout(
+      pow2Ceil(ld.layoutCols), pow2Ceil(ld.layoutRows),
+      ld.tileCols, ld.tileRows
+    )
+
+    /* --- Inflate the Extent --- */
+
+    /* How many cols and rows did the Layout increase by? */
+    val colDiff: Int = tileLayout.layoutCols - ld.layoutCols
+    val rowDiff: Int = tileLayout.layoutRows - ld.layoutRows
+
+    /* How many Extent-units should the Extent increase by? */
+    val dim: Extent = ld.mapTransform(SpatialKey(0, 0)) /* The dimensions of one grid tile */
+    val xDelta: Double = Math.abs(dim.xmax - dim.xmin)
+    val yDelta: Double = Math.abs(dim.ymax - dim.ymin)
+
+    val extent: Extent = Extent(
+      ld.extent.xmin, ld.extent.ymin - (rowDiff * yDelta),
+      ld.extent.xmax + (colDiff * xDelta), ld.extent.ymax
+    )
+
+    LayoutDefinition(extent, tileLayout)
+  }
+
+  /** The next power of two after the given value. Yields the value itself
+    * if it is a power of two.
+    */
+  /* Adapted from: https://graphics.stanford.edu/~seander/bithacks.html#RoundUpPowerOf2 */
+  def pow2Ceil(n: Int): Int = n match {
+    case n if isPow2(n) => n
+    case n => 1 << (1 + Math.floor(Math.log(n.toDouble) / Math.log(2)).toInt)
+  }
+
+  /** Is the given Int a power of two? */
+  def isPow2(n: Int): Boolean = (n & (n - 1)) == 0
+
+}

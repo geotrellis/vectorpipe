@@ -13,6 +13,7 @@ import scalaz.syntax.applicative._
 /** A [[LayoutDefinition]] whose grid dimensions are known to be powers of 2.
   *
   * Do not instantiate this class yourself. Use [[Gridding.inflate]] instead.
+  * Assumes the input to be sane - i.e. no zero-sized TileLayouts.
   */
 class Pow2Layout(val ld: LayoutDefinition) extends AnyVal {
   /** If possible, reduce this `Pow2Layout` to children who are also Pow2Layout. */

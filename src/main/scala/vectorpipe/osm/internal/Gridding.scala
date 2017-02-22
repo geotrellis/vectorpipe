@@ -10,87 +10,6 @@ import scalaz.syntax.applicative._
 
 // --- //
 
-/** A [[LayoutDefinition]] whose grid dimensions are known to be powers of 2.
-  *
-  * Do not instantiate this class yourself. Use [[Gridding.inflate]] instead.
-  * Assumes the input to be sane - i.e. no zero-sized TileLayouts.
-  */
-class Pow2Layout(val ld: LayoutDefinition) extends AnyVal {
-  /** If possible, reduce this `Pow2Layout` to children who are also Pow2Layout. */
-  def reduction: Seq[Pow2Layout] = (ld.layoutCols, ld.layoutRows) match {
-    case (1, 1) => Seq.empty[Pow2Layout] /* Cannot reduce further */
-    case (c, r) if c == r => squareReduction
-    case (c ,r) if c > r => horizontalReduction
-    case _ => verticalReduction
-  }
-
-  /** Split this Pow2Layout into four equal parts. */
-  private def squareReduction: Seq[Pow2Layout] = {
-    val tl = TileLayout(ld.layoutCols / 2, ld.layoutRows / 2, ld.tileCols, ld.tileRows)
-
-    /* The size of a new child Extent */
-    val xDelta: Double = (ld.extent.xmax - ld.extent.xmin) / 2
-    val yDelta: Double = (ld.extent.ymax - ld.extent.ymin) / 2
-
-    val topLeft = Extent(
-      ld.extent.xmin, ld.extent.ymin + yDelta,
-      ld.extent.xmax - xDelta, ld.extent.ymax
-    )
-
-    val topRight = Extent(
-      ld.extent.xmin + xDelta, ld.extent.ymin + yDelta,
-      ld.extent.xmax, ld.extent.ymax
-    )
-
-    val bottomLeft = Extent(
-      ld.extent.xmin, ld.extent.ymin,
-      ld.extent.xmax - xDelta, ld.extent.ymax - yDelta
-    )
-
-    val bottomRight = Extent(
-      ld.extent.xmin + xDelta, ld.extent.ymin,
-      ld.extent.xmax, ld.extent.ymax - yDelta
-    )
-
-    Seq(
-      new Pow2Layout(LayoutDefinition(topLeft, tl)),
-      new Pow2Layout(LayoutDefinition(topRight, tl)),
-      new Pow2Layout(LayoutDefinition(bottomLeft, tl)),
-      new Pow2Layout(LayoutDefinition(bottomRight, tl))
-    )
-  }
-
-  /** Cut this Layout into Left and Right child pieces.
-    * Child dimensions are still powers of two.
-    */
-  private def horizontalReduction: Seq[Pow2Layout] = {
-    val tl = TileLayout(ld.layoutCols / 2, ld.layoutRows, ld.tileCols, ld.tileRows)
-    val xDelta: Double = (ld.extent.xmax - ld.extent.xmin) / 2
-    val left = Extent(ld.extent.xmin, ld.extent.ymin, ld.extent.xmax - xDelta, ld.extent.ymax)
-    val right = Extent(ld.extent.xmin + xDelta, ld.extent.ymin, ld.extent.xmax, ld.extent.ymax)
-
-    Seq(
-      new Pow2Layout(LayoutDefinition(left, tl)),
-      new Pow2Layout(LayoutDefinition(right, tl))
-    )
-  }
-
-  /** Cut this Layout into Top and Bottom child pieces.
-    * Child dimensions are still powers of two.
-    */
-  private def verticalReduction: Seq[Pow2Layout] = {
-    val tl = TileLayout(ld.layoutCols, ld.layoutRows / 2, ld.tileCols, ld.tileRows)
-    val yDelta: Double = (ld.extent.ymax - ld.extent.ymin) / 2
-    val top = Extent(ld.extent.xmin, ld.extent.ymin + yDelta, ld.extent.xmax, ld.extent.ymax)
-    val bot = Extent(ld.extent.xmin, ld.extent.ymin, ld.extent.xmax, ld.extent.ymax - yDelta)
-
-    Seq(
-      new Pow2Layout(LayoutDefinition(top, tl)),
-      new Pow2Layout(LayoutDefinition(bot, tl))
-    )
-  }
-}
-
 /**
   * Internal mechanics for gridding a collection of [[OSMFeature]].
   */
@@ -111,21 +30,27 @@ object Gridding {
     */
   def inflate(ld: LayoutDefinition): Pow2Layout = {
 
-    /* --- Inflate the TileLayout --- */
+    /* --- Inflate the Tile Grid --- */
 
     /* Note that this doesn't necessarily expand the Tile grid into a square,
      * only to some rectangle whose side lengths are both perfect squares.
      */
-    val tileLayout: TileLayout = TileLayout(
-      pow2Ceil(ld.layoutCols), pow2Ceil(ld.layoutRows),
-      ld.tileCols, ld.tileRows
+
+    val inflatedCols: Int = pow2Ceil(ld.layoutCols)
+    val inflatedRows: Int = pow2Ceil(ld.layoutRows)
+
+    /* Example: If the inflated Layout is to be 16x16, its KeyBounds
+     * should be from (0,0) to (15,15).
+     */
+    val bounds: KeyBounds[SpatialKey] = KeyBounds(
+      SpatialKey(0, 0), SpatialKey(inflatedCols - 1, inflatedRows - 1)
     )
 
     /* --- Inflate the Extent --- */
 
     /* How many cols and rows did the Layout increase by? */
-    val colDiff: Int = tileLayout.layoutCols - ld.layoutCols
-    val rowDiff: Int = tileLayout.layoutRows - ld.layoutRows
+    val colDiff: Int = inflatedCols - ld.layoutCols
+    val rowDiff: Int = inflatedRows - ld.layoutRows
 
     /* How many Extent-units should the Extent increase by? */
     val dim: Extent = ld.mapTransform(SpatialKey(0, 0)) /* The dimensions of one grid tile */
@@ -137,7 +62,7 @@ object Gridding {
       ld.extent.xmax + (colDiff * xDelta), ld.extent.ymax
     )
 
-    new Pow2Layout(LayoutDefinition(extent, tileLayout))
+    Pow2Layout(bounds, extent)
   }
 
   /** The next power of two after the given value. Yields the value itself

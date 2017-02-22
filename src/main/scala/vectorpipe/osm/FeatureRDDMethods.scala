@@ -7,7 +7,7 @@ import geotrellis.vector._
 
 import org.apache.spark._
 import org.apache.spark.rdd._
-import vectorpipe.osm.internal.{ Gridding => G, Pow2Layout }
+import vectorpipe.osm.internal.Pow2Layout
 
 // --- //
 
@@ -28,7 +28,7 @@ class FeatureRDDMethods(val self: RDD[OSMFeature]) extends MethodExtensions[RDD[
      */
     val bounded: RDD[OSMFeature] = self.filter(f => f.geom.intersects(extent))
 
-    work(G.inflate(ld), self)
+    work(Pow2Layout.inflate(ld), self)
   }
 
   /** Divide-and-conquer over progressively smaller extents, capturing

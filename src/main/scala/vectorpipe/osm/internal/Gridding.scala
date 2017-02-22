@@ -1,12 +1,8 @@
 package vectorpipe.osm.internal
 
-import geotrellis.raster.TileLayout
 import geotrellis.spark._
 import geotrellis.spark.tiling._
 import geotrellis.vector.Extent
-
-import scalaz.std.stream._
-import scalaz.syntax.applicative._
 
 // --- //
 
@@ -14,14 +10,6 @@ import scalaz.syntax.applicative._
   * Internal mechanics for gridding a collection of [[OSMFeature]].
   */
 object Gridding {
-
-  /** Create the physical grid of [[SpatialKey]]s. */
-  def grid(ld: LayoutDefinition): Stream[SpatialKey] = {
-    val maxCols = ld.tileLayout.layoutCols
-    val maxRows = ld.tileLayout.layoutRows
-
-    (Stream.range(0, maxCols) |@| Stream.range(0, maxRows)) { SpatialKey(_, _) }
-  }
 
   /**
     * Expands the dimensions of a [[LayoutDefinition]] such that its

@@ -32,38 +32,36 @@ case class Pow2Layout(kb: KeyBounds[SpatialKey], extent: Extent) {
   /** Split this Pow2Layout into four equal parts. */
   private def squareReduction: Seq[Pow2Layout] = {
     /* The size of a new child Extent */
-    val ex_Δ: Double = (extent.xmax - extent.xmin) / 2
-    val ey_Δ: Double = (extent.ymax - extent.ymin) / 2
+    val Δx: Double = (extent.xmax - extent.xmin) / 2
+    val Δy: Double = (extent.ymax - extent.ymin) / 2
 
-    /* The size of a new child KeyBounds */
-    // TODO Only use one, because they should be equal?
-    val bx_Δ: Int = cols / 2
-    val by_Δ: Int = rows / 2
+    /* The size of a new child KeyBounds. Rows and cols assumed to be equal. */
+    val Δb: Int = cols / 2
 
     val topLeft = Pow2Layout(
-      KeyBounds(kb.minKey, SpatialKey(kb.maxKey.col - bx_Δ, kb.maxKey.row - by_Δ)),
-      Extent(extent.xmin, extent.ymin + ey_Δ, extent.xmax - ex_Δ, extent.ymax)
+      KeyBounds(kb.minKey, SpatialKey(kb.maxKey.col - Δb, kb.maxKey.row - Δb)),
+      Extent(extent.xmin, extent.ymin + Δy, extent.xmax - Δx, extent.ymax)
     )
 
     val topRight = Pow2Layout(
       KeyBounds(
-        SpatialKey(kb.minKey.col + bx_Δ, kb.minKey.row),
-        SpatialKey(kb.maxKey.col, kb.maxKey.row - by_Δ)
+        SpatialKey(kb.minKey.col + Δb, kb.minKey.row),
+        SpatialKey(kb.maxKey.col, kb.maxKey.row - Δb)
       ),
-      Extent(extent.xmin + ex_Δ, extent.ymin + ey_Δ, extent.xmax, extent.ymax)
+      Extent(extent.xmin + Δx, extent.ymin + Δy, extent.xmax, extent.ymax)
     )
 
     val bottomLeft = Pow2Layout(
       KeyBounds(
-        SpatialKey(kb.minKey.col, kb.minKey.row + by_Δ),
-        SpatialKey(kb.maxKey.col - bx_Δ, kb.maxKey.row)
+        SpatialKey(kb.minKey.col, kb.minKey.row + Δb),
+        SpatialKey(kb.maxKey.col - Δb, kb.maxKey.row)
       ),
-      Extent(extent.xmin, extent.ymin, extent.xmax - ex_Δ, extent.ymax - ey_Δ)
+      Extent(extent.xmin, extent.ymin, extent.xmax - Δx, extent.ymax - Δy)
     )
 
     val bottomRight = Pow2Layout(
-      KeyBounds(SpatialKey(kb.minKey.col + bx_Δ, kb.minKey.row + by_Δ), kb.maxKey),
-      Extent(extent.xmin + ex_Δ, extent.ymin, extent.xmax, extent.ymax - ey_Δ)
+      KeyBounds(SpatialKey(kb.minKey.col + Δb, kb.minKey.row + Δb), kb.maxKey),
+      Extent(extent.xmin + Δx, extent.ymin, extent.xmax, extent.ymax - Δy)
     )
 
     Seq(topLeft, topRight, bottomLeft, bottomRight)
@@ -74,17 +72,17 @@ case class Pow2Layout(kb: KeyBounds[SpatialKey], extent: Extent) {
     */
   private def horizontalReduction: Seq[Pow2Layout] = {
     /* Measures of horizontal change */
-    val ex_Δ: Double = (extent.xmax - extent.xmin) / 2
-    val bx_Δ: Int = ((kb.maxKey.col - kb.minKey.col) / 2) + 1
+    val Δx: Double = (extent.xmax - extent.xmin) / 2
+    val Δb: Int = cols / 2
 
     val left = Pow2Layout(
-      KeyBounds(kb.minKey, SpatialKey(kb.minKey.col + bx_Δ, kb.maxKey.row)),
-      Extent(extent.xmin, extent.ymin, extent.xmax - ex_Δ, extent.ymax)
+      KeyBounds(kb.minKey, SpatialKey(kb.maxKey.col - Δb, kb.maxKey.row)),
+      Extent(extent.xmin, extent.ymin, extent.xmax - Δx, extent.ymax)
     )
 
     val right = Pow2Layout(
-      KeyBounds(SpatialKey(kb.minKey.col + bx_Δ, kb.minKey.row), kb.maxKey),
-      Extent(extent.xmin + ex_Δ, extent.ymin, extent.xmax, extent.ymax)
+      KeyBounds(SpatialKey(kb.minKey.col + Δb, kb.minKey.row), kb.maxKey),
+      Extent(extent.xmin + Δx, extent.ymin, extent.xmax, extent.ymax)
     )
 
     Seq(left, right)
@@ -95,17 +93,17 @@ case class Pow2Layout(kb: KeyBounds[SpatialKey], extent: Extent) {
     */
   private def verticalReduction: Seq[Pow2Layout] = {
     /* Measures of vertical change */
-    val ey_Δ: Double = (extent.ymax - extent.ymin) / 2
-    val by_Δ: Int = ((kb.maxKey.row - kb.minKey.row) / 2) + 1
+    val Δy: Double = (extent.ymax - extent.ymin) / 2
+    val Δb: Int = ((kb.maxKey.row - kb.minKey.row) / 2) + 1
 
     val top = Pow2Layout(
-      KeyBounds(kb.minKey, SpatialKey(kb.maxKey.col, kb.minKey.row + by_Δ)),
-      Extent(extent.xmin, extent.ymin + ey_Δ, extent.xmax, extent.ymax)
+      KeyBounds(kb.minKey, SpatialKey(kb.maxKey.col, kb.maxKey.row - Δb)),
+      Extent(extent.xmin, extent.ymin + Δy, extent.xmax, extent.ymax)
     )
 
     val bot = Pow2Layout(
-      KeyBounds(SpatialKey(kb.minKey.col, kb.minKey.row + by_Δ), kb.maxKey),
-      Extent(extent.xmin, extent.ymin, extent.xmax, extent.ymax - ey_Δ)
+      KeyBounds(SpatialKey(kb.minKey.col, kb.minKey.row + Δb), kb.maxKey),
+      Extent(extent.xmin, extent.ymin, extent.xmax, extent.ymax - Δy)
     )
 
     Seq(top, bot)

@@ -33,7 +33,8 @@ class FeatureRDDMethods(val self: RDD[OSMFeature]) extends MethodExtensions[RDD[
 
     bounded.map({ f =>
       val env: Extent = f.geom.envelope
-      val bounds: GridBounds = mt(env)
+      val bounds: GridBounds = mt(env) /* Keys overlapping the Geom envelope */
+      val gridEx: Extent = mt(bounds) /* Extent fitted to the key grid */
       val set: MSet[SpatialKey] = MSet.empty
 
       /* Undefined behaviour if used concurrently */
@@ -42,7 +43,7 @@ class FeatureRDDMethods(val self: RDD[OSMFeature]) extends MethodExtensions[RDD[
       }
 
       /* Extend envelope to snap to the tile grid */
-      val re = RasterExtent(ld.createAlignedGridExtent(env).extent, bounds.width, bounds.height)
+      val re = RasterExtent(gridEx, bounds.width, bounds.height)
 
       Rasterizer.foreachCellByGeometry(f.geom, re)(g)
 

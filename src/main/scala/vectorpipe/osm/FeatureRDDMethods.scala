@@ -9,7 +9,6 @@ import geotrellis.vector._
 
 import org.apache.spark._
 import org.apache.spark.rdd._
-import vectorpipe.osm.internal.Pow2Layout
 
 import scala.collection.mutable.{ Set => MSet }
 
@@ -52,22 +51,4 @@ class FeatureRDDMethods(val self: RDD[OSMFeature]) extends MethodExtensions[RDD[
       .groupByKey()
   }
 
-  /** Divide-and-conquer over progressively smaller extents, capturing
-    * Features as it goes in `O(nlogn)`.
-    */
-  private def work(
-    p2l: Pow2Layout,
-    rdd: RDD[OSMFeature]
-  )(implicit sc: SparkContext): RDD[(SpatialKey, Array[OSMFeature])] = p2l match {
-    case p if p.isUnit => sc.parallelize(
-      seq = Seq((p.kb.minKey, rdd.collect())),
-      numSlices = 1  /* One partition per SpatialKey */ // TODO Bad idea?
-    )
-    case _ => p2l.reduction.map({ p =>
-      /* An extent for this subsection of the given Layout */
-      val extent: Polygon = p.extent.toPolygon()
-
-      work(p, rdd.filter(f => f.geom.intersects(extent)))
-    }).reduce(_ ++ _)
-  }
 }

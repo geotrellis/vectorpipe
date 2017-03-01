@@ -1,5 +1,5 @@
-VectorTiles for All
-===================
+A World's Worth of VectorTiles
+==============================
 
 Azavea is pursuing the development of a free-and-open-source pipeline for
 mass conversion of [OpenStreetMap](https://www.openstreetmap.org/) data to
@@ -14,33 +14,52 @@ roadbumps we've hit along the way.
 The Six-fold Path
 -----------------
 
-OSM Planet data is freely available as a single, ~50gb XML file. In converting this
-to a usable set of VectorTiles, we indentified six key steps:
+OSM Planet data is freely available in two formats: XML and
+[Protobuf](https://en.wikipedia.org/wiki/Protocol_Buffers). Many 3rd-party
+sites offer subsets of this data, locked to specific areas (countries /
+cities), but we have our sights set on the entire block. The sizes of the
+files might at first seem prohibitive: 55gb for XML, and 34gb for Protobuf.
+Furthermore, we'd want to parse the dataset in parallel with [Apache
+Spark](https://spark.apache.org/) for easy marshalling into GeoTrellis
+types. After an [initial foray](https://github.com/fosskers/axe) into
+splitting the XML data for subsequent parallel parsing, we abandoned this
+approach for another that favours [ORC files](https://orc.apache.org/),
+which are designed to be read in parallel from the start.
 
-1. [Fetch and preprocess the XML onto HDFS/S3](https://github.com/geotrellis/vectorpipe/issues/1)
-  - Potentially splitting the XML into tens-of-thousands of smaller parts, to leverage
-    Spark more effectively later
-2. [Parse the XML into an `RDD[Element]`](https://github.com/geotrellis/vectorpipe/issues/2)
-  - *Streaming* parsing to avoid blowing the JVM heap
+In converting the source data into a usable set of VectorTiles, we
+indentified six key steps:
+
+1. [Convert the OSM Protobuf data into an ORC file](https://github.com/geotrellis/vectorpipe/issues/7)
+   - A tool already exists for this, and we are collaborating with the author
+   to improve it.
+2. [Parse an RDD[Element] from the ORC](https://github.com/geotrellis/vectorpipe/issues/8)
+   - Critically, an ORC file can be queried in parallel via Spark SQL, the
+   results of which are not hard to marshal to Scala classes.
 3. [Convert the `Element`s to GeoTrellis `Feature`s](https://github.com/geotrellis/vectorpipe/issues/3)
-  - Lots of "`RDD` algebra", as I've begun calling it
+   - Lots of "`RDD` algebra", as I've begun calling it
 4. [Cut the `Feature`s into a grid](https://github.com/geotrellis/vectorpipe/issues/4)
+   - [In progress.](https://github.com/geotrellis/vectorpipe/pull/10)
 5. [Convert the grid of `Feature`s to that of `VectorTile`s](https://github.com/geotrellis/vectorpipe/issues/5)
 6. [Output the VectorTiles](https://github.com/locationtech/geotrellis/issues/1662)
 
-Code from steps 2 and 3 is being tested, and step 6 was already possible
-with our [VectorTile codec
+Luckily Step 1 was "done for us". Code from step 3 is being tested, and step
+6 was already possible with our [VectorTile codec
 implementation](https://geotrellis.github.io/scaladocs/latest/#geotrellis.vectortile.package).
-Steps 1, 4, and 5 remain untouched at the moment.
+Step 4 is in progress as this post is being written, while 2 and 5 are pending.
 
-In terms of the actual pipeline code, assuming Step 1 to have been
-performed, the rest is as simple as:
+In terms of the actual pipeline code, assuming an ORC file to have been
+produced via Step 1, the rest is envisioned simply as:
 
 ```scala
+import org.apache.spark.sql._
+import org.apache.spark.sql.hive._
 import vectorpipe.osm._
 
 /* Visible in any application using Spark */
 implicit val sc: SparkContext = ...
+
+/* For reading the ORC file via Spark SQL */
+implicit val hc: HiveContext = ...
 
 /* How should a `SpatialKey` map to a filepath on S3? */
 val s3PathFromKey: SpatialKey => String = SaveToS3.spatialKeyToPath(
@@ -48,12 +67,12 @@ val s3PathFromKey: SpatialKey => String = SaveToS3.spatialKeyToPath(
   "s3://some-bucket/catalog/{name}/{z}/{x}/{y}.mvt"
 )
 
-/* List of files containing OSM XML */
-val files: Seq[String] = ...
+/* Filepath to the ORC file */
+val orc: String = ...
 
 /* The work */
-sc.parallelize(files, numSlices = files.length)                   // RDD[String]
-  .map(f => Element.parseFile(f))                                 // RDD[Element]
+Orc.readFrom(orc)                                                 // RDD[Row]
+  .map(r => Element.parseFile(r))                                 // RDD[Element]
   .toFeatures                                                     // RDD[Feature]
   .toGrid                                                         // RDD[(SpatialKey, Seq[Feature])]
   .mapWithKey({ case (k, fs) => VectorTile.fromFeatures(k, fs) }) // RDD[(SpatialKey, VectorTile)]
@@ -66,11 +85,12 @@ earth, all for only a few dollars worth of AWS time.
 
 Now, let's delve a bit deeper.
 
-OpenStreetMap XML
------------------
+OpenStreetMap Data
+------------------
 
 This section acts as a primer and can be skipped if you know how OSM
-categorises their data.
+categorises their data. We'll be referencing the XML form of the data here
+for demonstration purposes only.
 
 OpenStreetMap has three primatives, collectively known as Elements. All
 Elements have common attributes, and can contain further metadata in
@@ -118,90 +138,40 @@ Visual examples:
 </relation>
 ```
 
-Parsing XML
------------
+Reading Data from ORC
+---------------------
 
-We opted to write our own parser for OSM XML because streaming parsing was a
-priority, and we wanted control over the output types to better match Step 3
-code. We settled on the [xml-spac](https://github.com/dylemma/xml-spac)
-library for XML parsing, as it:
-
-- streams!
-- uses the Applicative combinator style, a la `scala-parser-combinators` and
-its inspiration [parsec](https://hackage.haskell.org/package/parsec)
-
-The surface area of the Scala dependency management world is quite large. We
-have multiple build tools with their own ecosystems (try
-[coursier](https://github.com/alexarchambault/coursier) if you use sbt) but
-none help with actual package *discovery*. `xml-spac`'s author asked me how
-I found it, to which the answer was "Google".
-[Scaladex](https://index.scala-lang.org/) is a decent attempt at addressing
-this, but isn't always up to date.
-
-Writing composable parsers with `xml-spac` is easy, thanks to combinator
-style:
+By [adding a
+dependency](https://github.com/fosskers/playground/blob/master/scala/orc/build.sbt#L9),
+Spark code gains the ability to query ORC files via SparkSQL. This discovery
+was a big relief, as it presents itself as an elegant solution to a problem
+we were approaching with custom code. Reading and marshalling to Scala
+classes is as easy as:
 
 ```scala
-implicit val elementMeta: Parser[Any, ElementMeta] = ... // too long for this example
+/* The type to marshal to */
+case class Node(id: Long, tags: Map[String, String], lat: BigDecimal, lon: BigDecimal)
 
-/* <tag k='access' v='permissive' /> */
-implicit val tag: Parser[Any, (String, String)] = (
-  Parser.forMandatoryAttribute("k") ~ Parser.forMandatoryAttribute("v")
-).as({ case (k,v) => (k,v) }) // Hand-holding the typesystem.
+implicit val hc: HiveContext = ...
 
-implicit val elementData: Parser[Any, ElementData] = (
-  elementMeta ~ Splitter(* \ "tag").asListOf[(String, String)].map(_.toMap)
-).as(ElementData)
+/* A lazy reader */
+val data = hc.read.format("orc").load("VA.orc")
 
-/* <node lat='49.5135613' lon='6.0095049' ... > */
-implicit val node: Parser[Any, Node] = (
-  Parser.forMandatoryAttribute("lat").map(_.toDouble) ~
-    Parser.forMandatoryAttribute("lon").map(_.toDouble) ~
-    elementData
-).as(Node)
-
-// ... more parsers ...
-
-/** The master parser.
-  *
-  * ===Usage===
-  * {{{
-  * val xml: InputStream = new FileInputStream("somefile.osm")
-  *
-  * val res: Try[(List[Node], List[Way], List[Relation])] = Element.elements.parse(xml)
-  * }}}
-  */
-val elements: Parser[Any, (List[Node], List[Way], List[Relation])] = (
-  Splitter("osm" \ "node").asListOf[Node] ~
-    Splitter("osm" \ "way").asListOf[Way] ~
-    Splitter("osm" \ "relation").asListOf[Relation]
-).as({ case (ns, ws, rs) => (ns, ws, rs) })
+val nodes: RDD[Node] =
+  data
+    .select("id", "tags", "lat", "lon")
+    .where("type = 'node'")
+    .as[Node]
+    .rdd
 ```
 
-Where the essential pattern is:
 
-1. Tell `xml-spac` what fields you want
-2. Give it a way to construct an object after parsing some fields (the `.as(Foo)`)
+Here is a [fuller
+example](https://github.com/fosskers/playground/blob/master/scala/orc/src/main/scala/playground/Orc.scala).
 
-One could imagine the SPC variant to look like:
-
-```scala
-implicit val node: Parser[Node] = Node <~ attr "lat" ~ attr "lon" ~ elementData
-```
-
-or the `parsec`:
-
-```haskell
-node :: Parser Node
-node = Node <$> attr "lat" <*> attr "lon" <*> elementData
-```
-
-Yes, the `xml-spac` version is a bit verbose, but it does the job.
-
-Here's a full `xml-spac` example from [my code
-playground](https://github.com/fosskers/playground/blob/master/scala/xml-spac/src/main/scala/playground/XML.scala).
-
-So by Step 2, we've parsed all our XML into usable Scala objects. Now what?
+There is much more work to be done in this area, but this is a good start.
+Once employed, it gives us a full `RDD[Element]` from ORC data, which we can
+convert to GeoTrellis types for further processing.
 
 Conversion to GeoTrellis `Feature`s
 -----------------------------------
@@ -211,7 +181,7 @@ Conversion to GeoTrellis `Feature`s
 Here be dragons, and Relations birthed them hence. Recall that:
 
 1. Each Relation has a `type` tag, which can be set to anything
-2. Relation store metadata relavent to the entire structure
+2. Relations store metadata relevant to the entire structure
 3. Relations can refer to other Relations, forming Relation Graphs
 
 (1) means that we (the GeoTrellis team) have to draw a line in the sand for
@@ -237,8 +207,9 @@ itself pointed to by a higher Relation? Now we have Relation Graphs to deal
 with. After consulting with OSM contributors in [their
 IRC](http://irc.openstreetmap.org/), the concensus is that while these
 Relations *should* form Tree structures, there's no guarantee that they will
-because of the permissive way their XML works (i.e. Relations can refer to
-anything). There's also no guarantee that the Graphs found won't be cyclic.
+because of the permissive way their data-type relationships are defined
+(i.e. Relations can refer to anything). There's also no guarantee that the
+Graphs found won't be cyclic.
 
 Our answer is to apply Graph theory and force a Tree structure, essentially
 declaring Relation Graphs to be illegal. We ported an [established `Graph`
@@ -287,11 +258,11 @@ This is due to how OpenStreetMap's "Export" utility works. The rough algorithm i
 2. Find all Ways which reference those Nodes
   - If not all Nodes referenced by a Way in this bbox are present, grab them
   anyway (non-recursively, this won't go out and find yet more Ways based on
-  the new Nodes)
+  the new Nodes).
 3. Find all Relations which reference those Nodes and Ways
   - Unlike Ways, even if a Relation refers to other Elements outside the
-  bbox, *don't* fetch them. This prevents of flood of long Ways outside the
-  bbox   from being added by mistake, producing large XML
+  bbox, *don't* fetch them. This prevents a flood of long Ways outside the
+  bbox   from being added by mistake, producing large XML.
 
 So the full forest Polygon we see here is because of rule (2). What happens
 if we grab the XML for a smaller bounding box?
@@ -308,21 +279,11 @@ together, but can't be due to the caveat in (3) above. This was a source of
 strange Exceptions for a while. For now we abandon such Ways, knowing that
 they *would* be properly fused if using the full data set.
 
-Protobuf?
----------
-
-The entire OSM Planet dataset as XML is around 50gb, while the same as
-Protobuf data is around 30gb. The XML lends itself to being easily split
-into  ten-of-thousands of parts as desired, but if a similar method can be
-realized for Protobuf, then the overall parsing process to achieve
-`RDD[Element]` should be much faster.
-
-This approach would require more R&D up front, but may pay dividends.
-
 Current Work
 ------------
 
-I personally am moving into Step 1, so that code from Steps 2 and 3 can be
-battle tested on some more realistically sized data sets. We're excited for
-what this project will mean for both Azavea and the greater GIS community,
-so stay tuned.
+I personally am continuing work at Step 4, predicting a move to Step 5
+sometime next week. With the finalization of Step 2, we can at last begin
+producing VectorTiles to gauge performance and start some preliminary
+analysis. We're excited for what this project will mean for both Azavea and
+the greater GIS community, so stay tuned.

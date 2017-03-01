@@ -87,7 +87,7 @@ class ClippingSanity extends FunSpec with Matchers {
     }
   }
 
-  describe("Polygons") {
+  describe("Solid Polygons") {
     it("completely inside") {
       val p = Polygon(Line(
         Point(1,1), Point(1,2), Point(2,2), Point(2,1), Point(1,1)
@@ -144,4 +144,20 @@ class ClippingSanity extends FunSpec with Matchers {
       p.intersection(extent).as[Polygon] shouldBe Some(r)
     }
   }
+
+  describe("Holed Polygons") {
+    it("overlapping corner") {
+      val p = Polygon(
+        exterior = Line(Point(3,3), Point(3,7), Point(7,7), Point(7,3), Point(3,3)),
+        holes = Line(Point(4,4), Point(6,4), Point(6,6), Point(4,6), Point(4,4))
+      )
+
+      val r = Polygon(Line(
+        Point(3,3), Point(3,5), Point(4,5), Point(4,4), Point(5,4), Point(5,3), Point(3,3)
+      ))
+
+      p.intersection(extent).as[Polygon] shouldBe Some(r)
+    }
+  }
+
 }

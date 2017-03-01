@@ -16,12 +16,33 @@ import scala.collection.mutable.{ Set => MSet }
 
 class FeatureRDDMethods(val self: RDD[OSMFeature]) extends MethodExtensions[RDD[OSMFeature]] {
 
-  /** Given a particular zoom level, split a collection of [[OSMFeature]]s
+  /** Given a particular Layout (tile grid), split a collection of [[OSMFeature]]s
     * into a grid of them indexed by [[SpatialKey]].
     *
-    * @param ld The LayoutDefinition defining the area to gridify.
+    * ==Clipping Strategies==
+    *
+    * A clipping strategy defines how Geometries which stretch outside their
+    * associated bounding box should be reduced to better fit it. This is
+    * benefical, as it saves on storage for large, complex Geometries who
+    * only partially intersect some bounding box. The excess points will be
+    * cut out, but the "how" is a matter of weighing PROs and CONs in the
+    * context of the user's use-case. Several strategies come to mind:
+    *
+    *   - Clip directly on the bounding box
+    *   - Clip just outside the bounding box
+    *   - Keep the nearest Point outside the bounding box, wherever it is
+    *   - Custom clipping for each OSM Element type (building, etc)
+    *   - Don't clip
+    *
+    * These clipping strategies are defined in [[vectorpipe.geom.Clipping]],
+    * where you can find further explanation.
+    *
+    * @param ld   The LayoutDefinition defining the area to gridify.
+    * @param clip A function which represents a "clipping strategy".
     */
-  def toGrid(ld: LayoutDefinition)(implicit sc: SparkContext): RDD[(SpatialKey, Iterable[OSMFeature])] = {
+  def toGrid(ld: LayoutDefinition)
+            (clip: (SpatialKey, OSMFeature) => OSMFeature)
+            (implicit sc: SparkContext): RDD[(SpatialKey, Iterable[OSMFeature])] = {
 
     val mt: MapKeyTransform = ld.mapTransform
 
@@ -31,7 +52,8 @@ class FeatureRDDMethods(val self: RDD[OSMFeature]) extends MethodExtensions[RDD[
     /* Filter once to reduce later workload */
     val bounded: RDD[OSMFeature] = self.filter(f => f.geom.intersects(extent))
 
-    bounded.map({ f =>
+    /* Associate each Feature with a SpatialKey */
+    bounded.flatMap({ f =>
       val env: Extent = f.geom.envelope
       val bounds: GridBounds = mt(env) /* Keys overlapping the Geom envelope */
       val gridEx: Extent = mt(bounds) /* Extent fitted to the key grid */
@@ -47,9 +69,9 @@ class FeatureRDDMethods(val self: RDD[OSMFeature]) extends MethodExtensions[RDD[
 
       Rasterizer.foreachCellByGeometry(f.geom, re)(g)
 
-      (f, set)
-    }).flatMap({ case (f, set) => set.map(k => (k, f)) })
-      .groupByKey()
+      set.map(k => (k, f))
+    }).groupByKey()
+      .map({ case (k, iter) => (k, iter.map(g => clip(k, g))) })  /* Clip each geometry in some way */
   }
 
 }

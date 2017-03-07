@@ -21,7 +21,7 @@ import vectorpipe.util._
  *
  */
 
-class ElementRDDMethods(val self: RDD[Element]) extends MethodExtensions[RDD[Element]] {
+class ElementRDD(val self: RDD[Element]) extends MethodExtensions[RDD[Element]] {
   /** All [[Relation]] [[Element]]s, not doctored in any way. */
   def rawRelations: RDD[Relation] = self.flatMap({
     case e: Relation => Some(e)

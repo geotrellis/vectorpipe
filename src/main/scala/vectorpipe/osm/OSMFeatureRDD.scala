@@ -1,20 +1,19 @@
 package vectorpipe.osm
 
+import scala.collection.mutable.{Set => MSet}
+
 import geotrellis.raster._
 import geotrellis.raster.rasterize._
 import geotrellis.spark._
 import geotrellis.spark.tiling._
 import geotrellis.util._
 import geotrellis.vector._
-
 import org.apache.spark._
 import org.apache.spark.rdd._
 
-import scala.collection.mutable.{ Set => MSet }
-
 // --- //
 
-class FeatureRDDMethods(val self: RDD[OSMFeature]) extends MethodExtensions[RDD[OSMFeature]] {
+class OSMFeatureRDD(val self: RDD[OSMFeature]) extends MethodExtensions[RDD[OSMFeature]] {
 
   /** Given a particular Layout (tile grid), split a collection of [[OSMFeature]]s
     * into a grid of them indexed by [[SpatialKey]].
@@ -34,15 +33,20 @@ class FeatureRDDMethods(val self: RDD[OSMFeature]) extends MethodExtensions[RDD[
     *   - Custom clipping for each OSM Element type (building, etc)
     *   - Don't clip
     *
-    * These clipping strategies are defined in [[vectorpipe.geom.Clipping]],
+    * These clipping strategies are defined in [[vectorpipe.geom.Clip]],
     * where you can find further explanation.
     *
     * @param ld   The LayoutDefinition defining the area to gridify.
     * @param clip A function which represents a "clipping strategy".
+    * @return The pair `(OSMFeature, Extent)` reprents the clipped Feature
+    *         along with its __original__ bounding envelope. This envelope
+    *         is to be encoded into the Feature's metadata within a VT,
+    *         and could be used later to aid the reconstruction of the original,
+    *         unclipped Feature.
     */
   def toGrid(ld: LayoutDefinition)
-            (clip: (SpatialKey, OSMFeature) => OSMFeature)
-            (implicit sc: SparkContext): RDD[(SpatialKey, Iterable[OSMFeature])] = {
+            (clip: (Extent, OSMFeature) => OSMFeature)
+            (implicit sc: SparkContext): RDD[(SpatialKey, Iterable[(OSMFeature, Extent)])] = {
 
     val mt: MapKeyTransform = ld.mapTransform
 
@@ -71,7 +75,12 @@ class FeatureRDDMethods(val self: RDD[OSMFeature]) extends MethodExtensions[RDD[
 
       set.map(k => (k, f))
     }).groupByKey()
-      .map({ case (k, iter) => (k, iter.map(g => clip(k, g))) })  /* Clip each geometry in some way */
+      .map({ case (k, iter) =>
+        val kExt: Extent = mt(k)
+
+        /* Clip each geometry in some way */
+        (k, iter.map(g => (clip(kExt, g), g.envelope)))
+      })
   }
 
 }

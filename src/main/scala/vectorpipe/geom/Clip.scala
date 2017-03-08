@@ -14,7 +14,6 @@ import vectorpipe.osm._
 object Clip {
 
   private type ClipState[T] = State[(List[Point], List[Line]), T]
-//  private type ClapState[T] = State[(Option[Point], List[Point]), T]
 
   /** For any segment of a [[Line]] that extends outside the Extent,
     * clip directly on its nearest Point to the outside edge of that Extent.
@@ -23,48 +22,45 @@ object Clip {
     */
   def toNearestPoint(extent: Extent, line: Line): MultiLine = ???
 
-  // Clipping with manual recursion
+  /* Clipping with manual recursion */
   def toNearestPointR(extent: Extent, line: Line): MultiLine = {
     @tailrec def work(
       ps: Array[Point],
-      last: Option[Point],
+      last: Point,
       acc: List[Point],
       lines: List[Line]
-    ): (List[Line], Option[Point], List[Point]) = last match {
+    ): (List[Line], Point, List[Point]) = last match {
 
       /* We've reached the end of the Line */
       case _ if ps.isEmpty => (lines, last, acc)
-
-      /* The very first Point is within the Extent */
-      case None if extent.intersects(ps.head) => work(ps.tail, Some(ps.head), acc, lines)
 
       /* The current Point is within the Extent. Regardless of where
        * the previous Point was, we want to keep it:
        *   In  -> In : We're inside the Extent still.
        *   Out -> In : We were outside, now moving in.
        */
-      case Some(l) if extent.intersects(ps.head) => work(ps.tail, Some(ps.head), l :: acc, lines)
+      case l if extent.intersects(ps.head) => work(ps.tail, ps.head, l :: acc, lines)
 
       /* We've moved outside the Extent */
-      case Some(l) if extent.intersects(l) => work(ps.tail, Some(ps.head), l :: acc, lines)
+      case l if extent.intersects(l) => work(ps.tail, ps.head, l :: acc, lines)
 
       /* We've moved further away from the first Point outside the Extent */
-      case Some(l) if acc.nonEmpty => work(ps.tail, Some(ps.head), Nil, Line(l :: acc) :: lines)
+      case l if acc.nonEmpty => work(ps.tail, ps.head, Nil, Line(l :: acc) :: lines)
 
-      /* We're moving along a segment of external Points. The very first
-       * Point being outside the Extent will also trigger this.
-       */
-      case _ => work(ps.tail, Some(ps.head), acc, lines)
+      /* We're moving along a segment of external Points. */
+      case _ => work(ps.tail, ps.head, acc, lines)
 
     }
 
-    /* ASSUMPTION: `last` will never be `None` */
-    val allLines = work(line.points, None, Nil, Nil) match {
+    /* ASSUMPTION: This has length > 0 */
+    val points: Array[Point] = line.points
+
+    val allLines = work(points.tail, points.head, Nil, Nil) match {
       /* No need to check if `last` is actually in the Extent.
        * If `acc` is non-empty, we know them all to be `In` Points,
        * in which case `last` would be added regardless.
        */
-      case (lines, Some(last), acc) if acc.nonEmpty => Line(last :: acc) :: lines
+      case (lines, last, acc) if acc.nonEmpty => Line(last :: acc) :: lines
       case (lines, _, _) => lines
     }
 

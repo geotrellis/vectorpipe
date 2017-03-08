@@ -4,6 +4,7 @@ import scala.annotation.tailrec
 
 import geotrellis.vector._
 import scalaz._
+import scalaz.syntax.applicative._
 import vectorpipe.osm._
 
 // --- //
@@ -12,7 +13,7 @@ import vectorpipe.osm._
   * Remember that `identity` is also technically a valid Clipping Strat. */
 object Clip {
 
-  private type ClipState[T] = State[List[Line], T]
+  private type ClipState[T] = State[(List[Point], List[Line]), T]
 //  private type ClapState[T] = State[(Option[Point], List[Point]), T]
 
   /** For any segment of a [[Line]] that extends outside the Extent,
@@ -35,17 +36,17 @@ object Clip {
       case _ if ps.isEmpty => (lines, last, acc)
 
       /* The very first Point is within the Extent */
-      case None if extent.contains(ps.head) => work(ps.tail, Some(ps.head), acc, lines)
+      case None if extent.intersects(ps.head) => work(ps.tail, Some(ps.head), acc, lines)
 
       /* The current Point is within the Extent. Regardless of where
        * the previous Point was, we want to keep it:
        *   In  -> In : We're inside the Extent still.
        *   Out -> In : We were outside, now moving in.
        */
-      case Some(l) if extent.contains(ps.head) => work(ps.tail, Some(ps.head), l :: acc, lines)
+      case Some(l) if extent.intersects(ps.head) => work(ps.tail, Some(ps.head), l :: acc, lines)
 
       /* We've moved outside the Extent */
-      case Some(l) if extent.contains(l) => work(ps.tail, Some(ps.head), l :: acc, lines)
+      case Some(l) if extent.intersects(l) => work(ps.tail, Some(ps.head), l :: acc, lines)
 
       /* We've moved further away from the first Point outside the Extent */
       case Some(l) if acc.nonEmpty => work(ps.tail, Some(ps.head), Nil, Line(l :: acc) :: lines)
@@ -69,9 +70,6 @@ object Clip {
 
     MultiLine(allLines)
   }
-
-  // Clipping with foldRightM
-  def toNearestPointF(extent: Extent, line: Line): MultiLine = ???
 
   /** Naively clips Features to fit the given Extent. */
   def byExtent(extent: Extent, f: OSMFeature): OSMFeature = Feature(

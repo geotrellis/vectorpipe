@@ -88,7 +88,7 @@ object Clip {
       case (l,p) => State.get[Acc].flatMap({
         /* We've moved further away from the first Point outside the Extent */
         case (acc, lines) if acc.nonEmpty =>
-          State.modify[Acc]({case (acc, lines) => (Nil, Line(l :: acc) :: lines)}) >> p.pure[ClipState]
+          State.put[Acc]((Nil, Line(l :: acc) :: lines)) >> p.pure[ClipState]
 
         /* We're moving along a segment of external Points. The very first
          * Point being outside the Extent will also trigger this.

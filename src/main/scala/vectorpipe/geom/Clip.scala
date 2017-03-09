@@ -4,7 +4,8 @@ import scala.annotation.tailrec
 
 import geotrellis.vector._
 import scalaz._
-import scalaz.syntax.applicative._
+import scalaz.syntax.foldable._
+import scalaz.syntax.monad._
 import vectorpipe.osm._
 
 // --- //
@@ -13,7 +14,8 @@ import vectorpipe.osm._
   * Remember that `identity` is also technically a valid Clipping Strat. */
 object Clip {
 
-  private type ClipState[T] = State[(List[Point], List[Line]), T]
+  private type Acc = (List[Point], List[Line])
+  private type ClipState[T] = State[Acc, T]
 
   /** For any segment of a [[Line]] that extends outside the Extent,
     * clip directly on its nearest Point to the outside edge of that Extent.
@@ -34,15 +36,15 @@ object Clip {
       /* We've reached the end of the Line */
       case _ if ps.isEmpty => (lines, last, acc)
 
-      /* The current Point is within the Extent. Regardless of where
-       * the previous Point was, we want to keep it:
+      /* First condition: The current Point is within the Extent.
+       * Regardless of where the previous Point was, we want to keep it:
        *   In  -> In : We're inside the Extent still.
        *   Out -> In : We were outside, now moving in.
+       *
+       * Second condition: We've moved outside the Extent.
        */
-      case l if extent.intersects(ps.head) => work(ps.tail, ps.head, l :: acc, lines)
-
-      /* We've moved outside the Extent */
-      case l if extent.intersects(l) => work(ps.tail, ps.head, l :: acc, lines)
+      case l if extent.intersects(ps.head) || extent.intersects(l) =>
+        work(ps.tail, ps.head, l :: acc, lines)
 
       /* We've moved further away from the first Point outside the Extent */
       case l if acc.nonEmpty => work(ps.tail, ps.head, Nil, Line(l :: acc) :: lines)
@@ -62,6 +64,40 @@ object Clip {
        */
       case (lines, last, acc) if acc.nonEmpty => Line(last :: acc) :: lines
       case (lines, _, _) => lines
+    }
+
+    MultiLine(allLines)
+  }
+
+  /* Clipping with foldLeftM */
+  def toNearestPointF(extent: Extent, line: Line): MultiLine = {
+    val points: Array[Point] = line.points
+
+    val allLines = ImmutableArray.fromArray(points.tail).foldLeftM[ClipState, Point](points.head)({
+
+      /* First condition: The current Point is within the Extent.
+       * Regardless of where the previous Point was, we want to keep it:
+       *   In  -> In : We're inside the Extent still.
+       *   Out -> In : We were outside, now moving in.
+       *
+       * Second condition: We've moved outside the Extent.
+       */
+      case (l,p) if extent.intersects(p) || extent.intersects(l) =>
+        State.modify[Acc]({ case (acc, lines) => (l :: acc, lines) }) >> p.pure[ClipState]
+
+      case (l,p) => State.get[Acc].flatMap({
+        /* We've moved further away from the first Point outside the Extent */
+        case (acc, lines) if acc.nonEmpty =>
+          State.modify[Acc]({case (acc, lines) => (Nil, Line(l :: acc) :: lines)}) >> p.pure[ClipState]
+
+        /* We're moving along a segment of external Points. The very first
+         * Point being outside the Extent will also trigger this.
+         */
+        case _ => p.pure[ClipState]
+      })
+    }).run((Nil, Nil)) match {
+      case ((acc, lines), last) if acc.nonEmpty => Line(last :: acc) :: lines
+      case ((_, lines), _) => lines
     }
 
     MultiLine(allLines)

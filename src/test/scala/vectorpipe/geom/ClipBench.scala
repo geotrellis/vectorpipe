@@ -50,7 +50,7 @@ class ClipBench extends Benchmarks with ConsoleReport {
     }
   }
 
-  benchmark("toNearestPoint - long line") {
+  benchmark("toNearestPoint - medium line") {
     run("Tail Recursion") {
       new Benchmark {
         var extent: Extent = _
@@ -58,7 +58,7 @@ class ClipBench extends Benchmarks with ConsoleReport {
 
         override def setUp() = {
           extent = Extent(0, 0, 5, 5)
-          line = Line((-1000 to 1000).map(n => Point(n,n)))
+          line = Line((-100 to 100).map(n => Point(n,n)))
         }
 
         def run() = Clip.toNearestPointR(extent, line)
@@ -72,7 +72,7 @@ class ClipBench extends Benchmarks with ConsoleReport {
 
         override def setUp() = {
           extent = Extent(0, 0, 5, 5)
-          line = Line((-1000 to 1000).map(n => Point(n,n)))
+          line = Line((-100 to 100).map(n => Point(n,n)))
         }
 
         def run() = Clip.toNearestPointF(extent, line)
@@ -86,7 +86,7 @@ class ClipBench extends Benchmarks with ConsoleReport {
 
         override def setUp() = {
           extent = Extent(0, 0, 5, 5)
-          line = Line((-1000 to 1000).map(n => Point(n,n)))
+          line = Line((-100 to 100).map(n => Point(n,n)))
         }
 
         def run() = Clip.toNearestPointJ(extent, line)

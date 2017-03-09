@@ -3,6 +3,7 @@ package vectorpipe.geom
 import scala.annotation.tailrec
 
 import geotrellis.vector._
+import scala.collection.mutable.ListBuffer
 import scalaz._
 import scalaz.syntax.foldable._
 import scalaz.syntax.monad._
@@ -90,9 +91,7 @@ object Clip {
         case (acc, lines) if acc.nonEmpty =>
           State.put[Acc]((Nil, Line(l :: acc) :: lines)) >> p.pure[ClipState]
 
-        /* We're moving along a segment of external Points. The very first
-         * Point being outside the Extent will also trigger this.
-         */
+        /* We're moving along a segment of external Points. */
         case _ => p.pure[ClipState]
       })
     }).run((Nil, Nil)) match {
@@ -101,6 +100,49 @@ object Clip {
     }
 
     MultiLine(allLines)
+  }
+
+  /* Clipping the "Java way" */
+  def toNearestPointJ(extent: Extent, line: Line): MultiLine = {
+    val origPoints: Array[Point] = line.points
+    val points: Array[Point] = origPoints.tail
+
+    /* The mutability is real */
+    var acc: ListBuffer[Point] = new ListBuffer[Point]
+    var lines: ListBuffer[Line] = new ListBuffer[Line]
+    var i: Int = 0
+    var last: Point = origPoints.head
+
+    while (i < points.length) {
+      val p: Point = points(i)
+
+      if (extent.intersects(p) || extent.intersects(last)) {
+      /* First condition: The current Point is within the Extent.
+       * Regardless of where the previous Point was, we want to keep it:
+       *   In  -> In : We're inside the Extent still.
+       *   Out -> In : We were outside, now moving in.
+       *
+       * Second condition: We've moved outside the Extent.
+       */
+        acc.append(last)
+      } else if (acc.nonEmpty) {
+        /* We've moved further away from the first Point outside the Extent */
+        acc.append(last)
+        lines.append(Line(acc))
+        acc = new ListBuffer[Point]
+      }
+
+      /* Otherwise, we're moving along a segment of external Points. */
+      last = p
+      i += 1
+    }
+
+    if (acc.nonEmpty) {
+      acc.append(last)
+      lines.append(Line(acc))
+    }
+
+    MultiLine(lines)
   }
 
   /** Naively clips Features to fit the given Extent. */

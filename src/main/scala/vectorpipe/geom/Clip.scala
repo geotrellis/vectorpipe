@@ -145,6 +145,52 @@ object Clip {
     MultiLine(lines)
   }
 
+  /* Clipping the "Java way" */
+  def toNearestPointJRobust(extent: Extent, line: Line): MultiLine = {
+    val origPoints: Array[Point] = line.points
+    val points: Array[Point] = origPoints.tail
+
+    /* The mutability is real */
+    var acc: ListBuffer[Point] = new ListBuffer[Point]
+    var lines: ListBuffer[Line] = new ListBuffer[Line]
+    var i: Int = 0
+    var last: Point = origPoints.head
+
+    while (i < points.length) {
+      val p: Point = points(i)
+
+      if (extent.intersects(p) || extent.intersects(last)) {
+      /* First condition: The current Point is within the Extent.
+       * Regardless of where the previous Point was, we want to keep it:
+       *   In  -> In : We're inside the Extent still.
+       *   Out -> In : We were outside, now moving in.
+       *
+       * Second condition: We've moved outside the Extent.
+       */
+        acc.append(last)
+      } else if (acc.nonEmpty) {
+        /* We've moved further away from the first Point outside the Extent */
+        acc.append(last)
+        lines.append(Line(acc))
+        acc = new ListBuffer[Point]
+      } else if (extent.intersects(Line(last, p))) {
+        /* A line segment crosses the Extent, but has no Points within it */
+        acc.append(last)
+      }
+
+      /* Otherwise, we're moving along a segment of external Points. */
+      last = p
+      i += 1
+    }
+
+    if (acc.nonEmpty) {
+      acc.append(last)
+      lines.append(Line(acc))
+    }
+
+    MultiLine(lines)
+  }
+
   /** Naively clips Features to fit the given Extent. */
   def byExtent(extent: Extent, f: OSMFeature): OSMFeature = Feature(
     f.geom.intersection(extent.toPolygon).toGeometry().get,

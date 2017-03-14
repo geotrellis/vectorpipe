@@ -1,8 +1,8 @@
 package vectorpipe.osm
 
-import io.dylemma.spac._
-
 import java.time.ZonedDateTime
+
+import io.dylemma.spac._
 
 // --- //
 

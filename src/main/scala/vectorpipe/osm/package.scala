@@ -1,9 +1,8 @@
 package vectorpipe
 
-import vectorpipe.util.Tree
-
 import geotrellis.vector._
 import org.apache.spark.rdd._
+import vectorpipe.util.Tree
 
 // --- //
 
@@ -15,7 +14,7 @@ package object osm {
   type OSMPolygon = Feature[Polygon, Tree[ElementData]]
   type OSMMultiPoly = Feature[MultiPolygon, Tree[ElementData]]
 
-  implicit class injectElementRDDMethods(rdd: RDD[Element]) extends ElementRDDMethods(rdd)
-  implicit class injectFeatureRDDMethods(rdd: RDD[OSMFeature]) extends FeatureRDDMethods(rdd)
+  implicit class injectElementRDDMethods(rdd: RDD[Element]) extends ElementRDD(rdd)
+  implicit class injectFeatureRDDMethods(rdd: RDD[OSMFeature]) extends OSMFeatureRDD(rdd)
 
 }

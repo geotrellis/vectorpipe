@@ -6,7 +6,7 @@ import scaliper._
 // --- //
 
 class ClipBench extends Benchmarks with ConsoleReport {
-
+/*
   benchmark("toNearestPoint - Java Style") {
     run("ALL IN - two-point line") {
       new Benchmark {
@@ -78,4 +78,5 @@ class ClipBench extends Benchmarks with ConsoleReport {
       }
     }
   }
+ */
 }

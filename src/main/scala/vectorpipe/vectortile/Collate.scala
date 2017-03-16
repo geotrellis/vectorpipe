@@ -3,8 +3,9 @@ package vectorpipe.vectortile
 import scala.collection.mutable.{ListBuffer, Map => MMap}
 
 import geotrellis.vector._
-import geotrellis.vectortile.{StrictLayer, Value, VectorTile}
-import vectorpipe.osm.OSMFeature
+import geotrellis.vectortile._
+import vectorpipe.osm.{ ElementData, OSMFeature }
+import vectorpipe.util.Tree
 
 // --- //
 
@@ -23,27 +24,48 @@ import vectorpipe.osm.OSMFeature
   * process afterward would maintain our winding for all Polygons.
   */
 object Collate {
+  /** Can be used as the `partition` argument to `generically`. Splits
+    * Geometries by their subtype.
+    */
+  def byGeomType[G <: Geometry, D](f: Feature[G, D]): String = f.geom match {
+    case g: Point        => "points"
+    case g: MultiPoint   => "points"
+    case g: Line         => "lines"
+    case g: MultiLine    => "lines"
+    case g: Polygon      => "polygons"
+    case g: MultiPolygon => "polygons"
+  }
+
   /** Collate some collection of Features into a [[VectorTile]] while
     * dropping any metadata they might have had. The resulting Tile has three
     * [[Layer]]s, labelled `points`, `lines`, and `polygons`.
     *
     * @param tileExtent The CRS Extent of the Tile to be created.
     */
-  def withoutMetadata[G <: Geometry, D](tileExtent: Extent, geoms: Iterable[Feature[G, D]]): VectorTile = {
-    def partition(f: Feature[G, D]): String = f.geom match {
-      case g: Point        => "points"
-      case g: MultiPoint   => "points"
-      case g: Line         => "lines"
-      case g: MultiLine    => "lines"
-      case g: Polygon      => "polygons"
-      case g: MultiPolygon => "polygons"
+  def withoutMetadata[G <: Geometry, D](tileExtent: Extent, geoms: Iterable[Feature[G, D]]): VectorTile =
+    generically(tileExtent, geoms, byGeomType, { _: D => Map.empty })
+
+  /** Collate Features into "Analytic VectorTiles". These aim to hold their
+    * data in such a way that it is as close to an isomorphism with the original
+    * OSM data as possible. Their Geometries are organised into three Layers:
+    * "points", "lines", and "polygons".
+    */
+  def byAnalytics(tileExtent: Extent, geoms: Iterable[OSMFeature]): VectorTile = {
+    def metadata(d: Tree[ElementData]): Map[String, Value] = {
+      val data: ElementData = d.root
+
+      Map(
+        "id" -> VInt64(data.meta.id),
+        "user" -> VString(data.meta.user),
+        "userId" -> VString(data.meta.userId),
+        "changeSet" -> VInt64(data.meta.changeSet.toLong),
+        "version" -> VInt64(data.meta.version.toLong),
+        "timestamp" -> VString(data.meta.timestamp.toString),
+        "visible" -> VBool(data.meta.visible)
+      ) ++ data.tagMap.mapValues(VString) // make less naive
     }
 
-    generically(tileExtent, geoms, partition, { _: D => Map.empty })
-  }
-
-  def byAnalytics(tileExtent: Extent, geoms: Iterable[OSMFeature]): VectorTile = {
-    ???
+    generically(tileExtent, geoms, byGeomType, metadata)
   }
 
   /** Given some Feature and a way to determine which [[Layer]] it should

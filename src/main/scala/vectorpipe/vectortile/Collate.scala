@@ -21,9 +21,19 @@ import vectorpipe.util.Tree
   * Create a VectorTile from some collection of GeoTrellis Geometries:
   * {{{
   * val tileExtent: Extent = ... // Extent of _this_ Tile
-  * val geoms: Iterable[Feature[Geometry, D]] = ...  // Some collection of Geometries
+  * val geoms: Iterable[Feature[Geometry, Map[String, String]]] = ...  // Some collection of Geometries
   *
-  * val tile: VectorTile = Collate.withoutMetadata(tileExtent, geoms)
+  * val tile: VectorTile = Collate.withStringMetadata(tileExtent, geoms)
+  * }}}
+  * Create a VectorTile via some custom collation scheme:
+  * {{{
+  * def partition(f: Feature[G,D]): String = ...
+  * def metadata(d: D): Map[String, Value] = ...
+  *
+  * val tileExtent: Extent = ... // Extent of _this_ Tile
+  * val geoms: Iterable[Feature[G, D]] = ...  // Some collection of Geometries
+  *
+  * val tile: VectorTile = Collate.generically(tileExtent, geoms, partition, metadata)
   * }}}
   *
   * ==Writing your own Collator Function==
@@ -82,6 +92,9 @@ object Collate {
     case g: MultiPolygon => "polygons"
   }
 
+  /** Partition all Features into a single Layer. */
+  def intoOneLayer[G <: Geometry, D](f: Feature[G, D]): String = "features"
+
   /** Collate some collection of Features into a [[VectorTile]] while
     * dropping any metadata they might have had. The resulting Tile has three
     * [[Layer]]s, labelled `points`, `lines`, and `polygons`.
@@ -113,6 +126,9 @@ object Collate {
 
     generically(tileExtent, geoms, byGeomType, metadata)
   }
+
+  def withStringMetadata[G <: Geometry](tileExtent: Extent, geoms: Iterable[Feature[G, Map[String, String]]]): VectorTile =
+    generically(tileExtent, geoms, byGeomType, { d: Map[String,String] => d.mapValues(VString) })
 
   /** Given some Feature and a way to determine which [[Layer]] it should
     * belong to (by layer name), collate each Feature into the

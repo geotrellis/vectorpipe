@@ -171,8 +171,13 @@ object Collate {
         case g: MultiPolygon => mpolys.append(Feature(MultiPolygon(g.polygons.map(winding)), metadata(f.data)))
       }})
 
-      /* The values 4096 and 2 here are expected defaults */
-      StrictLayer(name, 4096, 2, tileExtent, points, mpoints, lines, mlines, polys, mpolys)
+      /* The values 4096 and 2 here are expected defaults. The `ListBuffer`s
+       * are converted to `Vector` to ensure that their contents are immutable.
+       */
+      StrictLayer(
+        name, 4096, 2, tileExtent, points.toVector, mpoints.toVector,
+        lines.toVector, mlines.toVector, polys.toVector, mpolys.toVector
+      )
     }
 
     /* Both `MMap` and `ListBuffer` are mutable */

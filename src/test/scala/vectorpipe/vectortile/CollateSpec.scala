@@ -20,9 +20,7 @@ class CollateSpec extends FunSpec with Matchers {
 
   describe("Collation Functions") {
     it("withoutMetadata") {
-      val tile = Collate.withoutMetadata(extent, geoms)
-
-      println(tile)
+      Collate.withoutMetadata(extent, geoms)
     }
   }
 }

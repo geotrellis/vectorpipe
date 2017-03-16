@@ -9,23 +9,69 @@ import vectorpipe.util.Tree
 
 // --- //
 
-/** "Schema" functions which form [[geotrellis.vectortile.VectorTile]]s from
-  * collections of [[OSMFeature]]s.
+/** "Collator" or "Schema" functions which form
+  * `VectorTile`s from collections of GeoTrellis
+  * `Feature`s. Any function can be considered a valid "collator" if it
+  * satisfies the type:
+  * {{{
+  * collate: (Extent, Iterable[Feature[G,D]]) => VectorTile
+  * }}}
   *
-  * ===On Winding Order===
+  * ==Usage==
+  * Create a VectorTile from some collection of GeoTrellis Geometries:
+  * {{{
+  * val tileExtent: Extent = ... // Extent of _this_ Tile
+  * val geoms: Iterable[Feature[Geometry, D]] = ...  // Some collection of Geometries
+  *
+  * val tile: VectorTile = Collate.withoutMetadata(tileExtent, geoms)
+  * }}}
+  *
+  * ==Writing your own Collator Function==
+  * We provide a few defaults here, but any collation scheme is possible.
+  * Collation just refers to the process of organizing some `Iterable`
+  * collection of Geometries into various VectorTile `Layer`s. Creating your own
+  * collator is done easiest with [[generically]]. It expects a ''partition''
+  * function to guide Geometries into separate Layers, and a ''metadata''
+  * transformation function.
+  *
+  * ====Partition Functions====
+  * A valid partition function must be of the type:
+  * {{{
+  * partition: Feature[G,D] => String
+  * }}}
+  * The output String is the name of the `Layer` you'd like a given
+  * `Feature` to be relegated to. Notice that the entire `Feature` is available
+  * (i.e. both its Geometry and metadata), so that your partitioner can make
+  * fine-grained choices.
+  *
+  * ====Metadata Transformation Functions====
+  * One of these takes your `D` type and transforms it into what `VectorTile`s expect:
+  * {{{
+  * metadata: D => Map[String, Value]
+  * }}}
+  * You're encouraged to review the `Value` sum-type in
+  * [[https://geotrellis.github.io/scaladocs/latest/#geotrellis.vectortile.package
+  * geotrellis.vectortile]]
+  *
+  * ==On Winding Order==
   * VectorTiles require that Polygon exteriors have clockwise winding order,
   * and that interior holes have counter-clockwise winding order. These assume
   * that the origin `(0,0)` is in the '''top-left''' corner.
   *
-  * '''All collation functions here must correct for winding order
-  * themselves.''' Why? OSM data makes no guarantee about what winding order its
-  * derived Polygons will have. We could correct winding order when our first
-  * `RDD[OSMFeature]` is created, except that its unlikely that the clipping
-  * process afterward would maintain our winding for all Polygons.
+  * '''Any custom collator which does not call `generically` must correct
+  * for Polygon winding order manually.''' This can be done via the [[winding]]
+  * function.
+  *
+  * But why correct for winding order at all? Well, OSM data makes no guarantee
+  * about what winding order its derived Polygons will have. We could correct
+  * winding order when our first `RDD[OSMFeature]` is created, except that its
+  * unlikely that the clipping process afterward would maintain our winding for
+  * all Polygons.
   */
 object Collate {
   /** Can be used as the `partition` argument to `generically`. Splits
-    * Geometries by their subtype.
+    * Geometries by their subtype, naming three `Layer`s: `points`, `lines` and
+    * `polygons`.
     */
   def byGeomType[G <: Geometry, D](f: Feature[G, D]): String = f.geom match {
     case g: Point        => "points"
@@ -52,7 +98,7 @@ object Collate {
     */
   def byAnalytics(tileExtent: Extent, geoms: Iterable[OSMFeature]): VectorTile = {
     def metadata(d: Tree[ElementData]): Map[String, Value] = {
-      val data: ElementData = d.root
+      val data: ElementData = d.root // TODO Handle parent metadata
 
       Map(
         "id" -> VInt64(data.meta.id),
@@ -62,15 +108,16 @@ object Collate {
         "version" -> VInt64(data.meta.version.toLong),
         "timestamp" -> VString(data.meta.timestamp.toString),
         "visible" -> VBool(data.meta.visible)
-      ) ++ data.tagMap.mapValues(VString) // make less naive
+      ) ++ data.tagMap.mapValues(VString) // TODO make less naive
     }
 
     generically(tileExtent, geoms, byGeomType, metadata)
   }
 
   /** Given some Feature and a way to determine which [[Layer]] it should
-    * belong to (by layer name), collate each Feature into the appropriate
-    * [[Layer]] and form a [[VectorTile]].
+    * belong to (by layer name), collate each Feature into the
+    * appropriate[[Layer]] and form a [[VectorTile]]. '''Polygon winding order is
+    * corrected.'''
     *
     * @param tileExtent The Extent of ''this'' Tile.
     * @param geoms The Features to collate into various [[Layer]]s.

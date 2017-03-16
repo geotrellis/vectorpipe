@@ -198,10 +198,16 @@ class ElementRDD(val self: RDD[Element]) extends MethodExtensions[RDD[Element]] 
 
     val (multiPolys, lines, polys) = multipolygons(rawLines, rawPolys, geomRelations)
 
-    points.asInstanceOf[RDD[OSMFeature]] ++
-      lines.asInstanceOf[RDD[OSMFeature]] ++
-      polys.asInstanceOf[RDD[OSMFeature]] ++
-      multiPolys.asInstanceOf[RDD[OSMFeature]]
+    /* Pair each Geometry with its bounding envelope. The envelope will be
+     * stored in VectorTile Feature metadata, and can be used to aid in the
+     * Geometry restitching process during analytics.
+     */
+    val pnt: RDD[OSMFeature] = points.map(f => f.copy(data = (f.data, f.geom.envelope)))
+    val lns: RDD[OSMFeature] = lines.map(f => f.copy(data = (f.data, f.geom.envelope)))
+    val pls: RDD[OSMFeature] = polys.map(f => f.copy(data = (f.data, f.geom.envelope)))
+    val mps: RDD[OSMFeature] = multiPolys.map(f => f.copy(data = (f.data, f.geom.envelope)))
+
+    pnt ++ lns ++ pls ++ mps
   }
 
   /**

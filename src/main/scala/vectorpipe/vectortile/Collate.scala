@@ -110,8 +110,8 @@ object Collate {
     * "points", "lines", and "polygons".
     */
   def byAnalytics(tileExtent: Extent, geoms: Iterable[OSMFeature]): VectorTile = {
-    def metadata(d: Tree[ElementData]): Map[String, Value] = {
-      val data: ElementData = d.root // TODO Handle parent metadata
+    def metadata(d: (Tree[ElementData], Extent)): Map[String, Value] = {
+      val data: ElementData = d._1.root // TODO Handle parent metadata
 
       Map(
         "id" -> VInt64(data.meta.id),
@@ -120,7 +120,11 @@ object Collate {
         "changeSet" -> VInt64(data.meta.changeSet.toLong),
         "version" -> VInt64(data.meta.version.toLong),
         "timestamp" -> VString(data.meta.timestamp.toString),
-        "visible" -> VBool(data.meta.visible)
+        "visible" -> VBool(data.meta.visible),
+        "envelope_xmin" -> VDouble(d._2.xmin),
+        "envelope_ymin" -> VDouble(d._2.ymin),
+        "envelope_xmax" -> VDouble(d._2.xmax),
+        "envelope_ymax" -> VDouble(d._2.ymax)
       ) ++ data.tagMap.mapValues(VString) // TODO make less naive
     }
 

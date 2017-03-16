@@ -46,7 +46,7 @@ class OSMFeatureRDD(val self: RDD[OSMFeature]) extends MethodExtensions[RDD[OSMF
     */
   def toGrid(ld: LayoutDefinition)
             (clip: (Extent, OSMFeature) => OSMFeature)
-            (implicit sc: SparkContext): RDD[(SpatialKey, Iterable[(OSMFeature, Extent)])] = {
+            (implicit sc: SparkContext): RDD[(SpatialKey, Iterable[OSMFeature])] = {
 
     val mt: MapKeyTransform = ld.mapTransform
 
@@ -58,8 +58,8 @@ class OSMFeatureRDD(val self: RDD[OSMFeature]) extends MethodExtensions[RDD[OSMF
 
     /* Associate each Feature with a SpatialKey */
     bounded.flatMap({ f =>
-      val env: Extent = f.geom.envelope
-      val bounds: GridBounds = mt(env) /* Keys overlapping the Geom envelope */
+      val envelope: Extent = f.data._2
+      val bounds: GridBounds = mt(envelope) /* Keys overlapping the Geom envelope */
       val gridEx: Extent = mt(bounds) /* Extent fitted to the key grid */
       val set: MSet[SpatialKey] = MSet.empty
 
@@ -79,7 +79,7 @@ class OSMFeatureRDD(val self: RDD[OSMFeature]) extends MethodExtensions[RDD[OSMF
         val kExt: Extent = mt(k)
 
         /* Clip each geometry in some way */
-        (k, iter.map(g => (clip(kExt, g), g.envelope)))
+        (k, iter.map(g => clip(kExt, g)))
       })
   }
 

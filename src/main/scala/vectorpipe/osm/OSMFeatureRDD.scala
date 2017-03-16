@@ -38,7 +38,7 @@ class OSMFeatureRDD(val self: RDD[OSMFeature]) extends MethodExtensions[RDD[OSMF
     *
     * @param ld   The LayoutDefinition defining the area to gridify.
     * @param clip A function which represents a "clipping strategy".
-    * @return The pair `(OSMFeature, Extent)` reprents the clipped Feature
+    * @return The pair `(OSMFeature, Extent)` represents the clipped Feature
     *         along with its __original__ bounding envelope. This envelope
     *         is to be encoded into the Feature's metadata within a VT,
     *         and could be used later to aid the reconstruction of the original,

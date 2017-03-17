@@ -111,32 +111,52 @@ object Collate {
     */
   def byAnalytics(tileExtent: Extent, geoms: Iterable[OSMFeature]): VectorTile = {
     def metadata(d: (Tree[ElementData], Extent)): Map[String, Value] = {
-      val data: ElementData = d._1.root // TODO Handle parent metadata
 
-      Map(
-        "id" -> VInt64(data.meta.id),
-        "user" -> VString(data.meta.user),
-        "userId" -> VString(data.meta.userId),
-        "changeSet" -> VInt64(data.meta.changeSet.toLong),
-        "version" -> VInt64(data.meta.version.toLong),
-        "timestamp" -> VString(data.meta.timestamp.toString),
-        "visible" -> VBool(data.meta.visible),
+      val envelope: Map[String, Value] = Map(
         "envelope_xmin" -> VDouble(d._2.xmin),
         "envelope_ymin" -> VDouble(d._2.ymin),
         "envelope_xmax" -> VDouble(d._2.xmax),
         "envelope_ymax" -> VDouble(d._2.ymax)
-      ) ++ data.tagMap.mapValues(VString) // TODO make less naive
+      )
+
+      val meta: Map[String, Value] = flatParents("", d._1)
+
+      envelope ++ meta
     }
 
     generically(tileExtent, geoms, byGeomType, metadata)
+  }
+
+  /** Flatten parent metadata into a single `Map` so that it can be stored
+    * in a `VectorTile`.
+    */
+  private[vectorpipe] def flatParents(prefix: String, tree: Tree[ElementData]): Map[String, Value] = {
+
+    val meta = Map(
+      prefix ++ "id"        -> VInt64(tree.root.meta.id),
+      prefix ++ "user"      -> VString(tree.root.meta.user),
+      prefix ++ "userId"    -> VString(tree.root.meta.userId),
+      prefix ++ "changeSet" -> VInt64(tree.root.meta.changeSet.toLong),
+      prefix ++ "version"   -> VInt64(tree.root.meta.version.toLong),
+      prefix ++ "timestamp" -> VString(tree.root.meta.timestamp.toString),
+      prefix ++ "visible"   -> VBool(tree.root.meta.visible)
+    )
+
+    val tags = tree.root.tagMap.map({ case (k,v) => (prefix ++ k, VString(v)) })
+
+    val kids = tree.children.foldLeft(Map.empty[String, Value])({ (acc, t) =>
+      acc ++ flatParents(tree.root.meta.id.toString ++ "軈" ++ prefix, t)
+    })
+
+    meta ++ tags ++ kids
   }
 
   def withStringMetadata[G <: Geometry](tileExtent: Extent, geoms: Iterable[Feature[G, Map[String, String]]]): VectorTile =
     generically(tileExtent, geoms, byGeomType, { d: Map[String,String] => d.mapValues(VString) })
 
   /** Given some Feature and a way to determine which [[Layer]] it should
-    * belong to (by layer name), collate each Feature into the
-    * appropriate[[Layer]] and form a [[VectorTile]]. '''Polygon winding order is
+    * belong to (by layer name), collate each Feature into the appropriate
+    * [[Layer]] and form a [[VectorTile]]. '''Polygon winding order is
     * corrected.'''
     *
     * @param tileExtent The Extent of ''this'' Tile.

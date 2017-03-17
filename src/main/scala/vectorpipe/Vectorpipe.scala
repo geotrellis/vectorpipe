@@ -15,7 +15,36 @@ import vectorpipe.osm.internal.{ElementToFeature => E2F}
 
 // --- //
 
-object Vectorpipe {
+/** VectorPipe is a library for mass conversion of OSM data into Mapbox
+  * VectorTiles. It is powered by [[https://github.com/locationtech/geotrellis
+  * GeoTrellis]] and [[https://spark.apache.org Apache Spark]].
+  *
+  * ==Usage==
+  * GeoTrellis and Spark do most of our work for us. Writing a `main` that
+  * uses VectorPipe need not contain much more than:
+  * {{{
+  * import vectorpipe.{ VectorPipe => VP }
+  * import vectorpipe.osm._               /* For associated types */
+  * import vectorpipe.geom.Clip           /* How should we clip Geometries? */
+  * import vectorpipe.vectortile.Collate  /* How should we organize Features into VT Layers? */
+  *
+  * val layout: LayoutDefinition = ...
+  * ... // TODO dealing with ORC
+  * val elements: RDD[Element] = ...
+  * val features: RDD[OSMFeature] = VP.toFeatures(elements)
+  * val featGrid: RDD[(SpatialKey, Iterable[OSMFeature])] = VP.toGrid(Clip.byHybrid, layout, features)
+  * val tileGrid: RDD[(SpatialKey, VectorTile)] = VP.toVectorTile(Collate.byAnalytics, layout, featGrid)
+  *
+  * /* How should a `SpatialKey` map to a filepath on S3? */
+  * val s3PathFromKey: SpatialKey => String = SaveToS3.spatialKeyToPath(
+  *   LayerId("sample", 1),  /* Whatever zoom level it is */
+  *   "s3://some-bucket/catalog/{name}/{z}/{x}/{y}.mvt"
+  * )
+  *
+  * tileGrid.saveToS3(s3PathFromKey)
+  * }}}
+  */
+object VectorPipe {
 
   /** Convert an RDD of raw OSM [[Element]]s into interpreted GeoTrellis
     * [[Feature]]s. In order to mix the various subtypes together, they've

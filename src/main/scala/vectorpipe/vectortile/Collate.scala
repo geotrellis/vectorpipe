@@ -119,7 +119,7 @@ object Collate {
         "envelope_ymax" -> VDouble(d._2.ymax)
       )
 
-      val meta: Map[String, Value] = flatParents("", d._1)
+      val meta: Map[String, Value] = flatParents(identity, d._1)
 
       envelope ++ meta
     }
@@ -130,22 +130,24 @@ object Collate {
   /** Flatten parent metadata into a single `Map` so that it can be stored
     * in a `VectorTile`.
     */
-  private[vectorpipe] def flatParents(prefix: String, tree: Tree[ElementData]): Map[String, Value] = {
+  private[vectorpipe] def flatParents(
+    prefix: String => String, tree: Tree[ElementData]
+  ): Map[String, Value] = {
 
     val meta = Map(
-      prefix ++ "id"        -> VInt64(tree.root.meta.id),
-      prefix ++ "user"      -> VString(tree.root.meta.user),
-      prefix ++ "userId"    -> VString(tree.root.meta.userId),
-      prefix ++ "changeSet" -> VInt64(tree.root.meta.changeSet.toLong),
-      prefix ++ "version"   -> VInt64(tree.root.meta.version.toLong),
-      prefix ++ "timestamp" -> VString(tree.root.meta.timestamp.toString),
-      prefix ++ "visible"   -> VBool(tree.root.meta.visible)
+      prefix("id")        -> VInt64(tree.root.meta.id),
+      prefix("user")      -> VString(tree.root.meta.user),
+      prefix("userId")    -> VString(tree.root.meta.userId),
+      prefix("changeSet") -> VInt64(tree.root.meta.changeSet.toLong),
+      prefix("version")   -> VInt64(tree.root.meta.version.toLong),
+      prefix("timestamp") -> VString(tree.root.meta.timestamp.toString),
+      prefix("visible")   -> VBool(tree.root.meta.visible)
     )
 
-    val tags = tree.root.tagMap.map({ case (k,v) => (prefix ++ k, VString(v)) })
+    val tags = tree.root.tagMap.map({ case (k,v) => (prefix(k), VString(v)) })
 
     val kids = tree.children.foldLeft(Map.empty[String, Value])({ (acc, t) =>
-      acc ++ flatParents(tree.root.meta.id.toString ++ "軈" ++ prefix, t)
+      acc ++ flatParents({ s => t.root.meta.id.toString ++ "軈" ++ prefix(s) }, t)
     })
 
     meta ++ tags ++ kids

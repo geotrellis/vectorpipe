@@ -144,7 +144,7 @@ object VectorPipe {
     clip: (Extent, OSMFeature) => OSMFeature,
     ld: LayoutDefinition,
     rdd: RDD[OSMFeature]
-  )(implicit sc: SparkContext): RDD[(SpatialKey, Iterable[OSMFeature])] = {
+  ): RDD[(SpatialKey, Iterable[OSMFeature])] = {
 
     val mt: MapKeyTransform = ld.mapTransform
 
@@ -191,7 +191,7 @@ object VectorPipe {
     collate: (Extent, Iterable[OSMFeature]) => VectorTile,
     ld: LayoutDefinition,
     rdd: RDD[(SpatialKey, Iterable[OSMFeature])]
-  )(implicit sc: SparkContext): RDD[(SpatialKey, VectorTile)] = {
+  ): RDD[(SpatialKey, VectorTile)] = {
     val mt: MapKeyTransform = ld.mapTransform
 
     rdd.map({ case (k, iter) => (k, collate(mt(k), iter))})

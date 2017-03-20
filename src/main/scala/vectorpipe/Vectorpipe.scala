@@ -1,6 +1,9 @@
 package vectorpipe
 
+import java.io.{FileInputStream, InputStream}
+
 import scala.collection.mutable.{Set => MSet}
+import scala.util.{Failure, Success}
 
 import geotrellis.raster._
 import geotrellis.raster.rasterize._
@@ -8,6 +11,7 @@ import geotrellis.spark._
 import geotrellis.spark.tiling._
 import geotrellis.vector._
 import geotrellis.vectortile.VectorTile
+import org.apache.spark.SparkContext
 import org.apache.spark.rdd._
 import vectorpipe.osm._
 import vectorpipe.osm.internal.{ElementToFeature => E2F}
@@ -44,6 +48,19 @@ import vectorpipe.osm.internal.{ElementToFeature => E2F}
   * }}}
   */
 object VectorPipe {
+
+  /** Given a path to an OSM XML file, parse it into usable types. */
+  def fromLocalXML(path: String)(implicit sc: SparkContext): Either[String, (RDD[Node], RDD[Way], RDD[Relation])] = {
+    /* A byte stream, so as to not tax the heap */
+    val xml: InputStream = new FileInputStream(path)
+
+    /* Parse the OSM data */
+    Element.elements.parse(xml) match {
+      case Failure(e) => Left(e.toString)
+      case Success((ns, ws, rs)) =>
+        Right((sc.parallelize(ns), sc.parallelize(ws), sc.parallelize(rs)))
+    }
+  }
 
   /** Convert an RDD of raw OSM [[Element]]s into interpreted GeoTrellis
     * [[Feature]]s. In order to mix the various subtypes together, they've

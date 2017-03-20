@@ -8,7 +8,6 @@ import geotrellis.spark._
 import geotrellis.spark.tiling._
 import geotrellis.vector._
 import geotrellis.vectortile.VectorTile
-import org.apache.spark._
 import org.apache.spark.rdd._
 import vectorpipe.osm._
 import vectorpipe.osm.internal.{ElementToFeature => E2F}
@@ -30,8 +29,8 @@ import vectorpipe.osm.internal.{ElementToFeature => E2F}
   *
   * val layout: LayoutDefinition = ...
   * ... // TODO dealing with ORC
-  * val elements: RDD[Element] = ...
-  * val features: RDD[OSMFeature] = VP.toFeatures(elements)
+  * val (nodes, ways, relations): (RDD[Node], RDD[Way], RDD[Relation]) = ...
+  * val features: RDD[OSMFeature] = VP.toFeatures(nodes, ways, relations)
   * val featGrid: RDD[(SpatialKey, Iterable[OSMFeature])] = VP.toGrid(Clip.byHybrid, layout, features)
   * val tileGrid: RDD[(SpatialKey, VectorTile)] = VP.toVectorTile(Collate.byAnalytics, layout, featGrid)
   *
@@ -81,21 +80,21 @@ object VectorPipe {
     *     across its child members. Otherwise, Relations are "dropped"
     *     from the output.
     */
-  def toFeatures(rdd: RDD[Element]): RDD[OSMFeature] = {
+  def toFeatures(nodes: RDD[Node], ways: RDD[Way], relations: RDD[Relation]): RDD[OSMFeature] = {
 
     /* All Geometric OSM Relations.
      * A (likely false) assumption made in the `flatTree` function is that
      * Geometric Relations never appear in Relation Graphs. Therefore we can
      * naively grab them all here.
      */
-    val geomRelations: RDD[Relation] = E2F.rawRelations(rdd).filter({ r =>
+    val geomRelations: RDD[Relation] = relations.filter({ r =>
       r.data.tagMap.get("type") == Some("multipolygon")
     })
 
     // TODO Use the results on this!
     //val toDisseminate: ParSeq[(Long, Seq[ElementData])] = E2F.flatForest(E2F.relForest(rawRelations))
 
-    val (points, rawLines, rawPolys) = E2F.geometries(E2F.rawNodes(rdd), E2F.rawWays(rdd))
+    val (points, rawLines, rawPolys) = E2F.geometries(nodes, ways)
 
     val (multiPolys, lines, polys) = E2F.multipolygons(rawLines, rawPolys, geomRelations)
 

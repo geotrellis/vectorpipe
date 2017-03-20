@@ -17,7 +17,7 @@ libraryDependencies ++= Seq(
   "org.locationtech.geotrellis" %% "geotrellis-vector"     % "1.1.0-SNAPSHOT",
   "org.locationtech.geotrellis" %% "geotrellis-vectortile" % "1.1.0-SNAPSHOT",
   "org.scalatest"               %% "scalatest"             % "2.2.0" % "test",
-  "org.scalaz"                  %% "scalaz-core"           % "7.2.9",
+  "org.scalaz"                  %% "scalaz-core"           % "7.2.10",
   "org.spire-math"              %% "spire"                 % "0.13.0"
 )
 

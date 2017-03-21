@@ -13,6 +13,8 @@ import geotrellis.vector._
 import geotrellis.vectortile.VectorTile
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd._
+import scalaz.std.stream._
+import scalaz.syntax.applicative._
 import vectorpipe.osm._
 import vectorpipe.osm.internal.{ElementToFeature => E2F}
 
@@ -171,30 +173,49 @@ object VectorPipe {
     val bounded: RDD[OSMFeature] = rdd.filter(f => f.geom.intersects(extent))
 
     /* Associate each Feature with a SpatialKey */
-    bounded.flatMap({ f =>
-      val envelope: Extent = f.data._2
-      val bounds: GridBounds = mt(envelope) /* Keys overlapping the Geom envelope */
-      val gridEx: Extent = mt(bounds) /* Extent fitted to the key grid */
-      val set: MSet[SpatialKey] = MSet.empty
+    val grid: RDD[(SpatialKey, OSMFeature)] = bounded.flatMap(f => byIntersect(mt, f))
 
-      /* Undefined behaviour if used concurrently */
-      val g: (Int, Int) => Unit = { (x, y) =>
-        set += SpatialKey(bounds.colMin + x, bounds.rowMin + y)
-      }
+    grid.groupByKey().map({ case (k, iter) =>
+      val kExt: Extent = mt(k)
 
-      /* Extend envelope to snap to the tile grid */
-      val re = RasterExtent(gridEx, bounds.width, bounds.height)
+      /* Clip each geometry in some way */
+      (k, iter.map(g => clip(kExt, g)))
+    })
+  }
 
-      Rasterizer.foreachCellByGeometry(f.geom, re)(g)
+  /* Takes advantage of the fact that most Geoms are small, and only occur in one Tile */
+  private def byIntersect(mt: MapKeyTransform, f: OSMFeature): Stream[(SpatialKey, OSMFeature)] = {
+    val b: GridBounds = mt(f.data._2)
 
-      set.map(k => (k, f))
-    }).groupByKey()
-      .map({ case (k, iter) =>
-        val kExt: Extent = mt(k)
+    val keys: Stream[SpatialKey] =
+      (Stream.range(b.colMin, b.colMax + 1) |@| Stream.range(b.rowMin, b.rowMax + 1)) { SpatialKey(_, _) }
 
-        /* Clip each geometry in some way */
-        (k, iter.map(g => clip(kExt, g)))
-      })
+    keys.filter(k => mt(k).toPolygon.intersects(f.geom))
+      .map(k => (k, f))
+  }
+
+  /* The old implementation using the Rasterizer. Doesn't associate Polygons
+   * with their SpatialKeys properly.
+   */
+  private def byRasterizer(mt: MapKeyTransform, f: OSMFeature): MSet[(SpatialKey, OSMFeature)] = {
+    val envelope: Extent = f.data._2
+    val bounds: GridBounds = mt(envelope) /* Keys overlapping the Geom envelope */
+    val gridEx: Extent = mt(bounds) /* Extent fitted to the key grid */
+    val set: MSet[SpatialKey] = MSet.empty
+
+    /* Undefined behaviour if used concurrently */
+    val g: (Int, Int) => Unit = { (x, y) =>
+      set += SpatialKey(bounds.colMin + x, bounds.rowMin + y)
+    }
+
+    /* Extend envelope to snap to the tile grid */
+    val re = RasterExtent(gridEx, bounds.width, bounds.height)
+
+    Rasterizer.foreachCellByGeometry(f.geom, re)(g)
+
+    //println(s"${f.data._1.root.meta.id} touches ${set.size} keys")
+
+    set.map(k => (k, f))
   }
 
   /** Given a collection of GeoTrellis `Feature`s which have been associated

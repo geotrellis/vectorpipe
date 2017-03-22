@@ -13,8 +13,6 @@ import geotrellis.vector._
 import geotrellis.vectortile.VectorTile
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd._
-import scalaz.std.stream._
-import scalaz.syntax.applicative._
 import vectorpipe.osm._
 import vectorpipe.osm.internal.{ElementToFeature => E2F}
 
@@ -167,9 +165,10 @@ object VectorPipe {
     val mt: MapKeyTransform = ld.mapTransform
 
     /* Initial bounding box for capturing Features */
-    val extent: Polygon = ld.extent.toPolygon()
+    val extent: Polygon = ld.extent.toPolygon
 
     /* Filter once to reduce later workload */
+    // TODO: This may be an unnecessary bottleneck.
     val bounded: RDD[OSMFeature] = rdd.filter(f => f.geom.intersects(extent))
 
     /* Associate each Feature with a SpatialKey */
@@ -184,11 +183,13 @@ object VectorPipe {
   }
 
   /* Takes advantage of the fact that most Geoms are small, and only occur in one Tile */
-  private def byIntersect(mt: MapKeyTransform, f: OSMFeature): Stream[(SpatialKey, OSMFeature)] = {
+  private def byIntersect(mt: MapKeyTransform, f: OSMFeature): Iterator[(SpatialKey, OSMFeature)] = {
     val b: GridBounds = mt(f.data._2)
 
-    val keys: Stream[SpatialKey] =
-      (Stream.range(b.colMin, b.colMax + 1) |@| Stream.range(b.rowMin, b.rowMax + 1)) { SpatialKey(_, _) }
+    val keys: Iterator[SpatialKey] = for {
+      x <- Iterator.range(b.colMin, b.colMax+1)
+      y <- Iterator.range(b.rowMin, b.rowMax+1)
+    } yield SpatialKey(x, y)
 
     keys.filter(k => mt(k).toPolygon.intersects(f.geom))
       .map(k => (k, f))

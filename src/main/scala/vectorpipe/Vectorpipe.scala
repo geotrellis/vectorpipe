@@ -2,11 +2,9 @@ package vectorpipe
 
 import java.io.{FileInputStream, InputStream}
 
-import scala.collection.mutable.{Set => MSet}
 import scala.util.{Failure, Success}
 
 import geotrellis.raster._
-import geotrellis.raster.rasterize._
 import geotrellis.spark._
 import geotrellis.spark.tiling._
 import geotrellis.vector._
@@ -193,30 +191,6 @@ object VectorPipe {
 
     keys.filter(k => mt(k).toPolygon.intersects(f.geom))
       .map(k => (k, f))
-  }
-
-  /* The old implementation using the Rasterizer. Doesn't associate Polygons
-   * with their SpatialKeys properly.
-   */
-  private def byRasterizer(mt: MapKeyTransform, f: OSMFeature): MSet[(SpatialKey, OSMFeature)] = {
-    val envelope: Extent = f.data._2
-    val bounds: GridBounds = mt(envelope) /* Keys overlapping the Geom envelope */
-    val gridEx: Extent = mt(bounds) /* Extent fitted to the key grid */
-    val set: MSet[SpatialKey] = MSet.empty
-
-    /* Undefined behaviour if used concurrently */
-    val g: (Int, Int) => Unit = { (x, y) =>
-      set += SpatialKey(bounds.colMin + x, bounds.rowMin + y)
-    }
-
-    /* Extend envelope to snap to the tile grid */
-    val re = RasterExtent(gridEx, bounds.width, bounds.height)
-
-    Rasterizer.foreachCellByGeometry(f.geom, re)(g)
-
-    //println(s"${f.data._1.root.meta.id} touches ${set.size} keys")
-
-    set.map(k => (k, f))
   }
 
   /** Given a collection of GeoTrellis `Feature`s which have been associated

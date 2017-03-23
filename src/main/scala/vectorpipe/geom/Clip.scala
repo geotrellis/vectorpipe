@@ -6,8 +6,7 @@ import vectorpipe.osm._
 
 // --- //
 
-/** Clipping Strategies.
-  * Remember that `identity` is also technically a valid Clipping Strat. */
+/** Clipping Strategies. */
 object Clip {
 
   /** For any segment of a [[Line]] that extends outside the Extent,

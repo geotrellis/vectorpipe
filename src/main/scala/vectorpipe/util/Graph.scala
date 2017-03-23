@@ -50,6 +50,8 @@ import scalaz.syntax.applicative._
   *     └── 3
   *         └── ∅
   * }}}
+  *
+  * @constructor Use `Graph.fromEdges` instead of this.
   */
 class Graph[K: Order, V](
   outgoing: Vector[Seq[Vertex]],

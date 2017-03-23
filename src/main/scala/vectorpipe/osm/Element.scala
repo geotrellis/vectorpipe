@@ -19,7 +19,7 @@ object Element {
       Parser.forMandatoryAttribute("changeset").map(_.toInt) ~
       Parser.forMandatoryAttribute("version").map(_.toInt) ~
       Parser.forMandatoryAttribute("timestamp").map(ZonedDateTime.parse) ~
-      Parser.forMandatoryAttribute("visible").map(_.toBoolean)
+      Parser.forOptionalAttribute("visible").map(_.map(_.toBoolean).getOrElse(false))
   ).as(ElementMeta)
 
   /* <tag k='access' v='permissive' /> */

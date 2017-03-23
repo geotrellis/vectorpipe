@@ -4,7 +4,7 @@ import java.io.{FileInputStream, InputStream}
 
 import scala.util.{Failure, Success}
 
-import geotrellis.raster._
+import geotrellis.raster.GridBounds
 import geotrellis.spark._
 import geotrellis.spark.tiling._
 import geotrellis.vector._

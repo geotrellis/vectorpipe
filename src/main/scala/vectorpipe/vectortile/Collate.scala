@@ -153,6 +153,30 @@ object Collate {
     meta ++ tags ++ kids
   }
 
+  /** Similar behaviour to [[byAnalytics]], except that recursive metadata
+    * is not stored.
+    */
+  def byAnalyticsLite(tileExtent: Extent, geoms: Iterable[OSMFeature]): VectorTile = {
+    def metadata(d: (Tree[ElementData], Extent)): Map[String, Value] = {
+
+      Map(
+        "id"            -> VInt64(d._1.root.meta.id),
+        "user"          -> VString(d._1.root.meta.user),
+        "userId"        -> VString(d._1.root.meta.userId),
+        "changeSet"     -> VInt64(d._1.root.meta.changeSet.toLong),
+        "version"       -> VInt64(d._1.root.meta.version.toLong),
+        "timestamp"     -> VString(d._1.root.meta.timestamp.toString),
+        "visible"       -> VBool(d._1.root.meta.visible),
+        "envelope_xmin" -> VDouble(d._2.xmin),
+        "envelope_ymin" -> VDouble(d._2.ymin),
+        "envelope_xmax" -> VDouble(d._2.xmax),
+        "envelope_ymax" -> VDouble(d._2.ymax)
+      )
+    }
+
+    generically(tileExtent, geoms, byGeomType, metadata)
+  }
+
   def withStringMetadata[G <: Geometry](tileExtent: Extent, geoms: Iterable[Feature[G, Map[String, String]]]): VectorTile =
     generically(tileExtent, geoms, byGeomType, { d: Map[String,String] => d.mapValues(VString) })
 

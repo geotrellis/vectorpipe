@@ -24,10 +24,8 @@ import vectorpipe.osm.internal.{ElementToFeature => E2F}
   * GeoTrellis and Spark do most of our work for us. Writing a `main` that
   * uses VectorPipe need not contain much more than:
   * {{{
-  * import vectorpipe.{ VectorPipe => VP }
-  * import vectorpipe.osm._               /* For associated types */
-  * import vectorpipe.geom.Clip           /* How should we clip Geometries? */
-  * import vectorpipe.vectortile.Collate  /* How should we organize Features into VT Layers? */
+  * import vectorpipe.{ VectorPipe => VP, Clip, Collate }
+  * import vectorpipe.osm._  /* For associated types */
   *
   * val layout: LayoutDefinition = ...
   * ... // TODO dealing with ORC

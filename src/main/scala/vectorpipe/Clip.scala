@@ -1,7 +1,8 @@
-package vectorpipe.geom
+package vectorpipe
+
+import scala.collection.mutable.ListBuffer
 
 import geotrellis.vector._
-import scala.collection.mutable.ListBuffer
 import vectorpipe.osm._
 
 // --- //

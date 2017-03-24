@@ -1,11 +1,8 @@
-package vectorpipe
 
-import geotrellis.vector._
-import com.vividsolutions.jts.{geom => jts}
+package object vectorpipe {
 
-// --- //
-
-package object vectortile {
+  import geotrellis.vector._
+  import com.vividsolutions.jts.{geom => jts}
 
   /** Ensure a [[geotrellis.vector.Polygon]] has the correct winding order
     * to be used in a [[VectorTile]].

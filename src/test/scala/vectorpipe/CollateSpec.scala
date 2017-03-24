@@ -1,4 +1,4 @@
-package vectorpipe.vectortile
+package vectorpipe
 
 import java.time.ZonedDateTime
 

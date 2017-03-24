@@ -1,4 +1,4 @@
-package vectorpipe.vectortile
+package vectorpipe
 
 import scala.collection.mutable.{ListBuffer, Map => MMap}
 

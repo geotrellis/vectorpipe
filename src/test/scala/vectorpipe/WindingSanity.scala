@@ -5,7 +5,7 @@ import scala.collection.mutable.ListBuffer
 import geotrellis.vector._
 import geotrellis.vectortile.internal._
 import org.scalatest._
-import vectorpipe._
+import vectorpipe.util._
 
 // --- //
 

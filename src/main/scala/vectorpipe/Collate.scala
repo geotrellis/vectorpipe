@@ -4,7 +4,7 @@ import scala.collection.mutable.{ListBuffer, Map => MMap}
 
 import geotrellis.vector._
 import geotrellis.vectortile._
-import vectorpipe.osm.{ ElementData, OSMFeature }
+import vectorpipe.osm.{ElementData, OSMFeature}
 import vectorpipe.util._
 
 // --- //

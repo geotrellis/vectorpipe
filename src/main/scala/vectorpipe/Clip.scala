@@ -2,8 +2,11 @@ package vectorpipe
 
 import scala.collection.mutable.ListBuffer
 
+import geotrellis.proj4.{LatLng, WebMercator}
 import geotrellis.vector._
+import geotrellis.vector.io._
 import vectorpipe.osm._
+import vectorpipe.util._
 
 // --- //
 
@@ -72,10 +75,21 @@ object Clip {
     centre.distanceToSegment(p1, p2) <= radius
 
   /** Naively clips Features to fit the given Extent. */
-  def byExtent(extent: Extent, f: OSMFeature): OSMFeature = Feature(
-    f.geom.intersection(extent.toPolygon).toGeometry().get,
-    f.data
-  )
+  def byExtent(extent: Extent, f: OSMFeature): OSMFeature = {
+    val exPoly: Polygon = extent.toPolygon
+
+    val geom: Geometry = try {
+      f.geom.intersection(exPoly).toGeometry.get
+    } catch {
+      case e: Throwable => {
+        println(s"${f.data._1.root.meta.id}: ${f.geom.reproject(WebMercator, LatLng).toGeoJson}")
+
+        throw e
+      }
+    }
+
+    Feature(geom, f.data)
+  }
 
   /** Clips Features to a 3x3 grid surrounding the current Tile.
     * This has been found to capture ''most'' Features which stretch

@@ -28,4 +28,14 @@ package object util {
      */
     Polygon(geom.reverse().asInstanceOf[jts.Polygon])
   }
+
+  /** Mysteriously missing from the Scala Standard Library. */
+  def zip3[A,B,C](a: Stream[A], b: Stream[B], c: Stream[C]): Stream[(A,B,C)] = {
+    if (a.isEmpty || b.isEmpty || c.isEmpty) Stream.empty else {
+      (a.head, b.head, c.head) #:: zip3(a.tail, b.tail, c.tail)
+    }
+  }
+
+  /** Mysteriously missing from the Scala Standard Library. */
+  def uncurry3[A,B,C,D](f: (A,B,C) => D): ((A,B,C)) => D = { case (a,b,c) => f(a,b,c) }
 }

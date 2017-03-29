@@ -109,7 +109,19 @@ object VectorPipe {
 
     val (points, rawLines, rawPolys) = E2F.geometries(nodes, ways)
 
-    val (multiPolys, lines, polys) = E2F.multipolygons(rawLines, rawPolys, geomRelations)
+    /* Depending on the dataset used, `Way` data may be incomplete. That is,
+     * the local version of a Way may have fewer Node references that the original
+     * as found on OpenStreetMap. These usually occur along "dataset bounding
+     * boxes" found in OSM subregion extracts, where a Polygon is cut in half by
+     * the BBOX. The resulting Polygons, with only a subset of the original Nodes,
+     * are often self-intersecting. This causes Topology Exceptions during the
+     * clipping stage of the pipeline. Our only recourse is to remove them here.
+     *
+     * See: https://github.com/geotrellis/vectorpipe/pull/16#issuecomment-290144694
+     */
+    val simplePolys = rawPolys.filter(_.geom.isValid)
+
+    val (multiPolys, lines, polys) = E2F.multipolygons(rawLines, simplePolys, geomRelations)
 
     /* Pair each Geometry with its bounding envelope. The envelope will be
      * stored in VectorTile Feature metadata, and can be used to aid in the

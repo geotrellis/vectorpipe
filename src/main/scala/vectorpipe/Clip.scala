@@ -79,7 +79,10 @@ object Clip {
     val exPoly: Polygon = extent.toPolygon
 
     val geom: Geometry = try {
-      f.geom.intersection(exPoly).toGeometry.get
+      f.geom match {
+        case mp: MultiPolygon => MultiPolygon(mp.polygons.flatMap(_.intersection(exPoly).as[Polygon]))
+        case _ => f.geom.intersection(exPoly).toGeometry.get
+      }
     } catch {
       case e: Throwable => {
         println(s"${f.data._1.root.meta.id}: ${f.geom.reproject(WebMercator, LatLng).toGeoJson}")

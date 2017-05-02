@@ -20,27 +20,70 @@ import vectorpipe.osm.internal.{ElementToFeature => E2F}
   * VectorTiles. It is powered by [[https://github.com/locationtech/geotrellis
   * GeoTrellis]] and [[https://spark.apache.org Apache Spark]].
   *
-  * ==Usage==
-  * GeoTrellis and Spark do most of our work for us. Writing a `main` that
-  * uses VectorPipe need not contain much more than:
+  * ==Outline==
+  * GeoTrellis and Spark do most of our work for us. Writing a `main`
+  * function that uses VectorPipe need not contain much more than:
   * {{{
   * import vectorpipe.{ VectorPipe => VP, Clip, Collate }
   * import vectorpipe.osm._  /* For associated types */
   *
-  * val layout: LayoutDefinition = ...
+  * val layout: LayoutDefinition =
+  *   ZoomedLayoutScheme.layoutForZoom(15, WebMercator.worldExtent, 512)
+  *
   * ... // TODO dealing with ORC
+  *
   * val (nodes, ways, relations): (RDD[Node], RDD[Way], RDD[Relation]) = ...
   * val features: RDD[OSMFeature] = VP.toFeatures(nodes, ways, relations)
   * val featGrid: RDD[(SpatialKey, Iterable[OSMFeature])] = VP.toGrid(Clip.byHybrid, layout, features)
-  * val tileGrid: RDD[(SpatialKey, VectorTile)] = VP.toVectorTile(Collate.byAnalytics, layout, featGrid)
+  * val tiles: RDD[(SpatialKey, VectorTile)] = VP.toVectorTile(Collate.byAnalytics, layout, featGrid)
+  * }}}
+  * The `tiles` RDD could then be used as a GeoTrellis tile layer as
+  * needed.
+  *
+  * ==Writing Portable Tiles==
+  * This method outputs VectorTiles to a directory structure appropriate for
+  * serving by a Tile Map Server. The VTs themselves are saved in the usual
+  * `.mvt` format, and so can be read by any other tool. The example that
+  * follows writes `tiles` from above to an S3 bucket:
+  * {{{
+  * import geotrellis.spark.io.s3._  // requires the `geotrellis-s3` library
   *
   * /* How should a `SpatialKey` map to a filepath on S3? */
   * val s3PathFromKey: SpatialKey => String = SaveToS3.spatialKeyToPath(
-  *   LayerId("sample", 1),  /* Whatever zoom level it is */
+  *   LayerId("sample", 1),  // Whatever zoom level it is
   *   "s3://some-bucket/catalog/{name}/{z}/{x}/{y}.mvt"
   * )
   *
-  * tileGrid.saveToS3(s3PathFromKey)
+  * tiles.saveToS3(s3PathFromKey)
+  * }}}
+  *
+  * ==Writing a GeoTrellis Layer of VectorTiles==
+  * The disadvantage of the "Portable Tiles" approach is that there is no
+  * way to read the tiles back into a `RDD[(SpatialKey, VectorTile)]` and do
+  * Spark-based manipulation operations. To do that, the tiles have to be
+  * written as a "GeoTrellis Layer" from the get-go. The output of such a write
+  * are split and compressed files that aren't readable by other tools. This
+  * method compresses VectorTiles to about half the size of a normal `.mvt`.
+  * {{{
+  * import geotrellis.spark._
+  * import geotrellis.spark.io._
+  * import geotrellis.spark.io.file._    /* When writing to your local computer */
+  * import geotrellis.vectortile.spark._ /* From `geotrellis-vectortile-spark` */
+  *
+  * /* IO classes */
+  * val catalog: String = "/home/you/tiles/"  /* This must exist ahead of time! */
+  * val store = FileAttributeStore(catalog)
+  * val writer = FileLayerWriter(store)
+  *
+  * /* Dynamically determine the KeyBounds */
+  * val bounds: KeyBounds[SpatialKey] =
+  *   tiles.map({ case (key, _) => KeyBounds(key, key) }).reduce(_ combine _)
+  *
+  * /* Construct metadata for the Layer */
+  * val meta = Metadata(layout, bounds)
+  *
+  * /* Write the Tile Layer */
+  * writer.write(LayerId("north-van", 15), ContextRDD(tiles, meta), ZCurveKeyIndexMethod)
   * }}}
   */
 object VectorPipe {

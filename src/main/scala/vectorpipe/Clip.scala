@@ -85,7 +85,7 @@ object Clip {
       }
     } catch {
       case e: Throwable => {
-        println(s"${f.data._1.root.meta.id}: ${f.geom.reproject(WebMercator, LatLng).toGeoJson}")
+        println(s"${f.data.root.meta.id}: ${f.geom.reproject(WebMercator, LatLng).toGeoJson}")
 
         throw e
       }

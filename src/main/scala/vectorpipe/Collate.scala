@@ -110,18 +110,8 @@ object Collate {
     * "points", "lines", and "polygons".
     */
   def byAnalytics(tileExtent: Extent, geoms: Iterable[OSMFeature]): VectorTile = {
-    def metadata(d: (Tree[ElementData], Extent)): Map[String, Value] = {
-
-      val envelope: Map[String, Value] = Map(
-        "envelope_xmin" -> VDouble(d._2.xmin),
-        "envelope_ymin" -> VDouble(d._2.ymin),
-        "envelope_xmax" -> VDouble(d._2.xmax),
-        "envelope_ymax" -> VDouble(d._2.ymax)
-      )
-
-      val meta: Map[String, Value] = flatParents(identity, d._1)
-
-      envelope ++ meta
+    def metadata(d: Tree[ElementData]): Map[String, Value] = {
+      flatParents(identity, d)
     }
 
     generically(tileExtent, geoms, byGeomType, metadata)
@@ -157,20 +147,16 @@ object Collate {
     * is not stored.
     */
   def byAnalyticsLite(tileExtent: Extent, geoms: Iterable[OSMFeature]): VectorTile = {
-    def metadata(d: (Tree[ElementData], Extent)): Map[String, Value] = {
+    def metadata(d: Tree[ElementData]): Map[String, Value] = {
 
       Map(
-        "id"            -> VInt64(d._1.root.meta.id),
-        "user"          -> VString(d._1.root.meta.user),
-        "userId"        -> VString(d._1.root.meta.userId),
-        "changeSet"     -> VInt64(d._1.root.meta.changeSet.toLong),
-        "version"       -> VInt64(d._1.root.meta.version.toLong),
-        "timestamp"     -> VString(d._1.root.meta.timestamp.toString),
-        "visible"       -> VBool(d._1.root.meta.visible),
-        "envelope_xmin" -> VDouble(d._2.xmin),
-        "envelope_ymin" -> VDouble(d._2.ymin),
-        "envelope_xmax" -> VDouble(d._2.xmax),
-        "envelope_ymax" -> VDouble(d._2.ymax)
+        "id"            -> VInt64(d.root.meta.id),
+        "user"          -> VString(d.root.meta.user),
+        "userId"        -> VString(d.root.meta.userId),
+        "changeSet"     -> VInt64(d.root.meta.changeSet.toLong),
+        "version"       -> VInt64(d.root.meta.version.toLong),
+        "timestamp"     -> VString(d.root.meta.timestamp.toString),
+        "visible"       -> VBool(d.root.meta.visible)
       )
     }
 

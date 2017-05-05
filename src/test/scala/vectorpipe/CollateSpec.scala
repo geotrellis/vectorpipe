@@ -47,7 +47,7 @@ class CollateSpec extends FunSpec with Matchers {
 
       //      println(tree.map(_.meta.id).pretty)
 
-      Collate.byAnalytics(extent, Seq(Feature(geom, (tree, geom.envelope))))
+      Collate.byAnalytics(extent, Seq(Feature(geom, tree)))
     }
   }
 }

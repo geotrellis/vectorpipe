@@ -166,16 +166,28 @@ object VectorPipe {
 
     val (multiPolys, lines, polys) = E2F.multipolygons(rawLines, simplePolys, geomRelations)
 
-    /* Pair each Geometry with its bounding envelope. The envelope will be
-     * stored in VectorTile Feature metadata, and can be used to aid in the
-     * Geometry restitching process during analytics.
-     */
-    val pnt: RDD[OSMFeature] = points.map(f => f.copy(data = (f.data, f.geom.envelope)))
-    val lns: RDD[OSMFeature] = lines.map(f => f.copy(data = (f.data, f.geom.envelope)))
-    val pls: RDD[OSMFeature] = polys.map(f => f.copy(data = (f.data, f.geom.envelope)))
-    val mps: RDD[OSMFeature] = multiPolys.map(f => f.copy(data = (f.data, f.geom.envelope)))
+    /* A trick to allow us to fuse the RDDs of various Geom types */
+    val pnt: RDD[OSMFeature] = points.map(identity)
+    val lns: RDD[OSMFeature] = lines.map(identity)
+    val pls: RDD[OSMFeature] = polys.map(identity)
+    val mps: RDD[OSMFeature] = multiPolys.map(identity)
 
-    pnt ++ lns ++ pls ++ mps
+    val geoms = pnt ++ lns ++ pls ++ mps
+
+    /* Add every Feature's bounding envelope to its metadata */
+    geoms.map({ f =>
+
+      val env: Extent = f.geom.envelope
+
+      val envMap: Map[String, String] = Map(
+        "envelope_xmin" -> env.xmin.toString,
+        "envelope_ymin" -> env.ymin.toString,
+        "envelope_xmax" -> env.xmax.toString,
+        "envelope_ymax" -> env.ymax.toString
+      )
+
+      f.copy(data = f.data.copy(root = f.data.root.copy(tagMap = f.data.root.tagMap ++ envMap)))
+    })
   }
 
   /** Given a particular Layout (tile grid), split a collection of [[OSMFeature]]s
@@ -207,11 +219,11 @@ object VectorPipe {
     *         and could be used later to aid the reconstruction of the original,
     *         unclipped Feature.
     */
-  def toGrid(
-    clip: (Extent, OSMFeature) => OSMFeature,
+  def toGrid[G <: Geometry, D](
+    clip: (Extent, Feature[G, D]) => Feature[G, D],
     ld: LayoutDefinition,
-    rdd: RDD[OSMFeature]
-  ): RDD[(SpatialKey, Iterable[OSMFeature])] = {
+    rdd: RDD[Feature[G, D]]
+  ): RDD[(SpatialKey, Iterable[Feature[G, D]])] = {
 
     val mt: MapKeyTransform = ld.mapTransform
 
@@ -220,10 +232,10 @@ object VectorPipe {
 
     /* Filter once to reduce later workload */
     // TODO: This may be an unnecessary bottleneck.
-    val bounded: RDD[OSMFeature] = rdd.filter(f => f.geom.intersects(extent))
+    val bounded: RDD[Feature[G, D]] = rdd.filter(f => f.geom.intersects(extent))
 
     /* Associate each Feature with a SpatialKey */
-    val grid: RDD[(SpatialKey, OSMFeature)] = bounded.flatMap(f => byIntersect(mt, f))
+    val grid: RDD[(SpatialKey, Feature[G, D])] = bounded.flatMap(f => byIntersect(mt, f))
 
     grid.groupByKey().map({ case (k, iter) =>
       val kExt: Extent = mt(k)
@@ -234,8 +246,11 @@ object VectorPipe {
   }
 
   /* Takes advantage of the fact that most Geoms are small, and only occur in one Tile */
-  private def byIntersect(mt: MapKeyTransform, f: OSMFeature): Iterator[(SpatialKey, OSMFeature)] = {
-    val b: GridBounds = mt(f.data._2)
+  private def byIntersect[G <: Geometry, D](
+    mt: MapKeyTransform,
+    f: Feature[G, D]
+  ): Iterator[(SpatialKey, Feature[G, D])] = {
+    val b: GridBounds = mt(f.geom.envelope)
 
     val keys: Iterator[SpatialKey] = for {
       x <- Iterator.range(b.colMin, b.colMax+1)
@@ -252,10 +267,10 @@ object VectorPipe {
     *
     * @see [[vectorpipe.vectortile.Collate]]
     */
-  def toVectorTile(
-    collate: (Extent, Iterable[OSMFeature]) => VectorTile,
+  def toVectorTile[G <: Geometry, D](
+    collate: (Extent, Iterable[Feature[G, D]]) => VectorTile,
     ld: LayoutDefinition,
-    rdd: RDD[(SpatialKey, Iterable[OSMFeature])]
+    rdd: RDD[(SpatialKey, Iterable[Feature[G, D]])]
   ): RDD[(SpatialKey, VectorTile)] = {
     val mt: MapKeyTransform = ld.mapTransform
 

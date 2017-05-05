@@ -5,8 +5,6 @@ import scala.collection.mutable.ListBuffer
 import geotrellis.proj4.{LatLng, WebMercator}
 import geotrellis.vector._
 import geotrellis.vector.io._
-import vectorpipe.osm._
-import vectorpipe.util._
 
 // --- //
 
@@ -75,7 +73,7 @@ object Clip {
     centre.distanceToSegment(p1, p2) <= radius
 
   /** Naively clips Features to fit the given Extent. */
-  def byExtent(extent: Extent, f: OSMFeature): OSMFeature = {
+  def byExtent[G <: Geometry, D](extent: Extent, f: Feature[G, D]): Feature[Geometry, D] = {
     val exPoly: Polygon = extent.toPolygon
 
     val geom: Geometry = try {
@@ -85,7 +83,7 @@ object Clip {
       }
     } catch {
       case e: Throwable => {
-        println(s"${f.data.root.meta.id}: ${f.geom.reproject(WebMercator, LatLng).toGeoJson}")
+        println(s"${f.data}: ${f.geom.reproject(WebMercator, LatLng).toGeoJson}")
 
         throw e
       }
@@ -99,17 +97,17 @@ object Clip {
     * outside their original Tile, and helps avoid the pain of
     * restitching later.
     */
-  def byBufferedExtent(extent: Extent, f: OSMFeature): OSMFeature =
+  def byBufferedExtent[G <: Geometry, D](extent: Extent, f: Feature[G, D]): Feature[Geometry, D] =
     byExtent(extent.expandBy(extent.width, extent.height), f)
 
   /** Bias the clipping strategy based on the incoming [[Geometry]]. */
-  def byHybrid(extent: Extent, f: OSMFeature): OSMFeature = f.geom match {
+  def byHybrid[G <: Geometry, D](extent: Extent, f: Feature[G, D]): Feature[Geometry, D] = f.geom match {
     case pnt: Point => f  /* A `Point` will always fall within the Extent */
     case line: Line => Feature(toNearestPoint(extent, line), f.data)
     case poly: Polygon => byBufferedExtent(extent, f)
     case mply: MultiPolygon => byBufferedExtent(extent, f)
   }
 
-  /** Yield an [[OSMFeature]] as-is. */
-  def asIs(extent: Extent, f: OSMFeature): OSMFeature = f
+  /** Yield an [[Feature]] as-is. */
+  def asIs[G <: Geometry, D](extent: Extent, f: Feature[G, D]): Feature[G, D] = f
 }

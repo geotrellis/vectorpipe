@@ -87,7 +87,7 @@ import org.apache.spark.rdd._
   */
 object VectorPipe {
 
-  /** Given a particular Layout (tile grid), split a collection of [[OSMFeature]]s
+  /** Given a particular Layout (tile grid), split a collection of [[Feature]]s
     * into a grid of them indexed by [[SpatialKey]].
     *
     * ==Clipping Strategies==

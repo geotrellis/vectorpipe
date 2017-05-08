@@ -24,17 +24,20 @@ class CollateSpec extends FunSpec with Matchers {
 
   val data0 = ElementData(
     ElementMeta(1037, "colin", "8765", 5, 1, ZonedDateTime.now, true),
-    Map("object" -> "flagpole")
+    Map("object" -> "flagpole"),
+    None
   )
 
   val data1 = ElementData(
     ElementMeta(10000, "colin", "8765", 5, 1, ZonedDateTime.now, true),
-    Map("route" -> "footpath")
+    Map("route" -> "footpath"),
+    None
   )
 
   val data2 = ElementData(
     ElementMeta(100123, "colin", "8765", 5, 1, ZonedDateTime.now, true),
-    Map("place" -> "park")
+    Map("place" -> "park"),
+    None
   )
 
   describe("Collation Functions") {

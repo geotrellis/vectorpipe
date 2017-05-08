@@ -8,3 +8,5 @@
 /images/*
 .ensime
 .ensime_cache/*
+clipping/*
+osmosis/*

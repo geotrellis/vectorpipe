@@ -18,14 +18,13 @@ import org.apache.spark.rdd._
   * function that uses VectorPipe need not contain much more than:
   * {{{
   * import vectorpipe._
-  * import vectorpipe.osm._  /* For associated types */
   *
   * val layout: LayoutDefinition =
   *   ZoomedLayoutScheme.layoutForZoom(15, WebMercator.worldExtent, 512)
   *
   * ... // TODO dealing with ORC
   *
-  * val (nodes, ways, relations): (RDD[Node], RDD[Way], RDD[Relation]) = ...
+  * val (nodes, ways, relations): (RDD[osm.Node], RDD[osm.Way], RDD[osm.Relation]) = ...
   *
   * val features: RDD[OSMFeature] =
   *   osm.toFeatures(nodes, ways, relations)
@@ -79,7 +78,7 @@ import org.apache.spark.rdd._
   *   tiles.map({ case (key, _) => KeyBounds(key, key) }).reduce(_ combine _)
   *
   * /* Construct metadata for the Layer */
-  * val meta = Metadata(layout, bounds)
+  * val meta = LayerMetadata(layout, bounds)
   *
   * /* Write the Tile Layer */
   * writer.write(LayerId("north-van", 15), ContextRDD(tiles, meta), ZCurveKeyIndexMethod)

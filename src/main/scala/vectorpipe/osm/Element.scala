@@ -1,5 +1,6 @@
 package vectorpipe.osm
 
+import geotrellis.vector.Extent
 import java.time.ZonedDateTime
 
 import io.dylemma.spac._
@@ -30,7 +31,7 @@ object Element {
   implicit val elementData: Parser[Any, ElementData] = (
     elementMeta ~
       Splitter(* \ "tag").asListOf[(String, String)].map(_.toMap)
-  ).as(ElementData)
+  ).as((meta, tags) => ElementData(meta, tags, None))
 
   /* <node lat='49.5135613' lon='6.0095049' ... > */
   implicit val node: Parser[Any, Node] = (
@@ -128,7 +129,7 @@ case class Member(
   role: String // TODO Use a sum type?
 )
 
-case class ElementData(meta: ElementMeta, tagMap: TagMap)
+case class ElementData(meta: ElementMeta, tagMap: TagMap, envelope: Option[Extent])
 
 /** All Element types have these attributes in common. */
 case class ElementMeta(

@@ -109,19 +109,8 @@ package object osm {
 
     /* Add every Feature's bounding envelope to its metadata */
     geoms.map({ f =>
-
-      val env: Extent = f.geom.envelope
-
-      val envMap: Map[String, String] = Map(
-        "envelope_xmin" -> env.xmin.toString,
-        "envelope_ymin" -> env.ymin.toString,
-        "envelope_xmax" -> env.xmax.toString,
-        "envelope_ymax" -> env.ymax.toString
-      )
-
-      f.copy(data = f.data.copy(root = f.data.root.copy(tagMap = f.data.root.tagMap ++ envMap)))
+      f.copy(data = f.data.copy(root = f.data.root.copy(envelope = Some(f.geom.envelope))))
     })
   }
-
 
 }

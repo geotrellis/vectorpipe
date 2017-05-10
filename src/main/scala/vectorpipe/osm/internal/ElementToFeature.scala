@@ -169,12 +169,13 @@ private[vectorpipe] object ElementToFeature {
           }
 
           /* The actual node coordinates in the correct order */
-          val (points, data) =
+          val (points, data): (Vector[(Double, Double)], Vector[ElementData]) =
             w.nodes
               .flatMap(n => tree.searchWith(n, pred))
               .map(n => ((n.lon, n.lat), n.data))
               .unzip
 
+          // TODO: 2017 May  9 @ 08:31 - Why are we `try`ing here?
           try {
             /* Segregate by which are purely Lines, and which form Polygons */
             if (w.isLine) {
@@ -276,7 +277,6 @@ private[vectorpipe] object ElementToFeature {
            *
            * Furthermore, winding order doesn't matter in OSM, but it does
            * in VectorTiles.
-           * TODO: Make sure winding order is handled correctly.
            */
           Some(Feature(MultiPolygon(fused), Tree(r.data, outers.map(_.data) ++ inners.map(_.data))))
         }

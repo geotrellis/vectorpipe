@@ -109,7 +109,7 @@ package object osm {
 
     /* Add every Feature's bounding envelope to its metadata */
     geoms.map({ f =>
-      f.copy(data = f.data.copy(root = f.data.root.copy(envelope = Some(f.geom.envelope))))
+      f.copy(data = f.data.copy(root = f.data.root.copy(extra = Some(Left(f.geom.envelope)))))
     })
   }
 

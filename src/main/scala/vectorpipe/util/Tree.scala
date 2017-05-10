@@ -16,9 +16,10 @@ case class Tree[T](root: T, children: Seq[Tree[T]]) extends Serializable {
   def postorder: Seq[T] = children.flatMap(_.postorder) :+ root
 
   /** The values of all leaves (nodes with no children) in the Tree. */
-  def leaves: Seq[T] = {
-    if (children.isEmpty) Seq(root) else children.flatMap(_.leaves)
-  }
+  def leaves: Seq[T] = if (children.isEmpty) Seq(root) else children.flatMap(_.leaves)
+
+  /** The number of nodes in the Tree. */
+  def size: Int = 1 + children.map(_.size).sum
 
   /** A nicer `toString`. Adapted from: http://stackoverflow.com/a/8948691/643684 */
   def pretty: String = {

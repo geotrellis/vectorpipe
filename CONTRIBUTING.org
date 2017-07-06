@@ -2,8 +2,6 @@
 #+AUTHOR: Colin
 #+HTML_HEAD: <link rel="stylesheet" type="text/css" href="/home/colin/code/org-theme.css"/>
 
-* Contributing to VectorPipe
-
 ** Prerequisite Knowledge
 
 *** GeoTrellis
@@ -104,7 +102,7 @@ having to think about them. This in turn decreases ~import~ confusion.
   val x = Foo(...)  // hard to know what x's type is.
 #+END_SRC
 
-- Avoid implicit conversions, except for typeclass wrapping and method injecting:
+- [[https://github.com/circe/circe/blame/master/DESIGN.md#L77][Avoid implicit conversions]]:
 
 #+BEGIN_SRC scala
   case class Foo(...)
@@ -121,6 +119,9 @@ having to think about them. This in turn decreases ~import~ confusion.
   // Or else you can write code like:
   val x = Foo(...).bar // where did `bar` come from?
 #+END_SRC
+
+Typeclasses should be implented via the implicit-val-within-companion-object
+pattern.
 
 - Avoid classes that don't represent data:
 

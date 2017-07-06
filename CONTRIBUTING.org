@@ -1,0 +1,138 @@
+#+TITLE: Contributing to VectorPipe
+#+AUTHOR: Colin
+#+HTML_HEAD: <link rel="stylesheet" type="text/css" href="/home/colin/code/org-theme.css"/>
+
+* Contributing to VectorPipe
+
+** Prerequisite Knowledge
+
+*** GeoTrellis
+
+GeoTrellis sublibraries and types are used heavily throughout ~vectorpipe~,
+particularly its ~vector~ and ~vectortile~ packages.
+
+*** Apache Spark
+
+~RDD~ usage is fairly prevalent, so knowledge of Spark internals may help
+you, depending on your task.
+
+*** Cats
+
+The Functional Programming library that adds certain necessities missing
+from vanilla Scala. This is not at all necessary for /using/ ~vectorpipe~,
+but is used here and there within its internal machinery.
+
+*** OpenStreetMap
+
+Knowledge of how OpenStreetMap data is formatted will help you immensely. Terms:
+
+- Element
+- Node
+- Way
+- Relation
+
+** Style Guide
+
+When contributing code changes to ~vectorpipe~, bear in mind that we make a
+few stylistic choices in order to minimize code complexity:
+
+*** Code and Directory Layout
+
+- Code mechanics relevant to the workings of the library but irrelevant to the
+  user should be relegated to a module under ~vectorpipe.*.internal~, where
+  the ~*~ is whatever parent module you're working in.
+
+- Type aliases live in *package objects*:
+
+#+BEGIN_SRC scala
+  package vectorpipe
+
+  package object foo {
+    type Bar = Int
+  }
+#+END_SRC
+
+- Typeclass instances live in the companion object of the class they're for:
+
+#+BEGIN_SRC scala
+  import cats._
+
+  case class Foo[T](t: T)
+
+  object Foo {
+    implicit val fooFunctor: Functor[Foo] = new Functor[Foo] {
+      def map[A, B](fa: Foo[A])(f: A => B): Foo[B] = ???
+    }
+  }
+#+END_SRC
+
+This is to give immediate "visibility" of instances to their corresponding
+types. Just by importing ~Foo~, you have access to all its instances without
+having to think about them. This in turn decreases ~import~ confusion.
+
+*** Scala Features to Avoid
+
+- Avoid method overloading:
+
+#+BEGIN_SRC scala
+  case class Foo[T](t: T) {
+    def bar(a: Int): Bar = ???
+
+    // avoid
+    def bar(a: Int, b: Int): Bar = ???
+  }
+#+END_SRC
+
+- Avoid default arguments:
+
+#+BEGIN_SRC scala
+  case class Foo[T](t: T) {
+    // avoid
+    def bar(a: Int, b: Option[Int] = None): Bar = ???
+  }
+#+END_SRC
+
+- Avoid ~.apply~ returning a type other than the parent object:
+
+#+BEGIN_SRC scala
+  object Foo {
+    // avoid
+    def apply(...): Bar = ...
+  }
+
+  // Or else you can write code like:
+  val x = Foo(...)  // hard to know what x's type is.
+#+END_SRC
+
+- Avoid implicit conversions, except for typeclass wrapping and method injecting:
+
+#+BEGIN_SRC scala
+  case class Foo(...)
+
+  case class Bar(...) {
+    def bar: ??? = ...
+  }
+
+  object Foo {
+    // avoid
+    implicit def foo2Bar(foo: Foo): Bar = ...
+  }
+
+  // Or else you can write code like:
+  val x = Foo(...).bar // where did `bar` come from?
+#+END_SRC
+
+- Avoid classes that don't represent data:
+
+#+BEGIN_SRC scala
+  class Fooifizer(val bestArg: Type) {
+    def work(arg: Type): Unit = { ??? }
+  }
+#+END_SRC
+
+Instead, call a spade a spade and write a stand-alone function:
+
+#+BEGIN_SRC scala
+  /* Put this in an appropriate companion object, or the package object */
+  def fooifize(bestArg: Type, arg: Type): Unit = { ??? }
+#+END_SRC

@@ -1,7 +1,7 @@
 package vectorpipe.util
 
+import cats.implicits._
 import org.scalatest._
-import scalaz.syntax.functor._
 
 // --- //
 

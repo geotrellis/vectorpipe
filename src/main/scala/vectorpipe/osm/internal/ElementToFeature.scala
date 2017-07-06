@@ -2,16 +2,16 @@ package vectorpipe.osm.internal
 
 import scala.collection.parallel.ParSeq
 
+import cats.data.State
+import cats.implicits._
 import com.vividsolutions.jts.geom.LineString
 import com.vividsolutions.jts.operation.linemerge.LineMerger
 import geotrellis.util._
 import geotrellis.vector._
 import org.apache.spark.rdd._
-import scalaz.State
-import scalaz.syntax.applicative._
 import spire.std.any._
-import vectorpipe.util._
 import vectorpipe.osm._
+import vectorpipe.util._
 
 // --- //
 
@@ -246,7 +246,7 @@ private[vectorpipe] object ElementToFeature {
         }).toVector
 
         val (dumpedLineCount, fusedLines) =
-          fuseLines(spatialSort(ls.map(f => (f.geom.centroid.as[Point].get, f))).map(_._2)).run(0)
+          fuseLines(spatialSort(ls.map(f => (f.geom.centroid.as[Point].get, f))).map(_._2)).run(0).value
 
 //        println(s"LINES DUMPED BY fuseLines: ${dumpedLineCount}")
 

@@ -1,10 +1,10 @@
 package vectorpipe.util
 
+import cats.data.State
+import cats.implicits._
 import spire.algebra._
 import spire.std.any._
 import spire.syntax.order._
-import scalaz.State
-import scalaz.syntax.applicative._
 
 // --- //
 
@@ -101,7 +101,7 @@ class Graph[K: Order, V](
   private def generate(v: Vertex): Tree[Vertex] = Tree(v, outgoing(v).toStream.map(generate))
 
   /** Prune unnecessary connections. */
-  private def prune(vs: Forest[Vertex]): Forest[Vertex] = chop(vs).eval(Set.empty[Vertex])
+  private def prune(vs: Forest[Vertex]): Forest[Vertex] = chop(vs).runA(Set.empty[Vertex]).value
 
   /** An alias to massage the `Applicative` use in [[chop]]. */
   private type SetState[T] = State[Set[Vertex], T]
@@ -111,7 +111,7 @@ class Graph[K: Order, V](
     case tree +: rest => State.get[Set[Vertex]].flatMap({
       case set if set.contains(tree.root) => chop(rest) /* We've been here already */
       case set => for {
-        _  <- State.put(set + tree.root)
+        _  <- State.set(set + tree.root)
         as <- chop(tree.children)
         bs <- chop(rest)
       } yield {

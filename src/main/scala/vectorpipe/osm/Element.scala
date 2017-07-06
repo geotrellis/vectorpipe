@@ -2,6 +2,7 @@ package vectorpipe.osm
 
 import java.time.ZonedDateTime
 
+import geotrellis.vector.{Extent, Point}
 import io.dylemma.spac._
 
 // --- //
@@ -30,14 +31,14 @@ object Element {
   implicit val elementData: Parser[Any, ElementData] = (
     elementMeta ~
       Splitter(* \ "tag").asListOf[(String, String)].map(_.toMap)
-  ).as(ElementData)
+  ).as((meta, tags) => ElementData(meta, tags, None))
 
   /* <node lat='49.5135613' lon='6.0095049' ... > */
   implicit val node: Parser[Any, Node] = (
     Parser.forMandatoryAttribute("lat").map(_.toDouble) ~
       Parser.forMandatoryAttribute("lon").map(_.toDouble) ~
       elementData
-  ).as(Node)
+  ).as((lat, lon, d) => Node(lat, lon, d.copy(extra = Some(Right(Point(lon, lat))))))
 
   /*
    <way ... >
@@ -128,7 +129,7 @@ case class Member(
   role: String // TODO Use a sum type?
 )
 
-case class ElementData(meta: ElementMeta, tagMap: TagMap)
+case class ElementData(meta: ElementMeta, tagMap: TagMap, extra: Option[Either[Extent, Point]])
 
 /** All Element types have these attributes in common. */
 case class ElementMeta(
@@ -140,3 +141,12 @@ case class ElementMeta(
   timestamp: ZonedDateTime,
   visible: Boolean
 )
+
+/** Extra element-specific metadata. */
+private[vectorpipe] sealed trait Extra
+
+private[vectorpipe] case class NodeExtra(point: Point, ways: Seq[Long]) extends Extra
+
+private[vectorpipe] case class WayExtra(relations: Seq[Long]) extends Extra
+
+private[vectorpipe] case class GeomExtra(envelope: Extent) extends Extra

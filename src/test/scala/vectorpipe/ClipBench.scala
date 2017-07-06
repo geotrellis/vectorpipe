@@ -1,4 +1,4 @@
-package vectorpipe.geom
+package vectorpipe
 
 import geotrellis.vector._
 import scaliper._

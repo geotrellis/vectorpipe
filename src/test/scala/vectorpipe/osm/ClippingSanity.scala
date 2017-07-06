@@ -160,4 +160,16 @@ class ClippingSanity extends FunSpec with Matchers {
     }
   }
 
+  describe("MultiPolygons") {
+    it("Polygons are touching") {
+      val p = Polygon((1,1), (1,4), (2,4), (2,3), (2,2), (2,1), (1,1))
+      val q = Polygon((2,1), (2,2), (2,3), (2,4), (3,4), (3,1), (2,1))
+      val mp = MultiPolygon(p, q)
+
+      println(mp)
+      println(mp.intersection(extent).toGeometry.get)
+
+    }
+  }
+
 }

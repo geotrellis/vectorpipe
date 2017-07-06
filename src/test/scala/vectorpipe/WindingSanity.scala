@@ -1,11 +1,11 @@
-package vectorpipe.geom
+package vectorpipe
 
 import scala.collection.mutable.ListBuffer
 
 import geotrellis.vector._
 import geotrellis.vectortile.internal._
 import org.scalatest._
-import vectorpipe.vectortile._
+import vectorpipe.util._
 
 // --- //
 

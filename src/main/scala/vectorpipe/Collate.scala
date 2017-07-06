@@ -1,11 +1,11 @@
-package vectorpipe.vectortile
+package vectorpipe
 
 import scala.collection.mutable.{ListBuffer, Map => MMap}
 
 import geotrellis.vector._
 import geotrellis.vectortile._
-import vectorpipe.osm.{ ElementData, OSMFeature }
-import vectorpipe.util.Tree
+import vectorpipe.osm._
+import vectorpipe.util._
 
 // --- //
 
@@ -109,68 +109,148 @@ object Collate {
     * OSM data as possible. Their Geometries are organised into three Layers:
     * "points", "lines", and "polygons".
     */
-  def byAnalytics(tileExtent: Extent, geoms: Iterable[OSMFeature]): VectorTile = {
-    def metadata(d: (Tree[ElementData], Extent)): Map[String, Value] = {
+  def byAnalytics(tileExtent: Extent, geoms: Iterable[OSMFeature]): VectorTile =
+    generically(tileExtent, geoms, byGeomType, flatParents)
 
-      val envelope: Map[String, Value] = Map(
-        "envelope_xmin" -> VDouble(d._2.xmin),
-        "envelope_ymin" -> VDouble(d._2.ymin),
-        "envelope_xmax" -> VDouble(d._2.xmax),
-        "envelope_ymax" -> VDouble(d._2.ymax)
-      )
+  private[vectorpipe] def flatParents(d: Tree[ElementData]): Map[String, Value] = {
 
-      val meta: Map[String, Value] = flatParents(identity, d._1)
+    def work(parent: Long, node: Tree[ElementData]): Seq[(Extra, ElementData)] = node.root.extra match {
+      /* It's a Way that got eaten */
+      case None =>
+        (WayExtra(Seq(parent)), node.root) +: node.children.flatMap(t => work(node.root.meta.id, t))
 
-      envelope ++ meta
+      /* It's a Node that got eaten */
+      case Some(Right(p)) => Seq((NodeExtra(p, Seq(parent)), node.root))
+
+      /* Should never occur */
+      case _ => sys.error("BOOM!"); Seq.empty
     }
 
-    generically(tileExtent, geoms, byGeomType, metadata)
+    d.root match {
+      /* It was a top-level Node, not part of any Way */
+      case ElementData(_, _, Some(Left(extent))) if d.children.isEmpty =>
+        compressMeta(0, GeomExtra(extent), d.root)
+
+      /* It was either a Way that became a Line/Poly, or a Relation that became a MultiPoly */
+      case ElementData(_, _, Some(Left(extent))) => {
+
+        /* Combine data for Nodes which were shared by multiple Ways */
+        val kids = uniqueNodes(d.children.flatMap(t => work(d.root.meta.id, t)))
+
+        ((GeomExtra(extent), d.root) +: kids)
+          .zipWithIndex
+          .map({ case ((extra, meta), i) => compressMeta(i.toShort, extra, meta) })
+          .reduce(_ ++ _)
+      }
+
+      /* Should never happen, since all top-level Features should have had
+       * their `extra` field sent to hold their bounding envelope in a
+       * `Some(Left(...))`
+       */
+      case _ => Map.empty
+    }
   }
 
-  /** Flatten parent metadata into a single `Map` so that it can be stored
-    * in a `VectorTile`.
+  /** Combine Node metadata if those from different Ways are detected to be
+    * from the same original Node. Non-node metadata is returned unaltered.
     */
-  private[vectorpipe] def flatParents(
-    prefix: String => String, tree: Tree[ElementData]
-  ): Map[String, Value] = {
+  private def uniqueNodes(items: Seq[(Extra, ElementData)]): Seq[(Extra, ElementData)] = {
 
-    val meta = Map(
-      prefix("id")        -> VInt64(tree.root.meta.id),
-      prefix("user")      -> VString(tree.root.meta.user),
-      prefix("userId")    -> VString(tree.root.meta.userId),
-      prefix("changeSet") -> VInt64(tree.root.meta.changeSet.toLong),
-      prefix("version")   -> VInt64(tree.root.meta.version.toLong),
-      prefix("timestamp") -> VString(tree.root.meta.timestamp.toString),
-      prefix("visible")   -> VBool(tree.root.meta.visible)
-    )
-
-    val tags = tree.root.tagMap.map({ case (k,v) => (prefix(k), VString(v)) })
-
-    val kids = tree.children.foldLeft(Map.empty[String, Value])({ (acc, t) =>
-      acc ++ flatParents({ s => t.root.meta.id.toString ++ "軈" ++ prefix(s) }, t)
+    val (nodes, others) = items.partition({
+      case (NodeExtra(_, _), _) => true
+      case _ => false
     })
 
-    meta ++ tags ++ kids
+    val uniques: Seq[(Extra, ElementData)] = {
+      val um: MMap[Long, (Extra, ElementData)] = MMap.empty
+
+      nodes.foreach({
+        /* Handle the collision */
+        case n if um.contains(n._2.meta.id) => {
+          val m: NodeExtra = um(n._2.meta.id)._1.asInstanceOf[NodeExtra]
+
+          val foo = (NodeExtra(m.point, n._1.asInstanceOf[NodeExtra].ways ++ m.ways), n._2)
+
+          um.update(n._2.meta.id, foo)
+        }
+
+        /* No key collision */
+        case n => um.update(n._2.meta.id, n)
+      })
+
+      um.values.toSeq
+    }
+
+    uniques ++ others
+  }
+
+  private def compressMeta(id: Short, extra: Extra, data: ElementData): Map[String, Value] = {
+
+    /* In Scala, Chars are unsigned 16-bit values */
+    val prefix: Char = id.toChar
+
+    val usuals = Map(
+      Seq(prefix, 0x00.toChar).mkString -> VInt64(data.meta.id),
+      Seq(prefix, 0x01.toChar).mkString -> VString(data.meta.user),
+      Seq(prefix, 0x02.toChar).mkString -> VString(data.meta.userId),
+      Seq(prefix, 0x03.toChar).mkString -> VInt64(data.meta.changeSet.toLong),
+      Seq(prefix, 0x04.toChar).mkString -> VInt64(data.meta.version.toLong),
+      Seq(prefix, 0x05.toChar).mkString -> VString(data.meta.timestamp.toString),
+      Seq(prefix, 0x06.toChar).mkString -> VBool(data.meta.visible)
+    )
+
+    val tags: Map[String, Value] = data.tagMap
+      .toStream
+      .map({ case (k,v) => k ++ ":" ++ v })
+      .zipWithIndex
+      .map({ case (v,i) => Seq(prefix, (i + 0x70).toChar).mkString -> VString(v) })
+      .toMap
+
+    val extras: Map[String, Value] = extra match {
+      case NodeExtra(p, ws) => {
+
+        val latLng = Map(
+          Seq(prefix, 0x07.toChar).mkString -> VDouble(p.y),
+          Seq(prefix, 0x08.toChar).mkString -> VDouble(p.x)
+        )
+
+        val ways = ws.zipWithIndex
+          .map({ case (v,i) => Seq(prefix, (i + 0x20).toChar).mkString -> VInt64(v) })
+          .toMap
+
+        latLng ++ ways
+      }
+
+      case WayExtra(rs) =>
+        rs.zipWithIndex
+          .map({ case (v,i) => Seq(prefix, (i + 0x40).toChar).mkString -> VInt64(v) })
+          .toMap
+
+      case GeomExtra(env) => Map(
+        Seq(prefix, 0x09.toChar).mkString -> VDouble(env.xmin),
+        Seq(prefix, 0x0a.toChar).mkString -> VDouble(env.ymin),
+        Seq(prefix, 0x0b.toChar).mkString -> VDouble(env.xmax),
+        Seq(prefix, 0x0c.toChar).mkString -> VDouble(env.ymax)
+      )
+    }
+
+    usuals ++ tags ++ extras
   }
 
   /** Similar behaviour to [[byAnalytics]], except that recursive metadata
     * is not stored.
     */
   def byAnalyticsLite(tileExtent: Extent, geoms: Iterable[OSMFeature]): VectorTile = {
-    def metadata(d: (Tree[ElementData], Extent)): Map[String, Value] = {
+    def metadata(d: Tree[ElementData]): Map[String, Value] = {
 
       Map(
-        "id"            -> VInt64(d._1.root.meta.id),
-        "user"          -> VString(d._1.root.meta.user),
-        "userId"        -> VString(d._1.root.meta.userId),
-        "changeSet"     -> VInt64(d._1.root.meta.changeSet.toLong),
-        "version"       -> VInt64(d._1.root.meta.version.toLong),
-        "timestamp"     -> VString(d._1.root.meta.timestamp.toString),
-        "visible"       -> VBool(d._1.root.meta.visible),
-        "envelope_xmin" -> VDouble(d._2.xmin),
-        "envelope_ymin" -> VDouble(d._2.ymin),
-        "envelope_xmax" -> VDouble(d._2.xmax),
-        "envelope_ymax" -> VDouble(d._2.ymax)
+        "id"            -> VInt64(d.root.meta.id),
+        "user"          -> VString(d.root.meta.user),
+        "userId"        -> VString(d.root.meta.userId),
+        "changeSet"     -> VInt64(d.root.meta.changeSet.toLong),
+        "version"       -> VInt64(d.root.meta.version.toLong),
+        "timestamp"     -> VString(d.root.meta.timestamp.toString),
+        "visible"       -> VBool(d.root.meta.visible)
       )
     }
 

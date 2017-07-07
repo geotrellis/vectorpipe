@@ -40,11 +40,11 @@ rest.
 GeoTrellis has a consistent `RDD[(K, V)]` pattern for handling grids of
 tiled data, where `K` is the grid index and `V` is the actual value type.
 Before `RDD[(SpatialKey, VectorTile)]` can be achieved, we need to convert
-our gridless `RDD[Feature[G, D]]` into such a grid, such that each `Feature`
-is reasonbly clipped to the size of an individual tile. Depending on which
-clipping function you choose (from the `vectorpipe.Clip` object, or even
-your own custom one) the shape of the clipped Geometry will vary. See our
-Scaladocs for more detail on the available options.
+our gridless `RDD[Feature[G, D]]` into such a grid, such that each Feature's
+`Geometry` is reasonably clipped to the size of an individual tile. Depending
+on which clipping function you choose (from the `vectorpipe.Clip` object, or
+even your own custom one) the shape of the clipped Geometry will vary. See
+our Scaladocs for more detail on the available options.
 
 ### Collating Feature Groups into a VectorTile
 

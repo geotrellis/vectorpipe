@@ -35,6 +35,7 @@ enablePlugins(MicrositesPlugin)
 micrositeName := "VectorPipe"
 micrositeDescription := "Convert Vector data into VectorTiles"
 micrositeAuthor := "GeoTrellis Team at Azavea"
+micrositeGitterChannel := false
 micrositeOrganizationHomepage := "https://www.azavea.com/"
 micrositeGithubOwner := "geotrellis"
 micrositeGithubRepo := "vectorpipe"

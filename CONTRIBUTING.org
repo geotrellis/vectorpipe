@@ -29,6 +29,15 @@ Knowledge of how OpenStreetMap data is formatted will help you immensely. Terms:
 - Way
 - Relation
 
+** Development Dependencies
+
+- [[http://www.scala-sbt.org/][SBT]]
+- [[https://spark.apache.org/][Apache Spark]] (a local install on your machine)
+- [[https://jekyllrb.com/][Jekyll]] (if editing the microsite)
+
+Otherwise, all Scala dependencies (including compilers) will be
+automatically downloaded by sbt.
+
 ** Style Guide
 
 When contributing code changes to ~vectorpipe~, bear in mind that we make a
@@ -66,7 +75,7 @@ few stylistic choices in order to minimize code complexity:
 
 This is to give immediate "visibility" of instances to their corresponding
 types. Just by importing ~Foo~, you have access to all its instances without
-having to think about them. This in turn decreases ~import~ confusion.
+having to think about them. This decreases ~import~ confusion.
 
 *** Scala Features to Avoid
 

@@ -11,7 +11,7 @@ applications we can transform completely raw data into a grid of
 VectorTiles, ready for further processing. "Clipping" and "Collation"
 functions help us customize this process along the way.
 
-![](/img/pipeline.png)
+<img src="/img/pipeline.png" style="width:90%;height:auto">
 
 ### Data Sources
 
@@ -35,7 +35,7 @@ across multiple machines via Spark's `RDD` type. From this "middle ground",
 we can proceed with creating Vector Tiles, or (with the right supporting
 code) we could convert *back* into the format of the original source data.
 
-Note that via the method `VectorTile.toIterator`, the following conversion
+Note that via the method `VectorTile.toIterable`, the following conversion
 is possible:
 
 ```tut:silent
@@ -53,8 +53,8 @@ implicit val sc: SparkContext = new SparkContext(
 val tiles: RDD[(SpatialKey, VectorTile)] = sc.emptyRDD
 
 /* A VT layer converted back to the "middle ground", possibly for recollation */
-val backToMiddle: RDD[(SpatialKey, Iterator[Feature[Geometry, Map[String, Value]]])] =
-  tiles.mapValues(_.toIterator)
+val backToMiddle: RDD[(SpatialKey, Iterable[Feature[Geometry, Map[String, Value]]])] =
+  tiles.mapValues(_.toIterable)
 
 /* Close up Spark nicely */
 sc.stop()

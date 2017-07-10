@@ -7,7 +7,6 @@ technologies:
  - first: ["GeoTrellis", "Geographic data processing engine for high performance applications"]
  - second: ["Apache Spark", "An engine for large-scale data processing"]
  - third: ["Scala", "Functional Programming on the JVM"]
- - fourth: ["OpenStreetMap", "Free and Open Maps"]
 ---
 
 # VectorPipe

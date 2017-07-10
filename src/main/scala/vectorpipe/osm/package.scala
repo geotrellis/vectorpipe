@@ -14,6 +14,9 @@ import vectorpipe.util.Tree
 
 package object osm {
 
+  import scala.util.Try
+
+
   type TagMap = Map[String, String]
   type OSMFeature = Feature[Geometry, Tree[ElementData]]
   type OSMPoint = Feature[Point, Tree[ElementData]]
@@ -24,10 +27,7 @@ package object osm {
   /** Given a path to an OSM XML file, parse it into usable types. */
   def fromLocalXML(path: String)(implicit sc: SparkContext): Either[String, (RDD[Node], RDD[Way], RDD[Relation])] = {
     /* A byte stream, so as to not tax the heap */
-    val xml: InputStream = new FileInputStream(path)
-
-    /* Parse the OSM data */
-    Element.elements.parse(xml) match {
+    Try(new FileInputStream(path) : InputStream).flatMap(xml => Element.elements.parse(xml)) match {
       case Failure(e) => Left(e.toString)
       case Success((ns, ws, rs)) =>
         Right((sc.parallelize(ns), sc.parallelize(ws), sc.parallelize(rs)))

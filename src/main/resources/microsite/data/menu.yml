@@ -1,0 +1,16 @@
+options:
+
+  - title: Usage
+    url: usage.html
+    menu_type: usage
+    menu_section: usage
+
+  - title: Concepts
+    url: usage/concepts.html
+    menu_type: usage
+    menu_section: concepts
+
+  - title: Reading OpenStreetMap Data
+    url: usage/osm.html
+    menu_type: usage
+    menu_section: osm

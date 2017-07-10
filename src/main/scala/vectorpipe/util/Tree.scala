@@ -1,7 +1,8 @@
 package vectorpipe.util
 
-import scalaz.{Functor, Applicative, Monad}
-import scalaz.syntax.monad._
+import cats._
+import cats.data._
+import cats.implicits._
 
 // --- //
 
@@ -50,24 +51,23 @@ object Tree {
 
   /** Trees are mappable. */
   implicit val treeFunctor: Functor[Tree] = new Functor[Tree] {
-    def map[A, B](fa: Tree[A])(f: A => B): Tree[B] = Tree(
-      f(fa.root),
-      fa.children.map(t => t.map(f))
-    )
+    def map[A, B](fa: Tree[A])(f: A => B): Tree[B] =
+      Tree(f(fa.root), fa.children.map(t => t.map(f)))
   }
 
   /** Trees are Applicative Functors. */
   implicit val treeApplicative: Applicative[Tree] = new Applicative[Tree] {
-    def point[A](a: => A): Tree[A] = singleton(a)
+    def pure[A](a: A): Tree[A] = singleton(a)
 
-    def ap[A, B](fa: => Tree[A])(tf: => Tree[A => B]): Tree[B] = {
+    def ap[A, B](tf: Tree[A => B])(fa: Tree[A]): Tree[B] = {
       val Tree(f, tfs) = tf
 
-      Tree(f(fa.root), fa.children.map(t => t.map(f)) ++ tfs.map(t => fa <*> t))
+      Tree(f(fa.root), fa.children.map(t => t.map(f)) ++ tfs.map(t => t ap fa))
     }
   }
 
   /** Trees are also Monads. */
+  /*
   implicit val treeMonad: Monad[Tree] = new Monad[Tree] {
     def point[A](a: => A): Tree[A] = treeApplicative.point(a)
 
@@ -77,4 +77,5 @@ object Tree {
       Tree(r2, k2 ++ fa.children.map(t => t >>= f))
     }
   }
+   */
 }

@@ -6,7 +6,6 @@ import geotrellis.vector._
 import org.scalatest._
 import vectorpipe.osm._
 import vectorpipe.util.Tree
-import scalaz.syntax.functor._
 
 // --- //
 

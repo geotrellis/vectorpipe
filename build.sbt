@@ -39,3 +39,4 @@ micrositeGitterChannel := false
 micrositeOrganizationHomepage := "https://www.azavea.com/"
 micrositeGithubOwner := "geotrellis"
 micrositeGithubRepo := "vectorpipe"
+micrositeBaseUrl := "/vectorpipe"

@@ -11,7 +11,7 @@ applications we can transform completely raw data into a grid of
 VectorTiles, ready for further processing. "Clipping" and "Collation"
 functions help us customize this process along the way.
 
-<img src="/img/pipeline.png" style="width:90%;height:auto">
+<img src="/vectorpipe/img/pipeline.png" style="width:90%;height:auto">
 
 ### Data Sources
 

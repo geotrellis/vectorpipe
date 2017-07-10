@@ -146,3 +146,30 @@ Instead, call a spade a spade and write a stand-alone function:
   /* Put this in an appropriate companion object, or the package object */
   def fooifize(bestArg: Type, arg: Type): Unit = { ??? }
 #+END_SRC
+
+** Updating the Microsite
+
+All content files can be found in ~src/main/tut/~. After making your desired
+changes, you can confirm them by running the following in sbt:
+
+#+BEGIN_EXAMPLE
+sbt> makeMicrosite
+#+END_EXAMPLE
+
+This will build the site as well as compile every Scala example. If
+something about the API has changed and the examples are no longer valid,
+these docs will fail to build. This is a good thing! Just make the
+appropriate extra changes and rebuild.
+
+To view your built site locally, navigate to ~target/site/~ and run ~jekyll
+serve~. Be careful: The main content of the site will be visible at
+[[http://127.0.0.1:4000/vectorpipe/][127.0.0.1:4000/vectorpipe/]]. Without
+the ~vectorpipe~ on the end, you won't see anything.
+
+If you have write permission to the main VectorPipe repo on Github, then
+your updated microsite can be published to
+[[https://geotrellis.github.io/vectorpipe/]] via:
+
+#+BEGIN_EXAMPLE
+sbt> publishMicrosite
+#+END_EXAMPLE

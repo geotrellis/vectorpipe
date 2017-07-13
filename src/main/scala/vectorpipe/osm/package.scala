@@ -1,21 +1,21 @@
 package vectorpipe
 
-import java.io.{FileInputStream, InputStream}
+import java.io.{ FileInputStream, InputStream }
+import java.time.ZonedDateTime
 
-import scala.util.{Failure, Success}
+import scala.util.{ Failure, Success, Try }
 
 import geotrellis.vector._
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
-import vectorpipe.osm.internal.{ElementToFeature => E2F}
+import org.apache.spark.sql._
+import org.apache.spark.sql.hive._
+import vectorpipe.osm.internal.{ ElementToFeature => E2F }
 import vectorpipe.util.Tree
 
 // --- //
 
 package object osm {
-
-  import scala.util.Try
-
 
   type TagMap = Map[String, String]
   type OSMFeature = Feature[Geometry, Tree[ElementData]]
@@ -27,48 +27,108 @@ package object osm {
   /** Given a path to an OSM XML file, parse it into usable types. */
   def fromLocalXML(path: String)(implicit sc: SparkContext): Either[String, (RDD[Node], RDD[Way], RDD[Relation])] = {
     /* A byte stream, so as to not tax the heap */
-    Try(new FileInputStream(path) : InputStream).flatMap(xml => Element.elements.parse(xml)) match {
+    Try(new FileInputStream(path): InputStream).flatMap(xml => Element.elements.parse(xml)) match {
       case Failure(e) => Left(e.toString)
       case Success((ns, ws, rs)) =>
         Right((sc.parallelize(ns), sc.parallelize(ws), sc.parallelize(rs)))
     }
   }
 
-  /** Convert an RDD of raw OSM [[Element]]s into interpreted GeoTrellis
-    * [[Feature]]s. In order to mix the various subtypes together, they've
-    * been upcasted internally to [[Geometry]]. Note:
-    * {{{
-    * type OSMFeature = Feature[Geometry, Tree[ElementData]]
-    * }}}
-    *
-    * ===Behaviour===
-    * This algorithm aims to losslessly "sanitize" its input data,
-    * in that it will break down malformed Relation structures, as
-    * well as cull member references to Elements which no longer
-    * exist (or exist outside the subset of data you're working
-    * on). Mathematically speaking, there should exist a function
-    * to reverse this conversion. This theoretical function and
-    * `toFeatures` form an isomorphism if the source data is
-    * correct. In other words, given:
-    * {{{
-    * parse: XML => RDD[Element]
-    * toFeatures: RDD[Element] => RDD[OSMFeature]
-    * restore: RDD[OSMFeature] => RDD[Element]
-    * unparse: RDD[Element] => XML
-    * }}}
-    * then:
-    * {{{
-    * unparse(restore(toFeatures(parse(xml: XML))))
-    * }}}
-    * will yield a body of semantically correct OSM data.
-    *
-    * To achieve this sanity, the algorithm has the following behaviour:
-    *   - Graphs of [[Relation]]s will be broken into spanning [[Tree]]s.
-    *   - It doesn't make sense to represent non-multipolygon Relations as
-    *     GeoTrellis `Geometry`s, so Relation metadata is disseminated
-    *     across its child members. Otherwise, Relations are "dropped"
-    *     from the output.
-    */
+  /** Given a path to an Apache ORC file containing OSM data, read out RDDs of each Element type. */
+  def fromLocalORC(path: String)(implicit hc: HiveContext): Either[String, (RDD[Node], RDD[Way], RDD[Relation])] = {
+    /* Necessary for the `map` transformation below to work */
+    import hc.sparkSession.implicits._
+
+    Try(hc.read.format("orc").load(path)) match {
+      case Failure(e) => Left(e.toString)
+      case Success(data) => {
+        val nodes: RDD[Node] =
+          data
+            .select("lat", "lon", "id", "user", "uid", "changeset", "version", "timestamp", "visible", "tags")
+            .where("type = 'node'")
+            .map { row =>
+              val lat: Double = row.getAs[Double]("lat")
+              val lon: Double = row.getAs[Double]("lon")
+              val tags: TagMap = row.getAs[TagMap]("tags")
+
+              Node(lat, lon, ElementData(metaFromRow(row), tags, Some(Right(Point(lon, lat)))))
+            }
+            .rdd
+
+        val ways: RDD[Way] =
+          data
+            .select($"nds.ref".alias("nds"), $"id", $"user", $"uid", $"changeset", $"version", $"timestamp", $"visible", $"tags")
+            .where("type = 'way'")
+            .map { row =>
+              val nodes: Vector[Long] = row.getAs[Vector[Long]]("nds")
+
+              Way(nodes, ElementData(metaFromRow(row), row.getAs[TagMap]("tags"), None))
+            }
+            .rdd
+
+        val relations: RDD[Relation] =
+          data
+            .select("members", "id", "user", "uid", "changeset", "version", "timestamp", "visible", "tags")
+            .where("type = 'relation'")
+            .map { row =>
+              val members: Seq[Member] = row.getAs[Seq[Member]]("members")
+
+              Relation(members, ElementData(metaFromRow(row), row.getAs[TagMap]("tags"), None))
+            }
+            .rdd
+
+        Right((nodes, ways, relations))
+      }
+    }
+  }
+
+  private def metaFromRow(row: Row): ElementMeta = {
+    ElementMeta(
+      row.getAs[Long]("id"),
+      row.getAs[String]("user"),
+      row.getAs[String]("uid"),
+      row.getAs[Long]("changeset"),
+      row.getAs[Long]("version"),
+      row.getAs[ZonedDateTime]("timestamp"),
+      row.getAs[Boolean]("visible"))
+  }
+
+  /**
+   * Convert an RDD of raw OSM [[Element]]s into interpreted GeoTrellis
+   * [[Feature]]s. In order to mix the various subtypes together, they've
+   * been upcasted internally to [[Geometry]]. Note:
+   * {{{
+   * type OSMFeature = Feature[Geometry, Tree[ElementData]]
+   * }}}
+   *
+   * ===Behaviour===
+   * This algorithm aims to losslessly "sanitize" its input data,
+   * in that it will break down malformed Relation structures, as
+   * well as cull member references to Elements which no longer
+   * exist (or exist outside the subset of data you're working
+   * on). Mathematically speaking, there should exist a function
+   * to reverse this conversion. This theoretical function and
+   * `toFeatures` form an isomorphism if the source data is
+   * correct. In other words, given:
+   * {{{
+   * parse: XML => RDD[Element]
+   * toFeatures: RDD[Element] => RDD[OSMFeature]
+   * restore: RDD[OSMFeature] => RDD[Element]
+   * unparse: RDD[Element] => XML
+   * }}}
+   * then:
+   * {{{
+   * unparse(restore(toFeatures(parse(xml: XML))))
+   * }}}
+   * will yield a body of semantically correct OSM data.
+   *
+   * To achieve this sanity, the algorithm has the following behaviour:
+   *   - Graphs of [[Relation]]s will be broken into spanning [[Tree]]s.
+   *   - It doesn't make sense to represent non-multipolygon Relations as
+   *     GeoTrellis `Geometry`s, so Relation metadata is disseminated
+   *     across its child members. Otherwise, Relations are "dropped"
+   *     from the output.
+   */
   def toFeatures(nodes: RDD[Node], ways: RDD[Way], relations: RDD[Relation]): RDD[OSMFeature] = {
 
     /* All Geometric OSM Relations.

@@ -16,7 +16,8 @@ scalacOptions := Seq(
 libraryDependencies ++= Seq(
   "com.azavea"                  %% "scaliper"              % "0.5.0-SNAPSHOT" % "test",
   "io.dylemma"                  %% "xml-spac"              % "0.3-SNAPSHOT",  // Published locally
-  "org.apache.spark"            %% "spark-core"            % "2.1.0",  // TODO add "provided" later
+  "org.apache.spark"            %% "spark-core"            % "2.2.0",  // TODO add "provided" later
+  "org.apache.spark"            %% "spark-hive"            % "2.2.0",
   "org.locationtech.geotrellis" %% "geotrellis-spark"      % "1.1.0-SNAPSHOT",
   "org.locationtech.geotrellis" %% "geotrellis-util"       % "1.1.0-SNAPSHOT",
   "org.locationtech.geotrellis" %% "geotrellis-vector"     % "1.1.0-SNAPSHOT",

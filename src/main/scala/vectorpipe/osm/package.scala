@@ -4,6 +4,7 @@ import java.io.{ FileInputStream, InputStream }
 import java.time.ZonedDateTime
 
 import scala.util.{ Failure, Success, Try }
+import scala.reflect.classTag
 
 import geotrellis.vector._
 import org.apache.spark.SparkContext
@@ -17,7 +18,6 @@ import vectorpipe.util.Tree
 
 package object osm {
 
-  type TagMap = Map[String, String]
   type OSMFeature = Feature[Geometry, Tree[ElementData]]
   type OSMPoint = Feature[Point, Tree[ElementData]]
   type OSMLine = Feature[Line, Tree[ElementData]]
@@ -39,43 +39,57 @@ package object osm {
     /* Necessary for the `map` transformation below to work */
     import hc.sparkSession.implicits._
 
+    /* WARNING: Here be Reflection Dragons!
+     * You may be look at this code and think: gee, that seems a bit verbose. You'd be right,
+     * but that doesn't change what's necessary. The workings here are fairly brittle - things
+     * might compile but fail mysteriously if anything is changed here (specifically regarding
+     * the explicit type hand-holding).
+     */
     Try(hc.read.format("orc").load(path)) match {
       case Failure(e) => Left(e.toString)
       case Success(data) => {
         val nodes: RDD[Node] =
           data
-            .select("lat", "lon", "id", "user", "uid", "changeset", "version", "timestamp", "visible", "tags")
+            .select("lat", "lon", "id", "user", "uid", "changeset", "version", "timestamp", "tags")
             .where("type = 'node'")
             .map { row =>
-              val lat: Double = row.getAs[Double]("lat")
-              val lon: Double = row.getAs[Double]("lon")
-              val tags: TagMap = row.getAs[TagMap]("tags")
+              val lat: Double = row.getAs[java.math.BigDecimal]("lat").doubleValue()
+              val lon: Double = row.getAs[java.math.BigDecimal]("lon").doubleValue()
+              val tags: scala.collection.immutable.Map[String, String] =
+                row.getAs[scala.collection.immutable.Map[String, String]]("tags")
 
-              Node(lat, lon, ElementData(metaFromRow(row), tags, Some(Right(Point(lon, lat)))))
+              (lat, lon, metaFromRow(row), tags)
             }
             .rdd
+            .map({ case (lat, lon, meta, tags) => Node(lat, lon, ElementData(meta, tags, Some(Right(Point(lon, lat))))) })
 
         val ways: RDD[Way] =
           data
-            .select($"nds.ref".alias("nds"), $"id", $"user", $"uid", $"changeset", $"version", $"timestamp", $"visible", $"tags")
+            .select($"nds.ref".alias("nds"), $"id", $"user", $"uid", $"changeset", $"version", $"timestamp", $"tags")
             .where("type = 'way'")
             .map { row =>
-              val nodes: Vector[Long] = row.getAs[Vector[Long]]("nds")
+              val nodes: Vector[Long] = row.getAs[Seq[Long]]("nds").toVector
+              val tags: scala.collection.immutable.Map[String, String] =
+                row.getAs[scala.collection.immutable.Map[String, String]]("tags")
 
-              Way(nodes, ElementData(metaFromRow(row), row.getAs[TagMap]("tags"), None))
+              (nodes, metaFromRow(row), tags)
             }
             .rdd
+            .map({ case (nodes, meta, tags) => Way(nodes, ElementData(meta, tags, None)) })
 
         val relations: RDD[Relation] =
           data
-            .select("members", "id", "user", "uid", "changeset", "version", "timestamp", "visible", "tags")
+            .select("members", "id", "user", "uid", "changeset", "version", "timestamp", "tags")
             .where("type = 'relation'")
             .map { row =>
               val members: Seq[Member] = row.getAs[Seq[Member]]("members")
+              val tags: scala.collection.immutable.Map[String, String] =
+                row.getAs[scala.collection.immutable.Map[String, String]]("tags")
 
-              Relation(members, ElementData(metaFromRow(row), row.getAs[TagMap]("tags"), None))
+              (members, metaFromRow(row), tags)
             }
-            .rdd
+            .rdd 
+            .map({ case (members, meta, tags) => Relation(members, ElementData(meta, tags, None)) })
 
         Right((nodes, ways, relations))
       }
@@ -86,11 +100,11 @@ package object osm {
     ElementMeta(
       row.getAs[Long]("id"),
       row.getAs[String]("user"),
-      row.getAs[String]("uid"),
+      row.getAs[Long]("uid").toString, // TODO Use a `Long` in the datatype instead?
       row.getAs[Long]("changeset"),
       row.getAs[Long]("version"),
-      row.getAs[ZonedDateTime]("timestamp"),
-      row.getAs[Boolean]("visible"))
+      row.getAs[java.sql.Timestamp]("timestamp").toString,
+      true)
   }
 
   /**

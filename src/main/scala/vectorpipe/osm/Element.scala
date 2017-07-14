@@ -19,7 +19,7 @@ object Element {
     Parser.forOptionalAttribute("uid").map(_.getOrElse("anonymous")) ~
     Parser.forMandatoryAttribute("changeset").map(_.toLong) ~
     Parser.forMandatoryAttribute("version").map(_.toLong) ~
-    Parser.forMandatoryAttribute("timestamp").map(ZonedDateTime.parse) ~
+    Parser.forMandatoryAttribute("timestamp") ~
     Parser.forOptionalAttribute("visible").map(_.map(_.toBoolean).getOrElse(false))).as(ElementMeta)
 
   /* <tag k='access' v='permissive' /> */
@@ -121,7 +121,7 @@ case class Member(
   ref: Long,
   role: String)
 
-case class ElementData(meta: ElementMeta, tagMap: TagMap, extra: Option[Either[Extent, Point]])
+case class ElementData(meta: ElementMeta, tagMap: Map[String, String], extra: Option[Either[Extent, Point]])
 
 /** All Element types have these attributes in common. */
 case class ElementMeta(
@@ -130,7 +130,7 @@ case class ElementMeta(
   userId: String,
   changeSet: Long,
   version: Long,
-  timestamp: ZonedDateTime,
+  timestamp: String,
   visible: Boolean)
 
 /** Extra element-specific metadata. */

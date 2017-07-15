@@ -18,6 +18,7 @@ libraryDependencies ++= Seq(
   "io.dylemma"                  %% "xml-spac"              % "0.3-SNAPSHOT",  // Published locally
   "org.apache.spark"            %% "spark-core"            % "2.2.0",  // TODO add "provided" later
   "org.apache.spark"            %% "spark-hive"            % "2.2.0",
+  "org.apache.hadoop"           %  "hadoop-aws"            % "2.8.1",
   "org.locationtech.geotrellis" %% "geotrellis-spark"      % "1.1.0-SNAPSHOT",
   "org.locationtech.geotrellis" %% "geotrellis-util"       % "1.1.0-SNAPSHOT",
   "org.locationtech.geotrellis" %% "geotrellis-vector"     % "1.1.0-SNAPSHOT",

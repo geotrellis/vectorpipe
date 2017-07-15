@@ -34,8 +34,11 @@ package object osm {
     }
   }
 
-  /** Given a path to an Apache ORC file containing OSM data, read out RDDs of each Element type. */
-  def fromLocalORC(path: String)(implicit hc: HiveContext): Either[String, (RDD[Node], RDD[Way], RDD[Relation])] = {
+  /** Given a path to an Apache ORC file containing OSM data, read out RDDs of each Element type.
+    * If you want to read a file from S3, you must call [[vectorpipe.useS3]] first
+    * to properly configure Hadoop to read your S3 credentials.
+    */
+  def fromORC(path: String)(implicit hc: HiveContext): Either[String, (RDD[Node], RDD[Way], RDD[Relation])] = {
     /* Necessary for the `map` transformation below to work */
     import hc.sparkSession.implicits._
 

@@ -18,6 +18,7 @@ import vectorpipe.util.Tree
 
 package object osm {
 
+  // TODO Get rid of these? I'm not convinced they're useful.
   type OSMFeature = Feature[Geometry, Tree[ElementData]]
   type OSMPoint = Feature[Point, Tree[ElementData]]
   type OSMLine = Feature[Line, Tree[ElementData]]
@@ -45,7 +46,7 @@ package object osm {
     /* WARNING: Here be Reflection Dragons!
      * You may be look at this code and think: gee, that seems a bit verbose. You'd be right,
      * but that doesn't change what's necessary. The workings here are fairly brittle - things
-     * might compile but fail mysteriously if anything is changed here (specifically regarding
+     * might compile but fail mysteriously at runtime if anything is changed here (specifically regarding
      * the explicit type hand-holding).
      */
     Try(hc.read.format("orc").load(path)) match {

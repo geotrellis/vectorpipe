@@ -6,16 +6,18 @@ section: "usage"
 
 ## From XML
 
+OSM XML files usually appear with the extention `.osm`. Since the data is all string-based,
+these files can be quite large compared to their PBF or ORC equivalents.
+
 ```tut:silent
 import org.apache.spark._
-import org.apache.spark.rdd.RDD
 import vectorpipe._
 
 implicit val sc: SparkContext = new SparkContext(
   new SparkConf().setMaster("local[*]").setAppName("xml-example")
 )
 
-val path: String = ""
+val path: String = "/some/path/on/your/machine/foo.osm"
 
 osm.fromLocalXML(path) match {
   case Left(e) => { }  /* Parsing failed somehow... is the filepath correct? */
@@ -27,8 +29,45 @@ sc.stop()
 
 ## From PBF
 
-Forthcoming.
+For the time being, `.osm.pbf` files can be used by first converting them to `.orc`
+files using the [osm2orc](https://github.com/mojodna/osm2orc) tool, and then following
+VectorPipe's ORC intructions given below.
 
 ## From ORC
 
-Forthcoming.
+You must first include an extra dependency to the `libraryDependencies` list in your `build.sbt`:
+
+```
+"org.apache.spark" %% "spark-hive" % "2.2.0"
+```
+
+And then we can read our OSM data in parallel via Spark:
+
+```tut:silent
+import org.apache.spark._
+import org.apache.spark.sql.hive._
+import vectorpipe._
+
+implicit val sc: SparkContext = new SparkContext(
+  new SparkConf().setMaster("local[*]").setAppName("orc-example")
+)
+
+/* Necessary for reading the ORC file, even if you're not using Apache Hive yourself */
+implicit val hc: HiveContext = new HiveContext(sc)
+
+/* If you want to read an ORC file from S3, you must call this first */
+useS3(sc)
+
+val path: String = "s3://bucket/key/foo.orc"
+// val path: String = "/some/path/on/your/machine/foo.orc" /* If not using S3 */
+
+osm.fromORC(path) match {
+  case Left(err) => { } /* Does the file exist? Do you have the right AWS credentials? */
+  case Right((ns,ws,rs)) => { } /* (RDD[Node], RDD[Way], RDD[Relation]) */
+}
+
+sc.stop()
+```
+
+This approach will be particularly efficient when ran on an EMR cluster, since
+EMR clusters have privileged access to S3.

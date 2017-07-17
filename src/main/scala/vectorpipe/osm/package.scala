@@ -10,7 +10,6 @@ import geotrellis.vector._
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql._
-import org.apache.spark.sql.hive._
 import vectorpipe.osm.internal.{ ElementToFeature => E2F }
 import vectorpipe.util.Tree
 
@@ -39,9 +38,9 @@ package object osm {
     * If you want to read a file from S3, you must call [[vectorpipe.useS3]] first
     * to properly configure Hadoop to read your S3 credentials.
     */
-  def fromORC(path: String)(implicit hc: HiveContext): Either[String, (RDD[Node], RDD[Way], RDD[Relation])] = {
+  def fromORC(path: String)(implicit ss: SparkSession): Either[String, (RDD[Node], RDD[Way], RDD[Relation])] = {
     /* Necessary for the `map` transformation below to work */
-    import hc.sparkSession.implicits._
+    import ss.implicits._
 
     /* WARNING: Here be Reflection Dragons!
      * You may be look at this code and think: gee, that seems a bit verbose. You'd be right,
@@ -49,7 +48,7 @@ package object osm {
      * might compile but fail mysteriously at runtime if anything is changed here (specifically regarding
      * the explicit type hand-holding).
      */
-    Try(hc.read.format("orc").load(path)) match {
+    Try(ss.read.orc(path)) match {
       case Failure(e) => Left(e.toString)
       case Success(data) => {
         val nodes: RDD[Node] =
@@ -92,7 +91,7 @@ package object osm {
 
               (members, metaFromRow(row), tags)
             }
-            .rdd 
+            .rdd
             .map({ case (members, meta, tags) => Relation(members, ElementData(meta, tags, None)) })
 
         Right((nodes, ways, relations))

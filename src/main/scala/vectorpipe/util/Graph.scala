@@ -9,11 +9,11 @@ import spire.syntax.order._
 // --- //
 
 /** Adapted from the Haskell implementation, which was based on the paper
-  * 'Structuring Depth-First Search Algorithms in Haskell' by David King
+  * ''Structuring Depth-First Search Algorithms in Haskell'' by David King
   * and John Launchbury.
   *
-  * Do not attempt to `new Graph(...)` yourself. In all cases,
-  * use `Graph.fromEdges` to construct a Graph.
+  * `Graph` has a private constructor. To create an instance of a `Graph`, use
+  * [[Graph.fromEdges]].
   *
   * ===Usage===
   * The two main methods of interest are `get`:
@@ -53,7 +53,7 @@ import spire.syntax.order._
   *
   * @constructor Use `Graph.fromEdges` instead of this.
   */
-class Graph[K: Order, V](
+class Graph[K: Order, V] private (
   outgoing: Vector[Seq[Vertex]],
   getNode: Vertex => (K, V, Seq[K]),
   getVert: K => Option[Vertex]
@@ -61,7 +61,7 @@ class Graph[K: Order, V](
   /** Possibly find a node that corresponds to a given key. */
   private def vertex(key: K): Option[Vertex] = getVert(key)
 
-  /** Use [[get]]. Retrieve the full node information given a [[Vertex]].
+  /** Use [[get]] instead. Retrieve the full node information given a [[Vertex]].
     * Vertex validity (bounds) is not checked.
     */
   def node(v: Vertex): (K, V, Seq[K]) = getNode(v)

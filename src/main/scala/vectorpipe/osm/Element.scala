@@ -2,7 +2,7 @@ package vectorpipe.osm
 
 import java.time.ZonedDateTime
 
-import geotrellis.vector.{Extent, Point}
+import geotrellis.vector.{ Extent, Point }
 import io.dylemma.spac._
 
 // --- //
@@ -15,30 +15,26 @@ sealed trait Element {
 object Element {
   implicit val elementMeta: Parser[Any, ElementMeta] = (
     Parser.forMandatoryAttribute("id").map(_.toLong) ~
-      Parser.forOptionalAttribute("user").map(_.getOrElse("anonymous")) ~
-      Parser.forOptionalAttribute("uid").map(_.getOrElse("anonymous")) ~
-      Parser.forMandatoryAttribute("changeset").map(_.toInt) ~
-      Parser.forMandatoryAttribute("version").map(_.toInt) ~
-      Parser.forMandatoryAttribute("timestamp").map(ZonedDateTime.parse) ~
-      Parser.forOptionalAttribute("visible").map(_.map(_.toBoolean).getOrElse(false))
-  ).as(ElementMeta)
+    Parser.forOptionalAttribute("user").map(_.getOrElse("anonymous")) ~
+    Parser.forOptionalAttribute("uid").map(_.getOrElse("anonymous")) ~
+    Parser.forMandatoryAttribute("changeset").map(_.toLong) ~
+    Parser.forMandatoryAttribute("version").map(_.toLong) ~
+    Parser.forMandatoryAttribute("timestamp") ~
+    Parser.forOptionalAttribute("visible").map(_.map(_.toBoolean).getOrElse(false))).as(ElementMeta)
 
   /* <tag k='access' v='permissive' /> */
   implicit val tag: Parser[Any, (String, String)] = (
-    Parser.forMandatoryAttribute("k") ~ Parser.forMandatoryAttribute("v")
-  ).as({ case (k,v) => (k,v) }) // Hand-holding the typesystem.
+    Parser.forMandatoryAttribute("k") ~ Parser.forMandatoryAttribute("v")).as({ case (k, v) => (k, v) }) // Hand-holding the typesystem.
 
   implicit val elementData: Parser[Any, ElementData] = (
     elementMeta ~
-      Splitter(* \ "tag").asListOf[(String, String)].map(_.toMap)
-  ).as((meta, tags) => ElementData(meta, tags, None))
+    Splitter(* \ "tag").asListOf[(String, String)].map(_.toMap)).as((meta, tags) => ElementData(meta, tags, None))
 
   /* <node lat='49.5135613' lon='6.0095049' ... > */
   implicit val node: Parser[Any, Node] = (
     Parser.forMandatoryAttribute("lat").map(_.toDouble) ~
-      Parser.forMandatoryAttribute("lon").map(_.toDouble) ~
-      elementData
-  ).as((lat, lon, d) => Node(lat, lon, d.copy(extra = Some(Right(Point(lon, lat))))))
+    Parser.forMandatoryAttribute("lon").map(_.toDouble) ~
+    elementData).as((lat, lon, d) => Node(lat, lon, d.copy(extra = Some(Right(Point(lon, lat))))))
 
   /*
    <way ... >
@@ -48,59 +44,57 @@ object Element {
    */
   implicit val way: Parser[Any, Way] = (
     Splitter(* \ "nd")
-      .through(Parser.forMandatoryAttribute("ref").map(_.toLong))
-      .parseToList
-      .map(_.toVector) ~
-      elementData
-  ).as(Way)
+    .through(Parser.forMandatoryAttribute("ref").map(_.toLong))
+    .parseToList
+    .map(_.toVector) ~
+    elementData).as(Way)
 
   /* <member type='way' ref='22902411' role='outer' /> */
   implicit val member: Parser[Any, Member] = (
     Parser.forMandatoryAttribute("type") ~
-      Parser.forMandatoryAttribute("ref").map(_.toLong) ~
-      Parser.forMandatoryAttribute("role")
-  ).as(Member)
+    Parser.forMandatoryAttribute("ref").map(_.toLong) ~
+    Parser.forMandatoryAttribute("role")).as(Member)
 
   implicit val relation: Parser[Any, Relation] = (
-    Splitter(* \ "member").asListOf[Member] ~ elementData
-  ).as(Relation)
+    Splitter(* \ "member").asListOf[Member] ~ elementData).as(Relation)
 
-  /** The master parser.
-    *
-    * ===Usage===
-    * {{{
-    * val xml: InputStream = new FileInputStream("somefile.osm")
-    *
-    * val res: Try[(List[Node], List[Way], List[Relation])] = Element.elements.parse(xml)
-    * }}}
-    */
+  /**
+   * The master parser.
+   *
+   * ===Usage===
+   * {{{
+   * val xml: InputStream = new FileInputStream("somefile.osm")
+   *
+   * val res: Try[(List[Node], List[Way], List[Relation])] = Element.elements.parse(xml)
+   * }}}
+   */
   val elements: Parser[Any, (List[Node], List[Way], List[Relation])] = (
     Splitter("osm" \ "node").asListOf[Node] ~
-      Splitter("osm" \ "way").asListOf[Way] ~
-      Splitter("osm" \ "relation").asListOf[Relation]
-  ).as({ case (ns, ws, rs) =>
-    (ns, ws, rs)
-  })
+    Splitter("osm" \ "way").asListOf[Way] ~
+    Splitter("osm" \ "relation").asListOf[Relation]).as({
+      case (ns, ws, rs) =>
+        (ns, ws, rs)
+    })
 }
 
-/** Some point in the world, which could represent a location or small object
-  *  like a park bench or flagpole.
-  */
+/**
+ * Some point in the world, which could represent a location or small object
+ *  like a park bench or flagpole.
+ */
 case class Node(
   lat: Double,
   lon: Double,
-  data: ElementData
-) extends Element
+  data: ElementData) extends Element
 
-/** A string of [[Node]]s which could represent a road, or if connected back around
-  *  to itself, a building, water body, landmass, etc.
-  *
-  *  Assumption: A Way has at least two nodes.
-  */
+/**
+ * A string of [[Node]]s which could represent a road, or if connected back around
+ *  to itself, a building, water body, landmass, etc.
+ *
+ *  Assumption: A Way has at least two nodes.
+ */
 case class Way(
-  nodes: Vector[Long],  /* Vector for O(1) indexing */
-  data: ElementData
-) extends Element {
+  nodes: Vector[Long], /* Vector for O(1) indexing */
+  data: ElementData) extends Element {
   /** Is it a Polyline, but not an "Area" even if closed? */
   def isLine: Boolean = !isClosed || (!isArea && isHighwayOrBarrier)
 
@@ -117,30 +111,27 @@ case class Way(
 
 case class Relation(
   members: Seq[Member],
-  data: ElementData
-) extends Element {
+  data: ElementData) extends Element {
   /** The IDs of sub-relations that this Relation points to. */
   def subrelations: Seq[Long] = members.filter(_.memType == "relation").map(_.ref)
 }
 
 case class Member(
-  memType: String, // TODO Use a sum type?
+  memType: String,
   ref: Long,
-  role: String // TODO Use a sum type?
-)
+  role: String)
 
-case class ElementData(meta: ElementMeta, tagMap: TagMap, extra: Option[Either[Extent, Point]])
+case class ElementData(meta: ElementMeta, tagMap: Map[String, String], extra: Option[Either[Extent, Point]])
 
 /** All Element types have these attributes in common. */
 case class ElementMeta(
   id: Long,
   user: String,
   userId: String,
-  changeSet: Int,
-  version: Int,
-  timestamp: ZonedDateTime,
-  visible: Boolean
-)
+  changeSet: Long,
+  version: Long,
+  timestamp: String,
+  visible: Boolean)
 
 /** Extra element-specific metadata. */
 private[vectorpipe] sealed trait Extra

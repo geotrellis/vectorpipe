@@ -99,6 +99,27 @@ having to think about them. This decreases ~import~ confusion.
   }
 #+END_SRC
 
+- Avoid throwing Exceptions:
+
+#+BEGIN_SRC scala
+  /* Surely this function will obey its contract... */
+  def innocent(path: String): Foo
+
+  sbt> innocent("/wrong/file/path/or/bad/data.txt")
+  java.lang.YouCouldntHaveForeseenThisException
+#+END_SRC
+
+Exceptions were intentionally left out of new languages like Golang, Rust, and Elm.
+In Scala, we can use vanilla ~Try~ and ~Either~, or ~EitherT~ from [[http://typelevel.org/cats/][Cats]]
+to model potential errors:
+
+#+BEGIN_SRC scala
+  def innocent(path: String): Either[String, Foo]
+
+  /* "Mixing Contexts", i.e. the ability to run concurrently and to fail safely */
+  def innocentIO(path: String): EitherT[Future, String, Foo]
+#+END_SRC
+
 - Avoid ~.apply~ returning a type other than the parent object:
 
 #+BEGIN_SRC scala
@@ -129,7 +150,7 @@ having to think about them. This decreases ~import~ confusion.
   val x = Foo(...).bar // where did `bar` come from?
 #+END_SRC
 
-Typeclasses should be implented via the implicit-val-within-companion-object
+Typeclasses should be implemented via the implicit-val-within-companion-object
 pattern.
 
 - Avoid classes that don't represent data:

@@ -13,7 +13,7 @@ sealed trait Element {
 }
 
 object Element {
-  implicit val elementMeta: Parser[Any, ElementMeta] = (
+  implicit val elementMeta: Parser[ElementMeta] = (
     Parser.forMandatoryAttribute("id").map(_.toLong) ~
     Parser.forOptionalAttribute("user").map(_.getOrElse("anonymous")) ~
     Parser.forOptionalAttribute("uid").map(_.getOrElse("anonymous")) ~
@@ -23,15 +23,15 @@ object Element {
     Parser.forOptionalAttribute("visible").map(_.map(_.toBoolean).getOrElse(false))).as(ElementMeta)
 
   /* <tag k='access' v='permissive' /> */
-  implicit val tag: Parser[Any, (String, String)] = (
+  implicit val tag: Parser[(String, String)] = (
     Parser.forMandatoryAttribute("k") ~ Parser.forMandatoryAttribute("v")).as({ case (k, v) => (k, v) }) // Hand-holding the typesystem.
 
-  implicit val elementData: Parser[Any, ElementData] = (
+  implicit val elementData: Parser[ElementData] = (
     elementMeta ~
     Splitter(* \ "tag").asListOf[(String, String)].map(_.toMap)).as((meta, tags) => ElementData(meta, tags, None))
 
   /* <node lat='49.5135613' lon='6.0095049' ... > */
-  implicit val node: Parser[Any, Node] = (
+  implicit val node: Parser[Node] = (
     Parser.forMandatoryAttribute("lat").map(_.toDouble) ~
     Parser.forMandatoryAttribute("lon").map(_.toDouble) ~
     elementData).as((lat, lon, d) => Node(lat, lon, d.copy(extra = Some(Right(Point(lon, lat))))))
@@ -42,7 +42,7 @@ object Element {
     ...
    </way>
    */
-  implicit val way: Parser[Any, Way] = (
+  implicit val way: Parser[Way] = (
     Splitter(* \ "nd")
     .through(Parser.forMandatoryAttribute("ref").map(_.toLong))
     .parseToList
@@ -50,12 +50,12 @@ object Element {
     elementData).as(Way)
 
   /* <member type='way' ref='22902411' role='outer' /> */
-  implicit val member: Parser[Any, Member] = (
+  implicit val member: Parser[Member] = (
     Parser.forMandatoryAttribute("type") ~
     Parser.forMandatoryAttribute("ref").map(_.toLong) ~
     Parser.forMandatoryAttribute("role")).as(Member)
 
-  implicit val relation: Parser[Any, Relation] = (
+  implicit val relation: Parser[Relation] = (
     Splitter(* \ "member").asListOf[Member] ~ elementData).as(Relation)
 
   /**
@@ -68,7 +68,7 @@ object Element {
    * val res: Try[(List[Node], List[Way], List[Relation])] = Element.elements.parse(xml)
    * }}}
    */
-  val elements: Parser[Any, (List[Node], List[Way], List[Relation])] = (
+  val elements: Parser[(List[Node], List[Way], List[Relation])] = (
     Splitter("osm" \ "node").asListOf[Node] ~
     Splitter("osm" \ "way").asListOf[Way] ~
     Splitter("osm" \ "relation").asListOf[Relation]).as({

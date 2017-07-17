@@ -38,25 +38,21 @@ VectorPipe's ORC intructions given below.
 You must first include an extra dependency to the `libraryDependencies` list in your `build.sbt`:
 
 ```
-"org.apache.spark" %% "spark-hive" % "2.2.0"
+"org.apache.spark" %% "spark-sql" % "2.2.0"
 ```
 
-And then we can read our OSM data in parallel via Spark:
+And then we can read our OSM data in parallel via Spark. Notice the use of `SparkSession`
+instead of `SparkContext` here:
 
 ```tut:silent
-import org.apache.spark._
-import org.apache.spark.sql.hive._
+import org.apache.spark.sql._
 import vectorpipe._
 
-implicit val sc: SparkContext = new SparkContext(
-  new SparkConf().setMaster("local[*]").setAppName("orc-example")
-)
-
-/* Necessary for reading the ORC file, even if you're not using Apache Hive yourself */
-implicit val hc: HiveContext = new HiveContext(sc)
+implicit val ss: SparkSession =
+  SparkSession.builder.master("local[*]").appName("orc-example").getOrCreate
 
 /* If you want to read an ORC file from S3, you must call this first */
-useS3(sc)
+useS3(ss)
 
 val path: String = "s3://bucket/key/foo.orc"
 // val path: String = "/some/path/on/your/machine/foo.orc" /* If not using S3 */
@@ -66,7 +62,7 @@ osm.fromORC(path) match {
   case Right((ns,ws,rs)) => { } /* (RDD[Node], RDD[Way], RDD[Relation]) */
 }
 
-sc.stop()
+ss.stop()
 ```
 
 This approach will be particularly efficient when ran on an EMR cluster, since

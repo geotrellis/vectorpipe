@@ -19,7 +19,7 @@ Spark](https://spark.apache.org/).
 
 Currently VectorPipe can process:
 
-- OSM XML
+- OpenStreetMap XML / PBF* / ORC
 
 And produce:
 

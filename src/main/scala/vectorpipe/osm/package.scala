@@ -17,12 +17,11 @@ import vectorpipe.util.Tree
 
 package object osm {
 
-  // TODO Get rid of these? I'm not convinced they're useful.
   type OSMFeature = Feature[Geometry, Tree[ElementData]]
-  type OSMPoint = Feature[Point, Tree[ElementData]]
-  type OSMLine = Feature[Line, Tree[ElementData]]
-  type OSMPolygon = Feature[Polygon, Tree[ElementData]]
-  type OSMMultiPoly = Feature[MultiPolygon, Tree[ElementData]]
+  private[vectorpipe] type OSMPoint = Feature[Point, Tree[ElementData]]
+  private[vectorpipe] type OSMLine = Feature[Line, Tree[ElementData]]
+  private[vectorpipe] type OSMPolygon = Feature[Polygon, Tree[ElementData]]
+  private[vectorpipe] type OSMMultiPoly = Feature[MultiPolygon, Tree[ElementData]]
 
   /** Given a path to an OSM XML file, parse it into usable types. */
   def fromLocalXML(path: String)(implicit sc: SparkContext): Either[String, (RDD[Node], RDD[Way], RDD[Relation])] = {

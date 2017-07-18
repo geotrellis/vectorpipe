@@ -10,6 +10,26 @@ import vectorpipe.util._
 // --- //
 
 class WindingSanity extends FunSpec with Matchers {
+
+  /* Borrowed from GT, where it's private */
+  def surveyor(l: ListBuffer[(Int, Int)]): Double = {
+    val ps: ListBuffer[(Int, Int)] = l.init
+    val xs = ps.map(_._1)
+    val yns = (ps :+ ps.head).tail.map(_._2)
+    val yps = (ps.last +: ps).init.map(_._2)
+
+    var sum: Double = 0
+    var i: Int = 0
+
+    while (i < ps.length) {
+      sum += xs(i) * (yns(i) - yps(i))
+
+      i += 1
+    }
+
+    sum
+  }
+
   /** Get the area of a Polygon via the Surveyor Formula. */
   def area(p: Polygon): Double = {
     val buff = new ListBuffer[(Int,Int)]

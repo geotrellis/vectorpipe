@@ -66,7 +66,6 @@ import org.apache.spark.rdd._
   * import geotrellis.spark._
   * import geotrellis.spark.io._
   * import geotrellis.spark.io.file._    /* When writing to your local computer */
-  * import geotrellis.vectortile.spark._ /* From `geotrellis-vectortile-spark` */
   *
   * /* IO classes */
   * val catalog: String = "/home/you/tiles/"  /* This must exist ahead of time! */

@@ -38,7 +38,7 @@ VectorPipe's ORC intructions given below.
 You must first include an extra dependency to the `libraryDependencies` list in your `build.sbt`:
 
 ```
-"org.apache.spark" %% "spark-sql" % "2.2.0"
+"org.apache.spark" %% "spark-hive" % "2.2.0"
 ```
 
 And then we can read our OSM data in parallel via Spark. Notice the use of `SparkSession`
@@ -49,7 +49,7 @@ import org.apache.spark.sql._
 import vectorpipe._
 
 implicit val ss: SparkSession =
-  SparkSession.builder.master("local[*]").appName("orc-example").getOrCreate
+  SparkSession.builder.master("local[*]").appName("orc-example").enableHiveSupport.getOrCreate
 
 /* If you want to read an ORC file from S3, you must call this first */
 useS3(ss)

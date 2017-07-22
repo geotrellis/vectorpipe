@@ -31,7 +31,7 @@ VectorPipe’s ORC intructions given below.</p>
 
 <p>You must first include an extra dependency to the <code class="highlighter-rouge">libraryDependencies</code> list in your <code class="highlighter-rouge">build.sbt</code>:</p>
 
-<div class="highlighter-rouge"><pre class="highlight"><code>"org.apache.spark" %% "spark-sql" % "2.2.0"
+<div class="highlighter-rouge"><pre class="highlight"><code>"org.apache.spark" %% "spark-hive" % "2.2.0"
 </code></pre>
 </div>
 
@@ -42,7 +42,7 @@ instead of <code class="highlighter-rouge">SparkContext</code> here:</p>
 <span class="k">import</span> <span class="nn">vectorpipe._</span>
 
 <span class="k">implicit</span> <span class="k">val</span> <span class="n">ss</span><span class="k">:</span> <span class="kt">SparkSession</span> <span class="o">=</span>
-  <span class="nc">SparkSession</span><span class="o">.</span><span class="n">builder</span><span class="o">.</span><span class="n">master</span><span class="o">(</span><span class="s">"local[*]"</span><span class="o">).</span><span class="n">appName</span><span class="o">(</span><span class="s">"orc-example"</span><span class="o">).</span><span class="n">getOrCreate</span>
+  <span class="nc">SparkSession</span><span class="o">.</span><span class="n">builder</span><span class="o">.</span><span class="n">master</span><span class="o">(</span><span class="s">"local[*]"</span><span class="o">).</span><span class="n">appName</span><span class="o">(</span><span class="s">"orc-example"</span><span class="o">).</span><span class="n">enableHiveSupport</span><span class="o">.</span><span class="n">getOrCreate</span>
 
 <span class="cm">/* If you want to read an ORC file from S3, you must call this first */</span>
 <span class="n">useS3</span><span class="o">(</span><span class="n">ss</span><span class="o">)</span>

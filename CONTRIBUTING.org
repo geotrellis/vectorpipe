@@ -79,7 +79,7 @@ having to think about them. This decreases ~import~ confusion.
 
 *** Scala Features to Avoid
 
-- Avoid method overloading:
+- We avoid method overloading:
 
 #+BEGIN_SRC scala
   case class Foo[T](t: T) {
@@ -90,7 +90,7 @@ having to think about them. This decreases ~import~ confusion.
   }
 #+END_SRC
 
-- Avoid default arguments:
+- We avoid default arguments:
 
 #+BEGIN_SRC scala
   case class Foo[T](t: T) {
@@ -99,7 +99,7 @@ having to think about them. This decreases ~import~ confusion.
   }
 #+END_SRC
 
-- Avoid throwing Exceptions:
+- We avoid throwing Exceptions:
 
 #+BEGIN_SRC scala
   /* Surely this function will obey its contract... */
@@ -120,7 +120,7 @@ to model potential errors:
   def innocentIO(path: String): EitherT[Future, String, Foo]
 #+END_SRC
 
-- Avoid ~.apply~ returning a type other than the parent object:
+- We avoid ~.apply~ returning a type other than the parent object:
 
 #+BEGIN_SRC scala
   object Foo {
@@ -132,7 +132,7 @@ to model potential errors:
   val x = Foo(...)  // hard to know what x's type is.
 #+END_SRC
 
-- [[https://github.com/circe/circe/blame/master/DESIGN.md#L77][Avoid implicit conversions]]:
+- We [[https://github.com/circe/circe/blame/master/DESIGN.md#L77][avoid implicit conversions]]:
 
 #+BEGIN_SRC scala
   case class Foo(...)
@@ -153,7 +153,7 @@ to model potential errors:
 Typeclasses should be implemented via the implicit-val-within-companion-object
 pattern.
 
-- Avoid classes that don't represent data:
+- We avoid classes that don't represent data:
 
 #+BEGIN_SRC scala
   class Fooifizer(val bestArg: Type) {
@@ -161,7 +161,7 @@ pattern.
   }
 #+END_SRC
 
-Instead, call a spade a spade and write a stand-alone function:
+Instead, we call a spade a spade and write a stand-alone function:
 
 #+BEGIN_SRC scala
   /* Put this in an appropriate companion object, or the package object */

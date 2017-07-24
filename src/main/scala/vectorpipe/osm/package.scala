@@ -1,10 +1,8 @@
 package vectorpipe
 
 import java.io.{ FileInputStream, InputStream }
-import java.time.ZonedDateTime
 
 import scala.util.{ Failure, Success, Try }
-import scala.reflect.classTag
 
 import geotrellis.vector._
 import org.apache.spark.SparkContext
@@ -81,17 +79,27 @@ package object osm {
 
         val relations: RDD[Relation] =
           data
-            .select("members", "id", "user", "uid", "changeset", "version", "timestamp", "tags")
+            .select($"members.type".alias("types"), $"members.ref".alias("refs"), $"members.role".alias("roles"), $"id", $"user", $"uid", $"changeset", $"version", $"timestamp", $"tags")
             .where("type = 'relation'")
             .map { row =>
-              val members: Seq[Member] = row.getAs[Seq[Member]]("members")
+              // val members: Seq[vectorpipe.osm.Member] =
+                // row.getAs[Seq[vectorpipe.osm.Member]]("members")
+
+              val types: Seq[String] = row.getAs[Seq[String]]("types")
+              val refs: Seq[Long] = row.getAs[Seq[Long]]("refs")
+              val roles: Seq[String] = row.getAs[Seq[String]]("roles")
+
               val tags: scala.collection.immutable.Map[String, String] =
                 row.getAs[scala.collection.immutable.Map[String, String]]("tags")
 
-              (members, metaFromRow(row), tags)
+              (types, refs, roles, metaFromRow(row), tags)
             }
             .rdd
-            .map({ case (members, meta, tags) => Relation(members, ElementData(meta, tags, None)) })
+            .map { case (types, refs, roles, meta, tags) =>
+               val members: Seq[Member] = types.zip(refs).zip(roles).map { case ((ty, rf), ro) => Member(ty, rf, ro) }
+
+               Relation(members, ElementData(meta, tags, None))
+            }
 
         Right((nodes, ways, relations))
       }

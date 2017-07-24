@@ -50,7 +50,7 @@ private[vectorpipe] object ElementToFeature {
 
     // TODO: This String comparison is aweful! Use a sumtype!
     val refs = tree.root.members.foldRight(Seq.empty[(Long, Seq[ElementData])])({
-      case (m, acc) if Set("node", "way").contains(m.memType) => (m.ref, data) +: acc
+      case (m, acc) if Set("node", "way").contains(m.`type`) => (m.ref, data) +: acc
       case (_, acc) => acc
     })
 
@@ -105,7 +105,7 @@ private[vectorpipe] object ElementToFeature {
 
     Tree(
       t.root.copy(members = t.root.members.filter({ m: Member =>
-        m.memType != "relation" || childIds.contains(m.ref)
+        m.`type` != "relation" || childIds.contains(m.ref)
       })),
       t.children.map(cull)
     )

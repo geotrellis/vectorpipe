@@ -113,11 +113,11 @@ case class Relation(
   members: Seq[Member],
   data: ElementData) extends Element {
   /** The IDs of sub-relations that this Relation points to. */
-  def subrelations: Seq[Long] = members.filter(_.memType == "relation").map(_.ref)
+  def subrelations: Seq[Long] = members.filter(_.`type` == "relation").map(_.ref)
 }
 
 case class Member(
-  memType: String,
+  `type`: String,
   ref: Long,
   role: String)
 

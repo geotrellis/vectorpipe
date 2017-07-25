@@ -44,6 +44,11 @@ package object osm {
      * but that doesn't change what's necessary. The workings here are fairly brittle - things
      * might compile but fail mysteriously at runtime if anything is changed here (specifically regarding
      * the explicit type hand-holding).
+     *
+     * Changes made here might also be respected by demo code local to this library,
+     * but then fail at runtime when published and used in a separate project.
+     * How the `Member`s list below is handled is an example of this.
+     * Moral of the story: avoid reflection and other runtime trickery.
      */
     Try(ss.read.orc(path)) match {
       case Failure(e) => Left(e.toString)
@@ -82,9 +87,11 @@ package object osm {
             .select($"members.type".alias("types"), $"members.ref".alias("refs"), $"members.role".alias("roles"), $"id", $"user", $"uid", $"changeset", $"version", $"timestamp", $"tags")
             .where("type = 'relation'")
             .map { row =>
-              // val members: Seq[vectorpipe.osm.Member] =
-                // row.getAs[Seq[vectorpipe.osm.Member]]("members")
 
+              /* ASSUMPTION: These three lists respect their original ordering as they
+               * were stored in Orc STRUCTs. i.e. the first element of each list were
+               * from the same STRUCT, as were those from the second, and third, etc.
+               */
               val types: Seq[String] = row.getAs[Seq[String]]("types")
               val refs: Seq[Long] = row.getAs[Seq[Long]]("refs")
               val roles: Seq[String] = row.getAs[Seq[String]]("roles")
@@ -96,9 +103,23 @@ package object osm {
             }
             .rdd
             .map { case (types, refs, roles, meta, tags) =>
-               val members: Seq[Member] = types.zip(refs).zip(roles).map { case ((ty, rf), ro) => Member(ty, rf, ro) }
+              /* Scala has no `zip3` or `zipWith`, so we have to combine these three Seqs
+               * somewhat inefficiently. This line really needs improvement.
+               *
+               * The issue here is that reflection can't figure out how to read a `Seq[Member]`
+               * from a `Row`, but _only when vectorpipe is used in another project_. Demo code
+               * local to this project with work just fine. The exception thrown is:
+               *
+               * java.lang.ClassCastException: org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema
+               * cannot be cast to vectorpipe.osm.Member
+               *
+               * This was supposed to have been fixed in an earlier version of Spark,
+               * and there is little mention of the issue in general on the internet.
+               */
+              val members: Seq[Member] =
+                types.zip(refs).zip(roles).map { case ((ty, rf), ro) => Member(ty, rf, ro) }
 
-               Relation(members, ElementData(meta, tags, None))
+              Relation(members, ElementData(meta, tags, None))
             }
 
         Right((nodes, ways, relations))

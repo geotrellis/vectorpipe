@@ -79,7 +79,9 @@ having to think about them. This decreases ~import~ confusion.
 
 *** Scala Features to Avoid
 
-- We avoid method overloading:
+**** Method Overloading and Default Arguments
+
+We [[https://stackoverflow.com/a/2512001/643684][avoid method overloading]]:
 
 #+BEGIN_SRC scala
   case class Foo[T](t: T) {
@@ -90,7 +92,7 @@ having to think about them. This decreases ~import~ confusion.
   }
 #+END_SRC
 
-- We avoid default arguments:
+We avoid default arguments:
 
 #+BEGIN_SRC scala
   case class Foo[T](t: T) {
@@ -99,7 +101,11 @@ having to think about them. This decreases ~import~ confusion.
   }
 #+END_SRC
 
-- We avoid throwing Exceptions:
+Since this is method overloading in disguise.
+
+**** Exceptions
+
+We avoid throwing Exceptions:
 
 #+BEGIN_SRC scala
   /* Surely this function will obey its contract... */
@@ -109,8 +115,8 @@ having to think about them. This decreases ~import~ confusion.
   java.lang.YouCouldntHaveForeseenThisException
 #+END_SRC
 
-Exceptions were intentionally left out of new languages like Golang, Rust, and Elm.
-In Scala, we can use vanilla ~Try~ and ~Either~, or ~EitherT~ from [[http://typelevel.org/cats/][Cats]]
+Exceptions were intentionally left out of new languages like [[https://golang.org/doc/faq#exceptions][Golang]], [[https://www.rust-lang.org/en-US/faq.html#error-handling][Rust]], and Elm.
+In Scala, we can use vanilla ~Try~ and ~Either~, or ~EitherT~ from [[http://typelevel.org/cats/][Cats]] or [[https://github.com/scalaz/scalaz][ScalaZ]]
 to model potential errors:
 
 #+BEGIN_SRC scala
@@ -120,7 +126,26 @@ to model potential errors:
   def innocentIO(path: String): EitherT[Future, String, Foo]
 #+END_SRC
 
-- We avoid ~.apply~ returning a type other than the parent object:
+**** Non-data Classes
+
+We [[https://www.youtube.com/watch?v=o9pEzgHorH0][avoid classes that don't represent data]]:
+
+#+BEGIN_SRC scala
+  class Fooifizer(val bestArg: Type) {
+    def work(arg: Type): Unit = { ??? }
+  }
+#+END_SRC
+
+Instead, we call a spade a spade and write a stand-alone function:
+
+#+BEGIN_SRC scala
+  /* Put this in an appropriate companion object, or the package object */
+  def fooifize(bestArg: Type, arg: Type): Unit = { ??? }
+#+END_SRC
+
+**** Miscellaneous
+
+We avoid ~.apply~ returning a type other than the parent object:
 
 #+BEGIN_SRC scala
   object Foo {
@@ -132,7 +157,7 @@ to model potential errors:
   val x = Foo(...)  // hard to know what x's type is.
 #+END_SRC
 
-- We [[https://github.com/circe/circe/blame/master/DESIGN.md#L77][avoid implicit conversions]]:
+We [[https://github.com/circe/circe/blame/master/DESIGN.md#L77][avoid implicit conversions]]:
 
 #+BEGIN_SRC scala
   case class Foo(...)
@@ -152,21 +177,6 @@ to model potential errors:
 
 Typeclasses should be implemented via the implicit-val-within-companion-object
 pattern.
-
-- We avoid classes that don't represent data:
-
-#+BEGIN_SRC scala
-  class Fooifizer(val bestArg: Type) {
-    def work(arg: Type): Unit = { ??? }
-  }
-#+END_SRC
-
-Instead, we call a spade a spade and write a stand-alone function:
-
-#+BEGIN_SRC scala
-  /* Put this in an appropriate companion object, or the package object */
-  def fooifize(bestArg: Type, arg: Type): Unit = { ??? }
-#+END_SRC
 
 ** Updating the Microsite
 

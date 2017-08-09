@@ -1,6 +1,6 @@
 name := """vectorpipe"""
 
-version := "1.0.0"
+version := "1.0.0-SNAPSHOT"
 
 organization := "com.azavea"
 organizationName := "Azavea"
@@ -16,9 +16,11 @@ scalacOptions := Seq(
 libraryDependencies ++= Seq(
   "com.azavea"                  %% "scaliper"              % "0.5.0-SNAPSHOT" % "test",
   "io.dylemma"                  %% "xml-spac"              % "0.3",
-  "org.apache.spark"            %% "spark-core"            % "2.2.0",
-  "org.apache.spark"            %% "spark-hive"            % "2.2.0",
-  "org.apache.hadoop"           %  "hadoop-aws"            % "2.8.1",
+  "org.apache.spark"            %% "spark-hive"            % "2.2.0" % "provided",
+  "org.apache.hadoop"           %  "hadoop-aws"            % "2.8.1"
+    exclude("javax.servlet",     "servlet-api")
+    exclude("javax.servlet.jsp", "jsp-api")
+    exclude("org.mortbay.jetty", "servlet-api"),
   "org.locationtech.geotrellis" %% "geotrellis-spark"      % "1.2.0-SNAPSHOT",
   "org.locationtech.geotrellis" %% "geotrellis-util"       % "1.2.0-SNAPSHOT",
   "org.locationtech.geotrellis" %% "geotrellis-vector"     % "1.2.0-SNAPSHOT",

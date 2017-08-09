@@ -108,7 +108,7 @@ package object osm {
                *
                * The issue here is that reflection can't figure out how to read a `Seq[Member]`
                * from a `Row`, but _only when vectorpipe is used in another project_. Demo code
-               * local to this project with work just fine. The exception thrown is:
+               * local to this project will work just fine. The exception thrown is:
                *
                * java.lang.ClassCastException: org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema
                * cannot be cast to vectorpipe.osm.Member

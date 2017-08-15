@@ -127,10 +127,10 @@ object VectorPipe {
 
     /* Filter once to reduce later workload */
     // TODO: This may be an unnecessary bottleneck.
-    val bounded: RDD[Feature[G, D]] = rdd.filter(f => f.geom.intersects(extent))
+    // val bounded: RDD[Feature[G, D]] = rdd.filter(f => f.geom.intersects(extent))
 
     /* Associate each Feature with a SpatialKey */
-    val grid: RDD[(SpatialKey, Feature[G, D])] = bounded.flatMap(f => byIntersect(mt, f))
+    val grid: RDD[(SpatialKey, Feature[G, D])] = rdd.flatMap(f => byIntersect(mt, f))
 
     grid.groupByKey().map({ case (k, iter) =>
       val kExt: Extent = mt(k)
@@ -145,15 +145,20 @@ object VectorPipe {
     mt: MapKeyTransform,
     f: Feature[G, D]
   ): Iterator[(SpatialKey, Feature[G, D])] = {
+
     val b: GridBounds = mt(f.geom.envelope)
 
+    /* For most Geoms, this will only produce one [[SpatialKey]]. */
     val keys: Iterator[SpatialKey] = for {
       x <- Iterator.range(b.colMin, b.colMax+1)
       y <- Iterator.range(b.rowMin, b.rowMax+1)
     } yield SpatialKey(x, y)
 
-    keys.filter(k => mt(k).toPolygon.intersects(f.geom))
-      .map(k => (k, f))
+    /* Yes, this filter is necessary, since the Geom's _envelope_ could intersect
+     * grid cells that the Geom itself does not. Not excluding these false positives
+     * could lead to undefined behaviour later in the clipping step.
+     */
+    keys.filter(k => mt(k).toPolygon.intersects(f.geom)).map(k => (k, f))
   }
 
   /** Given a collection of GeoTrellis `Feature`s which have been associated

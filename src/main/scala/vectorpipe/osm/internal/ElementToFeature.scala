@@ -176,10 +176,15 @@ private[vectorpipe] object ElementToFeature {
               .unzip
 
           // TODO: 2017 May  9 @ 08:31 - Why are we `try`ing here?
+          // 2017 Aug 14 - Maybe because Line/Poly construction can fail if `points` is empty?
+          // Confirm why it would ever be empty.
           try {
             /* Segregate by which are purely Lines, and which form Polygons */
             if (w.isLine) {
-              Some(Left(Feature(Line(points), Tree(w.data, data.map(_.pure[Tree])))))
+              // TODO: Report somehow that the Line was dropped for being degenerate.
+              if (isDegenerateLine(points)) None else {
+                Some(Left(Feature(Line(points), Tree(w.data, data.map(_.pure[Tree])))))
+              }
             } else {
               Some(Right(Feature(Polygon(points), Tree(w.data, data.map(_.pure[Tree])))))
             }
@@ -245,10 +250,13 @@ private[vectorpipe] object ElementToFeature {
           case _ => None
         }).toVector
 
-        val (dumpedLineCount, fusedLines) =
-          fuseLines(spatialSort(ls.map(f => (f.geom.centroid.as[Point].get, f))).map(_._2)).run(0).value
+        /* All line segments, rougly in order of connecting to others. */
+        val sorted = spatialSort(ls.map(f => (f.geom.centroid.as[Point].get, f))).map(_._2)
 
-//        println(s"LINES DUMPED BY fuseLines: ${dumpedLineCount}")
+        /* All line segments which could fuse into Polygons */
+        val (dumpedLineCount, fusedLines) = fuseLines(sorted).run(0).value
+
+        // if (dumpedLineCount > 0) println(s"LINES DUMPED BY fuseLines: ${dumpedLineCount}")
 
         val ps: Vector[OSMPolygon] = gs.flatMap({
           case Left(p) => Some(p)
@@ -364,11 +372,24 @@ private[vectorpipe] object ElementToFeature {
     case v => {
       fuseOne(v).flatMap({
         case None => fuseLines(v.tail)
-        case Some((f, d, rest)) => {
+        case Some((f, d, i, rest)) => {
           if (f.isClosed)
             fuseLines(rest).map(c => Feature(Polygon(f), Tree(d.head.root, d)) +: c)
-          else
-            fuseLines(Feature(f, Tree(d.head.root, d)) +: rest)
+          else {
+            /* The next sections of the currently accumulating Line may be far down
+             * the Vector, so we punt it forward to avoid wasted traversals
+             * and intersection checks.
+             * This is a band-aid around the fact that `spatialSort` doesn't
+             * place all sections of every fusable line in order; clumps of them
+             * can appear far apart in the Vector.
+             *
+             * If `i == 0`, the splitAt and `(++)` below are basically no-ops,
+             * so there's no point in any `if (i == 0) skipTheSplitAt`.
+             */
+            val (a, b) = rest.splitAt(i)
+
+            fuseLines(a ++ (Feature(f, Tree(d.head.root, d)) +: b))
+          }
         }
       })
     }
@@ -380,7 +401,7 @@ private[vectorpipe] object ElementToFeature {
    */
   private def fuseOne(
     v: Vector[OSMLine]
-  ): State[Int, Option[(Line, Seq[Tree[ElementData]], Vector[OSMLine])]] = {
+  ): State[Int, Option[(Line, Seq[Tree[ElementData]], Int, Vector[OSMLine])]] = {
     val h = v.head
     val t = v.tail
 
@@ -397,8 +418,8 @@ private[vectorpipe] object ElementToFeature {
         val (a, b) = t.splitAt(i)
 
         /* Hand-hold the typechecker */
-        val res: Option[(Line, Seq[Tree[ElementData]], Vector[OSMLine])] =
-          Some((line, Seq(h.data, f.data), a ++ b.tail))
+        val res: Option[(Line, Seq[Tree[ElementData]], Int, Vector[OSMLine])] =
+          Some((line, Seq(h.data, f.data), i, a ++ b.tail))
 
         /* Return early */
         return res.pure[IntState]
@@ -406,5 +427,13 @@ private[vectorpipe] object ElementToFeature {
     }
 
     State.modify[Int](_ + 1).map(_ => None)
+  }
+
+  /** Is a given line illegal? */
+  private def isDegenerateLine(points: Vector[(Double, Double)]): Boolean = {
+    /* Is the Line just two of the same Point?
+     * This would otherwise cause problems for JTS later.
+     */
+    points.length == 2 && points(0) == points(1)
   }
 }

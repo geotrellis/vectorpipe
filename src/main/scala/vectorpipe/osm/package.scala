@@ -210,7 +210,7 @@ package object osm {
     val pls: RDD[OSMFeature] = polys.map(identity)
     val mps: RDD[OSMFeature] = multiPolys.map(identity)
 
-    val geoms = pnt ++ lns ++ pls ++ mps
+    val geoms: RDD[OSMFeature] = pnt ++ lns ++ pls ++ mps
 
     /* Add every Feature's bounding envelope to its metadata */
     geoms.map({ f =>

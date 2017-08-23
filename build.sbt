@@ -37,6 +37,8 @@ parallelExecution in Test := false
 
 /* To generate the microsite locally, use `sbt makeMicrosite`.
  * To publish the site to Github, use `sbt publishMicrosite`.
+ *
+ * Spark deps must not be marked `provided` while doing these, or you will get errors.
  */
 
 enablePlugins(MicrositesPlugin)
@@ -50,4 +52,4 @@ micrositeOrganizationHomepage := "https://www.azavea.com/"
 micrositeGithubOwner := "geotrellis"
 micrositeGithubRepo := "vectorpipe"
 micrositeBaseUrl := "/vectorpipe"
-micrositeDocumentationUrl := "/vectorpipe/latest/api" /* Location of Scaladocs */
+micrositeDocumentationUrl := "/vectorpipe/latest/api/#vectorpipe.VectorPipe$" /* Location of Scaladocs */

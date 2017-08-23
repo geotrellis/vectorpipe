@@ -3,6 +3,7 @@ name := """vectorpipe"""
 version := "1.0.0-SNAPSHOT"
 
 organization := "com.azavea"
+
 organizationName := "Azavea"
 
 scalaVersion := "2.11.11"
@@ -34,7 +35,12 @@ parallelExecution in Test := false
 
 /* Microsite Settings */
 
+/* To generate the microsite locally, use `sbt makeMicrosite`.
+ * To publish the site to Github, use `sbt publishMicrosite`.
+ */
+
 enablePlugins(MicrositesPlugin)
+enablePlugins(SiteScaladocPlugin)
 
 micrositeName := "VectorPipe"
 micrositeDescription := "Convert Vector data into VectorTiles"
@@ -44,3 +50,4 @@ micrositeOrganizationHomepage := "https://www.azavea.com/"
 micrositeGithubOwner := "geotrellis"
 micrositeGithubRepo := "vectorpipe"
 micrositeBaseUrl := "/vectorpipe"
+micrositeDocumentationUrl := "/vectorpipe/latest/api" /* Location of Scaladocs */

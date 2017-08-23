@@ -9,6 +9,8 @@ technologies:
  - third: ["Scala", "Functional Programming on the JVM"]
 ---
 
+**Note: VectorPipe has not yet been released.**
+
 # VectorPipe
 
 VectorPipe is a Scala library for transforming vector data of arbitrary

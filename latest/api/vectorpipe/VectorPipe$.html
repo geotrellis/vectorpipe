@@ -1,0 +1,586 @@
+<!DOCTYPE html >
+<html>
+        <head>
+          <title>VectorPipe - vectorpipe.VectorPipe</title>
+          <meta name="description" content="VectorPipe - vectorpipe.VectorPipe" />
+          <meta name="keywords" content="VectorPipe vectorpipe.VectorPipe" />
+          <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+          
+      <link href="../lib/template.css" media="screen" type="text/css" rel="stylesheet" />
+      <link href="../lib/diagrams.css" media="screen" type="text/css" rel="stylesheet" id="diagrams-css" />
+      <script type="text/javascript" src="../lib/jquery.js" id="jquery-js"></script>
+      <script type="text/javascript" src="../lib/jquery-ui.js"></script>
+      <script type="text/javascript" src="../lib/template.js"></script>
+      <script type="text/javascript" src="../lib/tools.tooltip.js"></script>
+      
+      <script type="text/javascript">
+         if(top === self) {
+            var url = '../index.html';
+            var hash = 'vectorpipe.VectorPipe$';
+            var anchor = window.location.hash;
+            var anchor_opt = '';
+            if (anchor.length >= 1)
+              anchor_opt = '@' + anchor.substring(1);
+            window.location.href = url + '#' + hash + anchor_opt;
+         }
+   	  </script>
+    
+        </head>
+        <body class="value">
+      <div id="definition">
+        <img alt="Object" src="../lib/object_big.png" />
+        <p id="owner"><a href="package.html" class="extype" name="vectorpipe">vectorpipe</a></p>
+        <h1>VectorPipe</h1><h3><span class="morelinks"><div>Related Doc:
+            <a href="package.html" class="extype" name="vectorpipe">package vectorpipe</a>
+          </div></span></h3><span class="permalink">
+      <a href="../index.html#vectorpipe.VectorPipe$" title="Permalink" target="_top">
+        <img src="../lib/permalink.png" alt="Permalink" />
+      </a>
+    </span>
+      </div>
+
+      <h4 id="signature" class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">object</span>
+      </span>
+      <span class="symbol">
+        <span class="name">VectorPipe</span>
+      </span>
+      </h4>
+      
+          <div id="comment" class="fullcommenttop"><div class="comment cmt"><p>VectorPipe is a library for mass conversion of OSM data into Mapbox
+VectorTiles. It is powered by <a href="https://github.com/locationtech/geotrellis" target="_blank">GeoTrellis</a> and <a href="https://spark.apache.org" target="_blank">Apache Spark</a>.</p><h4>Outline</h4><p>GeoTrellis and Spark do most of our work for us. Writing a <code>main</code>
+function that uses VectorPipe need not contain much more than:</p><pre><span class="kw">import</span> vectorpipe._
+
+<span class="kw">val</span> layout: LayoutDefinition =
+  ZoomedLayoutScheme.layoutForZoom(<span class="num">15</span>, WebMercator.worldExtent, <span class="num">512</span>)
+
+... <span class="cmt">// TODO dealing with ORC</span>
+
+<span class="kw">val</span> (nodes, ways, relations): (RDD[osm.Node], RDD[osm.Way], RDD[osm.Relation]) = ...
+
+<span class="kw">val</span> features: RDD[OSMFeature] =
+  osm.toFeatures(nodes, ways, relations)
+
+<span class="kw">val</span> featGrid: RDD[(SpatialKey, Iterable[OSMFeature])] =
+  VectorPipe.toGrid(Clip.byHybrid, layout, features)
+
+<span class="kw">val</span> tiles: RDD[(SpatialKey, VectorTile)] =
+  VectorPipe.toVectorTile(Collate.byAnalytics, layout, featGrid)</pre><p>The <code>tiles</code> RDD could then be used as a GeoTrellis tile layer as
+needed.</p><h4>Writing Portable Tiles</h4><p>This method outputs VectorTiles to a directory structure appropriate for
+serving by a Tile Map Server. The VTs themselves are saved in the usual
+<code>.mvt</code> format, and so can be read by any other tool. The example that
+follows writes <code>tiles</code> from above to an S3 bucket:</p><pre><span class="kw">import</span> geotrellis.spark.io.s3._  <span class="cmt">// requires the `geotrellis-s3` library</span>
+
+<span class="cmt">/* How should a `SpatialKey` map to a filepath on S3? */</span>
+<span class="kw">val</span> s3PathFromKey: SpatialKey <span class="kw">=&gt;</span> <span class="std">String</span> = SaveToS3.spatialKeyToPath(
+  LayerId(<span class="lit">"sample"</span>, <span class="num">1</span>),  <span class="cmt">// Whatever zoom level it is</span>
+  <span class="lit">"s3://some-bucket/catalog/{name}/{z}/{x}/{y}.mvt"</span>
+)
+
+tiles.saveToS3(s3PathFromKey)</pre><h4>Writing a GeoTrellis Layer of VectorTiles</h4><p>The disadvantage of the &quot;Portable Tiles&quot; approach is that there is no
+way to read the tiles back into a <code>RDD[(SpatialKey, VectorTile)]</code> and do
+Spark-based manipulation operations. To do that, the tiles have to be
+written as a &quot;GeoTrellis Layer&quot; from the get-go. The output of such a write
+are split and compressed files that aren't readable by other tools. This
+method compresses VectorTiles to about half the size of a normal <code>.mvt</code>.</p><pre><span class="kw">import</span> geotrellis.spark._
+<span class="kw">import</span> geotrellis.spark.io._
+<span class="kw">import</span> geotrellis.spark.io.file._    <span class="cmt">/* When writing to your local computer */</span>
+
+<span class="cmt">/* IO classes */</span>
+<span class="kw">val</span> catalog: <span class="std">String</span> = <span class="lit">"/home/you/tiles/"</span>  <span class="cmt">/* This must exist ahead of time! */</span>
+<span class="kw">val</span> store = FileAttributeStore(catalog)
+<span class="kw">val</span> writer = FileLayerWriter(store)
+
+<span class="cmt">/* Dynamically determine the KeyBounds */</span>
+<span class="kw">val</span> bounds: KeyBounds[SpatialKey] =
+  tiles.map({ <span class="kw">case</span> (key, _) <span class="kw">=&gt;</span> KeyBounds(key, key) }).reduce(_ combine _)
+
+<span class="cmt">/* Construct metadata for the Layer */</span>
+<span class="kw">val</span> meta = LayerMetadata(layout, bounds)
+
+<span class="cmt">/* Write the Tile Layer */</span>
+writer.write(LayerId(<span class="lit">"north-van"</span>, <span class="num">15</span>), ContextRDD(tiles, meta), ZCurveKeyIndexMethod)</pre></div><div class="toggleContainer block">
+          <span class="toggle">Linear Supertypes</span>
+          <div class="superTypes hiddenContent"><span class="extype" name="scala.AnyRef">AnyRef</span>, <span class="extype" name="scala.Any">Any</span></div>
+        </div></div>
+        
+
+      <div id="mbrsel">
+        <div id="textfilter"><span class="pre"></span><span class="input"><input id="mbrsel-input" type="text" accesskey="/" /></span><span class="post"></span></div>
+        <div id="order">
+              <span class="filtertype">Ordering</span>
+              <ol>
+                
+                <li class="alpha in"><span>Alphabetic</span></li>
+                <li class="inherit out"><span>By Inheritance</span></li>
+              </ol>
+            </div>
+        <div id="ancestors">
+                <span class="filtertype">Inherited<br />
+                </span>
+                <ol id="linearization">
+                  <li class="in" name="vectorpipe.VectorPipe"><span>VectorPipe</span></li><li class="in" name="scala.AnyRef"><span>AnyRef</span></li><li class="in" name="scala.Any"><span>Any</span></li>
+                </ol>
+              </div><div id="ancestors">
+            <span class="filtertype"></span>
+            <ol>
+              <li class="hideall out"><span>Hide All</span></li>
+              <li class="showall in"><span>Show All</span></li>
+            </ol>
+          </div>
+        <div id="visbl">
+            <span class="filtertype">Visibility</span>
+            <ol><li class="public in"><span>Public</span></li><li class="all out"><span>All</span></li></ol>
+          </div>
+      </div>
+
+      <div id="template">
+        <div id="allMembers">
+        
+
+        
+
+        
+
+        <div id="values" class="values members">
+              <h3>Value Members</h3>
+              <ol><li name="scala.AnyRef#!=" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="!=(x$1:Any):Boolean"></a>
+      <a id="!=(Any):Boolean"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">final </span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span title="gt4s: $bang$eq" class="name">!=</span><span class="params">(<span name="arg0">arg0: <span class="extype" name="scala.Any">Any</span></span>)</span><span class="result">: <span class="extype" name="scala.Boolean">Boolean</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../index.html#vectorpipe.VectorPipe$@!=(x$1:Any):Boolean" title="Permalink" target="_top">
+        <img src="../lib/permalink.png" alt="Permalink" />
+      </a>
+    </span>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef → Any</dd></dl></div>
+    </li><li name="scala.AnyRef###" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="##():Int"></a>
+      <a id="##():Int"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">final </span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span title="gt4s: $hash$hash" class="name">##</span><span class="params">()</span><span class="result">: <span class="extype" name="scala.Int">Int</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../index.html#vectorpipe.VectorPipe$@##():Int" title="Permalink" target="_top">
+        <img src="../lib/permalink.png" alt="Permalink" />
+      </a>
+    </span>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef → Any</dd></dl></div>
+    </li><li name="scala.AnyRef#==" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="==(x$1:Any):Boolean"></a>
+      <a id="==(Any):Boolean"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">final </span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span title="gt4s: $eq$eq" class="name">==</span><span class="params">(<span name="arg0">arg0: <span class="extype" name="scala.Any">Any</span></span>)</span><span class="result">: <span class="extype" name="scala.Boolean">Boolean</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../index.html#vectorpipe.VectorPipe$@==(x$1:Any):Boolean" title="Permalink" target="_top">
+        <img src="../lib/permalink.png" alt="Permalink" />
+      </a>
+    </span>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef → Any</dd></dl></div>
+    </li><li name="scala.Any#asInstanceOf" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="asInstanceOf[T0]:T0"></a>
+      <a id="asInstanceOf[T0]:T0"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">final </span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">asInstanceOf</span><span class="tparams">[<span name="T0">T0</span>]</span><span class="result">: <span class="extype" name="scala.Any.asInstanceOf.T0">T0</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../index.html#vectorpipe.VectorPipe$@asInstanceOf[T0]:T0" title="Permalink" target="_top">
+        <img src="../lib/permalink.png" alt="Permalink" />
+      </a>
+    </span>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>Any</dd></dl></div>
+    </li><li name="scala.AnyRef#clone" visbl="prt" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="clone():Object"></a>
+      <a id="clone():AnyRef"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">clone</span><span class="params">()</span><span class="result">: <span class="extype" name="scala.AnyRef">AnyRef</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../index.html#vectorpipe.VectorPipe$@clone():Object" title="Permalink" target="_top">
+        <img src="../lib/permalink.png" alt="Permalink" />
+      </a>
+    </span>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Attributes</dt><dd>protected[<a href="../java$lang.html" class="extype" name="java.lang">java.lang</a>] </dd><dt>Definition Classes</dt><dd>AnyRef</dd><dt>Annotations</dt><dd>
+                <span class="name">@throws</span><span class="args">(<span>
+      
+      <span class="defval" name="classOf[java.lang.CloneNotSupportedException]">...</span>
+    </span>)</span>
+              
+        </dd></dl></div>
+    </li><li name="scala.AnyRef#eq" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="eq(x$1:AnyRef):Boolean"></a>
+      <a id="eq(AnyRef):Boolean"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">final </span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">eq</span><span class="params">(<span name="arg0">arg0: <span class="extype" name="scala.AnyRef">AnyRef</span></span>)</span><span class="result">: <span class="extype" name="scala.Boolean">Boolean</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../index.html#vectorpipe.VectorPipe$@eq(x$1:AnyRef):Boolean" title="Permalink" target="_top">
+        <img src="../lib/permalink.png" alt="Permalink" />
+      </a>
+    </span>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef</dd></dl></div>
+    </li><li name="scala.AnyRef#equals" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="equals(x$1:Any):Boolean"></a>
+      <a id="equals(Any):Boolean"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">equals</span><span class="params">(<span name="arg0">arg0: <span class="extype" name="scala.Any">Any</span></span>)</span><span class="result">: <span class="extype" name="scala.Boolean">Boolean</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../index.html#vectorpipe.VectorPipe$@equals(x$1:Any):Boolean" title="Permalink" target="_top">
+        <img src="../lib/permalink.png" alt="Permalink" />
+      </a>
+    </span>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef → Any</dd></dl></div>
+    </li><li name="scala.AnyRef#finalize" visbl="prt" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="finalize():Unit"></a>
+      <a id="finalize():Unit"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">finalize</span><span class="params">()</span><span class="result">: <span class="extype" name="scala.Unit">Unit</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../index.html#vectorpipe.VectorPipe$@finalize():Unit" title="Permalink" target="_top">
+        <img src="../lib/permalink.png" alt="Permalink" />
+      </a>
+    </span>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Attributes</dt><dd>protected[<a href="../java$lang.html" class="extype" name="java.lang">java.lang</a>] </dd><dt>Definition Classes</dt><dd>AnyRef</dd><dt>Annotations</dt><dd>
+                <span class="name">@throws</span><span class="args">(<span>
+      
+      <span class="symbol">classOf[java.lang.Throwable]</span>
+    </span>)</span>
+              
+        </dd></dl></div>
+    </li><li name="scala.AnyRef#getClass" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="getClass():Class[_]"></a>
+      <a id="getClass():Class[_]"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">final </span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">getClass</span><span class="params">()</span><span class="result">: <span class="extype" name="java.lang.Class">Class</span>[_]</span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../index.html#vectorpipe.VectorPipe$@getClass():Class[_]" title="Permalink" target="_top">
+        <img src="../lib/permalink.png" alt="Permalink" />
+      </a>
+    </span>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef → Any</dd></dl></div>
+    </li><li name="scala.AnyRef#hashCode" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="hashCode():Int"></a>
+      <a id="hashCode():Int"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">hashCode</span><span class="params">()</span><span class="result">: <span class="extype" name="scala.Int">Int</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../index.html#vectorpipe.VectorPipe$@hashCode():Int" title="Permalink" target="_top">
+        <img src="../lib/permalink.png" alt="Permalink" />
+      </a>
+    </span>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef → Any</dd></dl></div>
+    </li><li name="scala.Any#isInstanceOf" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="isInstanceOf[T0]:Boolean"></a>
+      <a id="isInstanceOf[T0]:Boolean"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">final </span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">isInstanceOf</span><span class="tparams">[<span name="T0">T0</span>]</span><span class="result">: <span class="extype" name="scala.Boolean">Boolean</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../index.html#vectorpipe.VectorPipe$@isInstanceOf[T0]:Boolean" title="Permalink" target="_top">
+        <img src="../lib/permalink.png" alt="Permalink" />
+      </a>
+    </span>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>Any</dd></dl></div>
+    </li><li name="scala.AnyRef#ne" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="ne(x$1:AnyRef):Boolean"></a>
+      <a id="ne(AnyRef):Boolean"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">final </span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">ne</span><span class="params">(<span name="arg0">arg0: <span class="extype" name="scala.AnyRef">AnyRef</span></span>)</span><span class="result">: <span class="extype" name="scala.Boolean">Boolean</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../index.html#vectorpipe.VectorPipe$@ne(x$1:AnyRef):Boolean" title="Permalink" target="_top">
+        <img src="../lib/permalink.png" alt="Permalink" />
+      </a>
+    </span>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef</dd></dl></div>
+    </li><li name="scala.AnyRef#notify" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="notify():Unit"></a>
+      <a id="notify():Unit"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">final </span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">notify</span><span class="params">()</span><span class="result">: <span class="extype" name="scala.Unit">Unit</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../index.html#vectorpipe.VectorPipe$@notify():Unit" title="Permalink" target="_top">
+        <img src="../lib/permalink.png" alt="Permalink" />
+      </a>
+    </span>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef</dd></dl></div>
+    </li><li name="scala.AnyRef#notifyAll" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="notifyAll():Unit"></a>
+      <a id="notifyAll():Unit"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">final </span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">notifyAll</span><span class="params">()</span><span class="result">: <span class="extype" name="scala.Unit">Unit</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../index.html#vectorpipe.VectorPipe$@notifyAll():Unit" title="Permalink" target="_top">
+        <img src="../lib/permalink.png" alt="Permalink" />
+      </a>
+    </span>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef</dd></dl></div>
+    </li><li name="scala.AnyRef#synchronized" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="synchronized[T0](x$1:=&gt;T0):T0"></a>
+      <a id="synchronized[T0](⇒T0):T0"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">final </span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">synchronized</span><span class="tparams">[<span name="T0">T0</span>]</span><span class="params">(<span name="arg0">arg0: ⇒ <span class="extype" name="java.lang.AnyRef.synchronized.T0">T0</span></span>)</span><span class="result">: <span class="extype" name="java.lang.AnyRef.synchronized.T0">T0</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../index.html#vectorpipe.VectorPipe$@synchronized[T0](x$1:=&gt;T0):T0" title="Permalink" target="_top">
+        <img src="../lib/permalink.png" alt="Permalink" />
+      </a>
+    </span>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef</dd></dl></div>
+    </li><li name="vectorpipe.VectorPipe#toGrid" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="toGrid[G&lt;:geotrellis.vector.Geometry,D](clip:(geotrellis.vector.Extent,geotrellis.vector.Feature[G,D])=&gt;geotrellis.vector.Feature[G,D],ld:geotrellis.spark.tiling.LayoutDefinition,rdd:org.apache.spark.rdd.RDD[geotrellis.vector.Feature[G,D]]):org.apache.spark.rdd.RDD[(geotrellis.spark.SpatialKey,Iterable[geotrellis.vector.Feature[G,D]])]"></a>
+      <a id="toGrid[G&lt;:Geometry,D]((Extent,Feature[G,D])⇒Feature[G,D],LayoutDefinition,RDD[Feature[G,D]]):RDD[(SpatialKey,Iterable[Feature[G,D]])]"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">toGrid</span><span class="tparams">[<span name="G">G &lt;: <span class="extype" name="geotrellis.vector.Geometry">Geometry</span></span>, <span name="D">D</span>]</span><span class="params">(<span name="clip">clip: (<span class="extype" name="geotrellis.vector.Extent">Extent</span>, <span class="extype" name="geotrellis.vector.Feature">Feature</span>[<span class="extype" name="vectorpipe.VectorPipe.toGrid.G">G</span>, <span class="extype" name="vectorpipe.VectorPipe.toGrid.D">D</span>]) ⇒ <span class="extype" name="geotrellis.vector.Feature">Feature</span>[<span class="extype" name="vectorpipe.VectorPipe.toGrid.G">G</span>, <span class="extype" name="vectorpipe.VectorPipe.toGrid.D">D</span>]</span>, <span name="ld">ld: <span class="extype" name="geotrellis.spark.tiling.LayoutDefinition">LayoutDefinition</span></span>, <span name="rdd">rdd: <span class="extype" name="org.apache.spark.rdd.RDD">RDD</span>[<span class="extype" name="geotrellis.vector.Feature">Feature</span>[<span class="extype" name="vectorpipe.VectorPipe.toGrid.G">G</span>, <span class="extype" name="vectorpipe.VectorPipe.toGrid.D">D</span>]]</span>)</span><span class="result">: <span class="extype" name="org.apache.spark.rdd.RDD">RDD</span>[(<span class="extype" name="geotrellis.spark.SpatialKey">SpatialKey</span>, <span class="extype" name="scala.Iterable">Iterable</span>[<span class="extype" name="geotrellis.vector.Feature">Feature</span>[<span class="extype" name="vectorpipe.VectorPipe.toGrid.G">G</span>, <span class="extype" name="vectorpipe.VectorPipe.toGrid.D">D</span>]])]</span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../index.html#vectorpipe.VectorPipe$@toGrid[G&lt;:geotrellis.vector.Geometry,D](clip:(geotrellis.vector.Extent,geotrellis.vector.Feature[G,D])=&gt;geotrellis.vector.Feature[G,D],ld:geotrellis.spark.tiling.LayoutDefinition,rdd:org.apache.spark.rdd.RDD[geotrellis.vector.Feature[G,D]]):org.apache.spark.rdd.RDD[(geotrellis.spark.SpatialKey,Iterable[geotrellis.vector.Feature[G,D]])]" title="Permalink" target="_top">
+        <img src="../lib/permalink.png" alt="Permalink" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">Given a particular Layout (tile grid), split a collection of <span class="extype" name="Feature">Feature</span>s
+into a grid of them indexed by <span class="extype" name="SpatialKey">SpatialKey</span>.</p><div class="fullcomment"><div class="comment cmt"><p>Given a particular Layout (tile grid), split a collection of <span class="extype" name="Feature">Feature</span>s
+into a grid of them indexed by <span class="extype" name="SpatialKey">SpatialKey</span>.</p><h4>Clipping Strategies</h4><p>A clipping strategy defines how Geometries which stretch outside their
+associated bounding box should be reduced to better fit it. This is
+benefical, as it saves on storage for large, complex Geometries who
+only partially intersect some bounding box. The excess points will be
+cut out, but the &quot;how&quot; is a matter of weighing PROs and CONs in the
+context of the user's use-case. Several strategies come to mind:</p><ul><li>Clip directly on the bounding box</li><li>Clip just outside the bounding box</li><li>Keep the nearest Point outside the bounding box, wherever it is</li><li>Custom clipping for each OSM Element type (building, etc)</li><li>Don't clip</li></ul><p>These clipping strategies are defined in <span class="extype" name="vectorpipe.geom.Clip">vectorpipe.geom.Clip</span>,
+where you can find further explanation.
+</p></div><dl class="paramcmts block"><dt class="param">clip</dt><dd class="cmt"><p>A function which represents a &quot;clipping strategy&quot;.</p></dd><dt class="param">ld</dt><dd class="cmt"><p>The LayoutDefinition defining the area to gridify.</p></dd><dt>returns</dt><dd class="cmt"><p>The pair <code>(OSMFeature, Extent)</code> represents the clipped Feature
+        along with its <u>original</u> bounding envelope. This envelope
+        is to be encoded into the Feature's metadata within a VT,
+        and could be used later to aid the reconstruction of the original,
+        unclipped Feature.</p></dd></dl></div>
+    </li><li name="scala.AnyRef#toString" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="toString():String"></a>
+      <a id="toString():String"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">toString</span><span class="params">()</span><span class="result">: <span class="extype" name="java.lang.String">String</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../index.html#vectorpipe.VectorPipe$@toString():String" title="Permalink" target="_top">
+        <img src="../lib/permalink.png" alt="Permalink" />
+      </a>
+    </span>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef → Any</dd></dl></div>
+    </li><li name="vectorpipe.VectorPipe#toVectorTile" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="toVectorTile[G&lt;:geotrellis.vector.Geometry,D](collate:(geotrellis.vector.Extent,Iterable[geotrellis.vector.Feature[G,D]])=&gt;geotrellis.vectortile.VectorTile,ld:geotrellis.spark.tiling.LayoutDefinition,rdd:org.apache.spark.rdd.RDD[(geotrellis.spark.SpatialKey,Iterable[geotrellis.vector.Feature[G,D]])]):org.apache.spark.rdd.RDD[(geotrellis.spark.SpatialKey,geotrellis.vectortile.VectorTile)]"></a>
+      <a id="toVectorTile[G&lt;:Geometry,D]((Extent,Iterable[Feature[G,D]])⇒VectorTile,LayoutDefinition,RDD[(SpatialKey,Iterable[Feature[G,D]])]):RDD[(SpatialKey,VectorTile)]"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">toVectorTile</span><span class="tparams">[<span name="G">G &lt;: <span class="extype" name="geotrellis.vector.Geometry">Geometry</span></span>, <span name="D">D</span>]</span><span class="params">(<span name="collate">collate: (<span class="extype" name="geotrellis.vector.Extent">Extent</span>, <span class="extype" name="scala.Iterable">Iterable</span>[<span class="extype" name="geotrellis.vector.Feature">Feature</span>[<span class="extype" name="vectorpipe.VectorPipe.toVectorTile.G">G</span>, <span class="extype" name="vectorpipe.VectorPipe.toVectorTile.D">D</span>]]) ⇒ <span class="extype" name="geotrellis.vectortile.VectorTile">VectorTile</span></span>, <span name="ld">ld: <span class="extype" name="geotrellis.spark.tiling.LayoutDefinition">LayoutDefinition</span></span>, <span name="rdd">rdd: <span class="extype" name="org.apache.spark.rdd.RDD">RDD</span>[(<span class="extype" name="geotrellis.spark.SpatialKey">SpatialKey</span>, <span class="extype" name="scala.Iterable">Iterable</span>[<span class="extype" name="geotrellis.vector.Feature">Feature</span>[<span class="extype" name="vectorpipe.VectorPipe.toVectorTile.G">G</span>, <span class="extype" name="vectorpipe.VectorPipe.toVectorTile.D">D</span>]])]</span>)</span><span class="result">: <span class="extype" name="org.apache.spark.rdd.RDD">RDD</span>[(<span class="extype" name="geotrellis.spark.SpatialKey">SpatialKey</span>, <span class="extype" name="geotrellis.vectortile.VectorTile">VectorTile</span>)]</span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../index.html#vectorpipe.VectorPipe$@toVectorTile[G&lt;:geotrellis.vector.Geometry,D](collate:(geotrellis.vector.Extent,Iterable[geotrellis.vector.Feature[G,D]])=&gt;geotrellis.vectortile.VectorTile,ld:geotrellis.spark.tiling.LayoutDefinition,rdd:org.apache.spark.rdd.RDD[(geotrellis.spark.SpatialKey,Iterable[geotrellis.vector.Feature[G,D]])]):org.apache.spark.rdd.RDD[(geotrellis.spark.SpatialKey,geotrellis.vectortile.VectorTile)]" title="Permalink" target="_top">
+        <img src="../lib/permalink.png" alt="Permalink" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">Given a collection of GeoTrellis <code>Feature</code>s which have been associated
+with some <code>SpatialKey</code> and a &quot;collation&quot; function, form those <code>Feature</code>s
+into a <code>VectorTile</code>.</p><div class="fullcomment"><div class="comment cmt"><p>Given a collection of GeoTrellis <code>Feature</code>s which have been associated
+with some <code>SpatialKey</code> and a &quot;collation&quot; function, form those <code>Feature</code>s
+into a <code>VectorTile</code>.
+</p></div><dl class="attributes block"> <dt>See also</dt><dd><span class="cmt"><p><span class="extype" name="vectorpipe.vectortile.Collate">vectorpipe.vectortile.Collate</span></p></span></dd></dl></div>
+    </li><li name="scala.AnyRef#wait" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="wait():Unit"></a>
+      <a id="wait():Unit"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">final </span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">wait</span><span class="params">()</span><span class="result">: <span class="extype" name="scala.Unit">Unit</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../index.html#vectorpipe.VectorPipe$@wait():Unit" title="Permalink" target="_top">
+        <img src="../lib/permalink.png" alt="Permalink" />
+      </a>
+    </span>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef</dd><dt>Annotations</dt><dd>
+                <span class="name">@throws</span><span class="args">(<span>
+      
+      <span class="defval" name="classOf[java.lang.InterruptedException]">...</span>
+    </span>)</span>
+              
+        </dd></dl></div>
+    </li><li name="scala.AnyRef#wait" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="wait(x$1:Long,x$2:Int):Unit"></a>
+      <a id="wait(Long,Int):Unit"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">final </span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">wait</span><span class="params">(<span name="arg0">arg0: <span class="extype" name="scala.Long">Long</span></span>, <span name="arg1">arg1: <span class="extype" name="scala.Int">Int</span></span>)</span><span class="result">: <span class="extype" name="scala.Unit">Unit</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../index.html#vectorpipe.VectorPipe$@wait(x$1:Long,x$2:Int):Unit" title="Permalink" target="_top">
+        <img src="../lib/permalink.png" alt="Permalink" />
+      </a>
+    </span>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef</dd><dt>Annotations</dt><dd>
+                <span class="name">@throws</span><span class="args">(<span>
+      
+      <span class="defval" name="classOf[java.lang.InterruptedException]">...</span>
+    </span>)</span>
+              
+        </dd></dl></div>
+    </li><li name="scala.AnyRef#wait" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="wait(x$1:Long):Unit"></a>
+      <a id="wait(Long):Unit"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">final </span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">wait</span><span class="params">(<span name="arg0">arg0: <span class="extype" name="scala.Long">Long</span></span>)</span><span class="result">: <span class="extype" name="scala.Unit">Unit</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../index.html#vectorpipe.VectorPipe$@wait(x$1:Long):Unit" title="Permalink" target="_top">
+        <img src="../lib/permalink.png" alt="Permalink" />
+      </a>
+    </span>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef</dd><dt>Annotations</dt><dd>
+                <span class="name">@throws</span><span class="args">(<span>
+      
+      <span class="defval" name="classOf[java.lang.InterruptedException]">...</span>
+    </span>)</span>
+              
+        </dd></dl></div>
+    </li></ol>
+            </div>
+
+        
+
+        
+        </div>
+
+        <div id="inheritedMembers">
+        <div class="parent" name="scala.AnyRef">
+              <h3>Inherited from <span class="extype" name="scala.AnyRef">AnyRef</span></h3>
+            </div><div class="parent" name="scala.Any">
+              <h3>Inherited from <span class="extype" name="scala.Any">Any</span></h3>
+            </div>
+        
+        </div>
+
+        <div id="groupedMembers">
+        <div class="group" name="Ungrouped">
+              <h3>Ungrouped</h3>
+              
+            </div>
+        </div>
+
+      </div>
+
+      <div id="tooltip"></div>
+
+      <div id="footer">  </div>
+
+
+    </body>
+      </html>

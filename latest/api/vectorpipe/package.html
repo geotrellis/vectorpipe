@@ -1,0 +1,334 @@
+<!DOCTYPE html >
+<html>
+        <head>
+          <title>vectorpipe - vectorpipe</title>
+          <meta name="description" content="vectorpipe - vectorpipe" />
+          <meta name="keywords" content="vectorpipe vectorpipe" />
+          <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+          
+      <link href="../lib/template.css" media="screen" type="text/css" rel="stylesheet" />
+      <link href="../lib/diagrams.css" media="screen" type="text/css" rel="stylesheet" id="diagrams-css" />
+      <script type="text/javascript" src="../lib/jquery.js" id="jquery-js"></script>
+      <script type="text/javascript" src="../lib/jquery-ui.js"></script>
+      <script type="text/javascript" src="../lib/template.js"></script>
+      <script type="text/javascript" src="../lib/tools.tooltip.js"></script>
+      
+      <script type="text/javascript">
+         if(top === self) {
+            var url = '../index.html';
+            var hash = 'vectorpipe.package';
+            var anchor = window.location.hash;
+            var anchor_opt = '';
+            if (anchor.length >= 1)
+              anchor_opt = '@' + anchor.substring(1);
+            window.location.href = url + '#' + hash + anchor_opt;
+         }
+   	  </script>
+    
+        </head>
+        <body class="value">
+      <div id="definition">
+        <img alt="Package" src="../lib/package_big.png" />
+        
+        <h1>vectorpipe</h1><span class="permalink">
+      <a href="../index.html#vectorpipe.package" title="Permalink" target="_top">
+        <img src="../lib/permalink.png" alt="Permalink" />
+      </a>
+    </span>
+      </div>
+
+      <h4 id="signature" class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">package</span>
+      </span>
+      <span class="symbol">
+        <span class="name">vectorpipe</span>
+      </span>
+      </h4>
+      
+          <div id="comment" class="fullcommenttop"><div class="comment cmt"><p>VectorPipe is a library for mass conversion of OSM data to VectorTiles,
+using GeoTrellis and Apache Spark - See the <a href="VectorPipe$.html" class="extype" name="vectorpipe.VectorPipe">VectorPipe</a> object for usage
+instructions.
+</p></div><div class="toggleContainer block">
+          <span class="toggle">Linear Supertypes</span>
+          <div class="superTypes hiddenContent"><span class="extype" name="scala.AnyRef">AnyRef</span>, <span class="extype" name="scala.Any">Any</span></div>
+        </div></div>
+        
+
+      <div id="mbrsel">
+        <div id="textfilter"><span class="pre"></span><span class="input"><input id="mbrsel-input" type="text" accesskey="/" /></span><span class="post"></span></div>
+        <div id="order">
+              <span class="filtertype">Ordering</span>
+              <ol>
+                
+                <li class="alpha in"><span>Alphabetic</span></li>
+                <li class="inherit out"><span>By Inheritance</span></li>
+              </ol>
+            </div>
+        <div id="ancestors">
+                <span class="filtertype">Inherited<br />
+                </span>
+                <ol id="linearization">
+                  <li class="in" name="vectorpipe"><span>vectorpipe</span></li><li class="in" name="scala.AnyRef"><span>AnyRef</span></li><li class="in" name="scala.Any"><span>Any</span></li>
+                </ol>
+              </div><div id="ancestors">
+            <span class="filtertype"></span>
+            <ol>
+              <li class="hideall out"><span>Hide All</span></li>
+              <li class="showall in"><span>Show All</span></li>
+            </ol>
+          </div>
+        <div id="visbl">
+            <span class="filtertype">Visibility</span>
+            <ol><li class="public in"><span>Public</span></li><li class="all out"><span>All</span></li></ol>
+          </div>
+      </div>
+
+      <div id="template">
+        <div id="allMembers">
+        
+
+        
+
+        
+
+        <div id="values" class="values members">
+              <h3>Value Members</h3>
+              <ol><li name="vectorpipe.Clip" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="Clip"></a>
+      <a id="Clip:Clip"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">object</span>
+      </span>
+      <span class="symbol">
+        <a href="Clip$.html"><span class="name">Clip</span></a>
+      </span>
+      </h4><span class="permalink">
+      <a href="../index.html#vectorpipe.package@Clip" title="Permalink" target="_top">
+        <img src="../lib/permalink.png" alt="Permalink" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">Clipping Strategies.</p>
+    </li><li name="vectorpipe.Collate" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="Collate"></a>
+      <a id="Collate:Collate"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">object</span>
+      </span>
+      <span class="symbol">
+        <a href="Collate$.html"><span class="name">Collate</span></a>
+      </span>
+      </h4><span class="permalink">
+      <a href="../index.html#vectorpipe.package@Collate" title="Permalink" target="_top">
+        <img src="../lib/permalink.png" alt="Permalink" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">&quot;Collator&quot; or &quot;Schema&quot; functions which form
+<code>VectorTile</code>s from collections of GeoTrellis
+<code>Feature</code>s.</p><div class="fullcomment"><div class="comment cmt"><p>&quot;Collator&quot; or &quot;Schema&quot; functions which form
+<code>VectorTile</code>s from collections of GeoTrellis
+<code>Feature</code>s. Any function can be considered a valid &quot;collator&quot; if it
+satisfies the type:</p><pre>collate: (Extent, Iterable[Feature[G,D]]) <span class="kw">=&gt;</span> VectorTile</pre><h4>Usage</h4><p>Create a VectorTile from some collection of GeoTrellis Geometries:</p><pre><span class="kw">val</span> tileExtent: Extent = ... <span class="cmt">// Extent of _this_ Tile</span>
+<span class="kw">val</span> geoms: Iterable[Feature[Geometry, <span class="std">Map</span>[<span class="std">String</span>, <span class="std">String</span>]]] = ...  <span class="cmt">// Some collection of Geometries</span>
+
+<span class="kw">val</span> tile: VectorTile = Collate.withStringMetadata(tileExtent, geoms)</pre><p>Create a VectorTile via some custom collation scheme:</p><pre><span class="kw">def</span> partition(f: Feature[G,D]): <span class="std">String</span> = ...
+<span class="kw">def</span> metadata(d: D): <span class="std">Map</span>[<span class="std">String</span>, Value] = ...
+
+<span class="kw">val</span> tileExtent: Extent = ... <span class="cmt">// Extent of _this_ Tile</span>
+<span class="kw">val</span> geoms: Iterable[Feature[G, D]] = ...  <span class="cmt">// Some collection of Geometries</span>
+
+<span class="kw">val</span> tile: VectorTile = Collate.generically(tileExtent, geoms, partition, metadata)</pre><h4>Writing your own Collator Function</h4><p>We provide a few defaults here, but any collation scheme is possible.
+Collation just refers to the process of organizing some <code>Iterable</code>
+collection of Geometries into various VectorTile <code>Layer</code>s. Creating your own
+collator is done easiest with <a href="Collate$.html#generically[G&lt;:geotrellis.vector.Geometry,D](tileExtent:geotrellis.vector.Extent,geoms:Iterable[geotrellis.vector.Feature[G,D]],partition:geotrellis.vector.Feature[G,D]=&gt;String,metadata:D=&gt;Map[String,geotrellis.vectortile.Value]):geotrellis.vectortile.VectorTile" class="extmbr" name="vectorpipe.Collate#generically">generically</a>. It expects a <i>partition</i>
+function to guide Geometries into separate Layers, and a <i>metadata</i>
+transformation function.</p><h6>Partition Functions</h6><p>A valid partition function must be of the type:</p><pre>partition: Feature[G,D] <span class="kw">=&gt;</span> <span class="std">String</span></pre><p>The output String is the name of the <code>Layer</code> you'd like a given
+<code>Feature</code> to be relegated to. Notice that the entire <code>Feature</code> is available
+(i.e. both its Geometry and metadata), so that your partitioner can make
+fine-grained choices.</p><h6>Metadata Transformation Functions</h6><p>One of these takes your <code>D</code> type and transforms it into what <code>VectorTile</code>s expect:</p><pre>metadata: D <span class="kw">=&gt;</span> <span class="std">Map</span>[<span class="std">String</span>, Value]</pre><p>You're encouraged to review the <code>Value</code> sum-type in
+<a href="https://geotrellis.github.io/scaladocs/latest/#geotrellis.vectortile.package" target="_blank">geotrellis.vectortile</a></p><h4>On Winding Order</h4><p>VectorTiles require that Polygon exteriors have clockwise winding order,
+and that interior holes have counter-clockwise winding order. These assume
+that the origin <code>(0,0)</code> is in the <b>top-left</b> corner.</p><p><b>Any custom collator which does not call <code>generically</code> must correct
+for Polygon winding order manually.</b> This can be done via the <span class="extype" name="winding">winding</span>
+function.</p><p>But why correct for winding order at all? Well, OSM data makes no guarantee
+about what winding order its derived Polygons will have. We could correct
+winding order when our first <code>RDD[OSMFeature]</code> is created, except that its
+unlikely that the clipping process afterward would maintain our winding for
+all Polygons.
+</p></div></div>
+    </li><li name="vectorpipe.VectorPipe" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="VectorPipe"></a>
+      <a id="VectorPipe:VectorPipe"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">object</span>
+      </span>
+      <span class="symbol">
+        <a href="VectorPipe$.html"><span class="name">VectorPipe</span></a>
+      </span>
+      </h4><span class="permalink">
+      <a href="../index.html#vectorpipe.package@VectorPipe" title="Permalink" target="_top">
+        <img src="../lib/permalink.png" alt="Permalink" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">VectorPipe is a library for mass conversion of OSM data into Mapbox
+VectorTiles.</p><div class="fullcomment"><div class="comment cmt"><p>VectorPipe is a library for mass conversion of OSM data into Mapbox
+VectorTiles. It is powered by <a href="https://github.com/locationtech/geotrellis" target="_blank">GeoTrellis</a> and <a href="https://spark.apache.org" target="_blank">Apache Spark</a>.</p><h4>Outline</h4><p>GeoTrellis and Spark do most of our work for us. Writing a <code>main</code>
+function that uses VectorPipe need not contain much more than:</p><pre><span class="kw">import</span> vectorpipe._
+
+<span class="kw">val</span> layout: LayoutDefinition =
+  ZoomedLayoutScheme.layoutForZoom(<span class="num">15</span>, WebMercator.worldExtent, <span class="num">512</span>)
+
+... <span class="cmt">// TODO dealing with ORC</span>
+
+<span class="kw">val</span> (nodes, ways, relations): (RDD[osm.Node], RDD[osm.Way], RDD[osm.Relation]) = ...
+
+<span class="kw">val</span> features: RDD[OSMFeature] =
+  osm.toFeatures(nodes, ways, relations)
+
+<span class="kw">val</span> featGrid: RDD[(SpatialKey, Iterable[OSMFeature])] =
+  VectorPipe.toGrid(Clip.byHybrid, layout, features)
+
+<span class="kw">val</span> tiles: RDD[(SpatialKey, VectorTile)] =
+  VectorPipe.toVectorTile(Collate.byAnalytics, layout, featGrid)</pre><p>The <code>tiles</code> RDD could then be used as a GeoTrellis tile layer as
+needed.</p><h4>Writing Portable Tiles</h4><p>This method outputs VectorTiles to a directory structure appropriate for
+serving by a Tile Map Server. The VTs themselves are saved in the usual
+<code>.mvt</code> format, and so can be read by any other tool. The example that
+follows writes <code>tiles</code> from above to an S3 bucket:</p><pre><span class="kw">import</span> geotrellis.spark.io.s3._  <span class="cmt">// requires the `geotrellis-s3` library</span>
+
+<span class="cmt">/* How should a `SpatialKey` map to a filepath on S3? */</span>
+<span class="kw">val</span> s3PathFromKey: SpatialKey <span class="kw">=&gt;</span> <span class="std">String</span> = SaveToS3.spatialKeyToPath(
+  LayerId(<span class="lit">"sample"</span>, <span class="num">1</span>),  <span class="cmt">// Whatever zoom level it is</span>
+  <span class="lit">"s3://some-bucket/catalog/{name}/{z}/{x}/{y}.mvt"</span>
+)
+
+tiles.saveToS3(s3PathFromKey)</pre><h4>Writing a GeoTrellis Layer of VectorTiles</h4><p>The disadvantage of the &quot;Portable Tiles&quot; approach is that there is no
+way to read the tiles back into a <code>RDD[(SpatialKey, VectorTile)]</code> and do
+Spark-based manipulation operations. To do that, the tiles have to be
+written as a &quot;GeoTrellis Layer&quot; from the get-go. The output of such a write
+are split and compressed files that aren't readable by other tools. This
+method compresses VectorTiles to about half the size of a normal <code>.mvt</code>.</p><pre><span class="kw">import</span> geotrellis.spark._
+<span class="kw">import</span> geotrellis.spark.io._
+<span class="kw">import</span> geotrellis.spark.io.file._    <span class="cmt">/* When writing to your local computer */</span>
+
+<span class="cmt">/* IO classes */</span>
+<span class="kw">val</span> catalog: <span class="std">String</span> = <span class="lit">"/home/you/tiles/"</span>  <span class="cmt">/* This must exist ahead of time! */</span>
+<span class="kw">val</span> store = FileAttributeStore(catalog)
+<span class="kw">val</span> writer = FileLayerWriter(store)
+
+<span class="cmt">/* Dynamically determine the KeyBounds */</span>
+<span class="kw">val</span> bounds: KeyBounds[SpatialKey] =
+  tiles.map({ <span class="kw">case</span> (key, _) <span class="kw">=&gt;</span> KeyBounds(key, key) }).reduce(_ combine _)
+
+<span class="cmt">/* Construct metadata for the Layer */</span>
+<span class="kw">val</span> meta = LayerMetadata(layout, bounds)
+
+<span class="cmt">/* Write the Tile Layer */</span>
+writer.write(LayerId(<span class="lit">"north-van"</span>, <span class="num">15</span>), ContextRDD(tiles, meta), ZCurveKeyIndexMethod)</pre></div></div>
+    </li><li name="vectorpipe.osm" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="osm"></a>
+      <a id="osm:osm"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">package</span>
+      </span>
+      <span class="symbol">
+        <a href="osm/package.html"><span class="name">osm</span></a>
+      </span>
+      </h4><span class="permalink">
+      <a href="../index.html#vectorpipe.package@osm" title="Permalink" target="_top">
+        <img src="../lib/permalink.png" alt="Permalink" />
+      </a>
+    </span>
+      
+    </li><li name="vectorpipe#useS3" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="useS3(ss:org.apache.spark.sql.SparkSession):Unit"></a>
+      <a id="useS3(SparkSession):Unit"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">useS3</span><span class="params">(<span name="ss">ss: <span class="extype" name="org.apache.spark.sql.SparkSession">SparkSession</span></span>)</span><span class="result">: <span class="extype" name="scala.Unit">Unit</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../index.html#vectorpipe.package@useS3(ss:org.apache.spark.sql.SparkSession):Unit" title="Permalink" target="_top">
+        <img src="../lib/permalink.png" alt="Permalink" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">Configure Spark to read files from S3 - <i>Mutates your underlying Hadoop Configuration!</i></p>
+    </li><li name="vectorpipe.util" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="util"></a>
+      <a id="util:util"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">package</span>
+      </span>
+      <span class="symbol">
+        <a href="util/package.html"><span class="name">util</span></a>
+      </span>
+      </h4><span class="permalink">
+      <a href="../index.html#vectorpipe.package@util" title="Permalink" target="_top">
+        <img src="../lib/permalink.png" alt="Permalink" />
+      </a>
+    </span>
+      
+    </li><li name="vectorpipe#vectorTileCodec" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="vectorTileCodec:geotrellis.spark.io.avro.AvroRecordCodec[geotrellis.vectortile.VectorTile]"></a>
+      <a id="vectorTileCodec:AvroRecordCodec[VectorTile]"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier">implicit </span>
+        <span class="kind">val</span>
+      </span>
+      <span class="symbol">
+        <span class="name">vectorTileCodec</span><span class="result">: <span class="extype" name="geotrellis.spark.io.avro.AvroRecordCodec">AvroRecordCodec</span>[<span class="extype" name="geotrellis.vectortile.VectorTile">VectorTile</span>]</span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../index.html#vectorpipe.package@vectorTileCodec:geotrellis.spark.io.avro.AvroRecordCodec[geotrellis.vectortile.VectorTile]" title="Permalink" target="_top">
+        <img src="../lib/permalink.png" alt="Permalink" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">Encode a <span class="extype" name="VectorTile">VectorTile</span> via Avro.</p><div class="fullcomment"><div class="comment cmt"><p>Encode a <span class="extype" name="VectorTile">VectorTile</span> via Avro. This is the glue for Layer IO.</p></div></div>
+    </li></ol>
+            </div>
+
+        
+
+        
+        </div>
+
+        <div id="inheritedMembers">
+        <div class="parent" name="scala.AnyRef">
+              <h3>Inherited from <span class="extype" name="scala.AnyRef">AnyRef</span></h3>
+            </div><div class="parent" name="scala.Any">
+              <h3>Inherited from <span class="extype" name="scala.Any">Any</span></h3>
+            </div>
+        
+        </div>
+
+        <div id="groupedMembers">
+        <div class="group" name="Ungrouped">
+              <h3>Ungrouped</h3>
+              
+            </div>
+        </div>
+
+      </div>
+
+      <div id="tooltip"></div>
+
+      <div id="footer">  </div>
+
+
+    </body>
+      </html>

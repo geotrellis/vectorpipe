@@ -115,7 +115,7 @@ object VectorPipe {
     *         unclipped Feature.
     */
   def toGrid[G <: Geometry, D](
-    clip: (Extent, Feature[G, D]) => Feature[G, D],
+    clip: (Extent, Feature[G, D]) => Either[String, Feature[G, D]],
     ld: LayoutDefinition,
     rdd: RDD[Feature[G, D]]
   ): RDD[(SpatialKey, Iterable[Feature[G, D]])] = {
@@ -132,12 +132,19 @@ object VectorPipe {
     /* Associate each Feature with a SpatialKey */
     val grid: RDD[(SpatialKey, Feature[G, D])] = rdd.flatMap(f => byIntersect(mt, f))
 
-    grid.groupByKey().map({ case (k, iter) =>
+    grid.groupByKey().map { case (k, iter) =>
       val kExt: Extent = mt(k)
 
       /* Clip each geometry in some way */
-      (k, iter.map(g => clip(kExt, g)))
-    })
+      val clipped: List[Feature[G, D]] = iter.foldLeft(List.empty[Feature[G, D]]) { (acc, g) =>
+        clip(kExt, g) match {
+          case Right(h) => h :: acc
+          case Left(_) => acc // TODO Log the failures!
+        }
+      }
+
+      (k, clipped)
+    }
   }
 
   /* Takes advantage of the fact that most Geoms are small, and only occur in one Tile */

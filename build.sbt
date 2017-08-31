@@ -33,9 +33,9 @@ libraryDependencies ++= Seq(
 
 parallelExecution in Test := false
 
-/* Microsite Settings */
-
-/* To generate the microsite locally, use `sbt makeMicrosite`.
+/* Microsite Settings
+ *
+ * To generate the microsite locally, use `sbt makeMicrosite`.
  * To publish the site to Github, use `sbt publishMicrosite`.
  *
  * Spark deps must not be marked `provided` while doing these, or you will get errors.

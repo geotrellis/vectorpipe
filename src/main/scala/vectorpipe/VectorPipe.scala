@@ -165,7 +165,7 @@ object VectorPipe {
     * with some `SpatialKey` and a "collation" function, form those `Feature`s
     * into a `VectorTile`.
     *
-    * @see [[vectorpipe.vectortile.Collate]]
+    * @see [[vectorpipe.Collate]]
     */
   def toVectorTile[G <: Geometry, D](
     collate: (Extent, Iterable[Feature[G, D]]) => VectorTile,

@@ -4,7 +4,9 @@ import java.io.{ FileInputStream, InputStream }
 
 import scala.util.{ Failure, Success, Try }
 
+import geotrellis.proj4._
 import geotrellis.vector._
+import geotrellis.vector.io._
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql._
@@ -13,6 +15,7 @@ import vectorpipe.util.Tree
 
 // --- //
 
+/** Types and functions unique to working with OpenStreetMap data. */
 package object osm {
 
   type OSMFeature = Feature[Geometry, Tree[ElementData]]
@@ -20,6 +23,16 @@ package object osm {
   private[vectorpipe] type OSMLine = Feature[Line, Tree[ElementData]]
   private[vectorpipe] type OSMPolygon = Feature[Polygon, Tree[ElementData]]
   private[vectorpipe] type OSMMultiPoly = Feature[MultiPolygon, Tree[ElementData]]
+
+  /** Print any clipping errors to STDOUT. Less verbose than [[vectorpipe.VectorPipe.stdout]],
+    * since only the offending element ID is printed instead of the entire metadata tree.
+    *
+    * The geometry itself is printed as LatLng GeoJSON, so that you can copy-paste it into
+    * [[http://geojson.io geojson.io]].
+    */
+  def stdout[G <: Geometry](e: Extent, f: Feature[G, Tree[ElementData]]): Unit = {
+    println(s"CLIP FAILURE W/ EXTENT: ${e}\nELEMENT ID: ${f.data.root.meta.id}\nGEOM: ${f.geom.reproject(WebMercator, LatLng).toGeoJson}")
+  }
 
   /** Given a path to an OSM XML file, parse it into usable types. */
   def fromLocalXML(path: String)(implicit sc: SparkContext): Either[String, (RDD[Node], RDD[Way], RDD[Relation])] = {

@@ -74,7 +74,7 @@ object Clip {
     centre.distanceToSegment(p1, p2) <= radius
 
   /** Naively clips Features to fit the given Extent. */
-  def byExtent[G <: Geometry, D](extent: Extent, f: Feature[G, D]): Either[String, Feature[Geometry, D]] = {
+  def byExtent[G <: Geometry, D](extent: Extent, f: Feature[G, D]): Option[Feature[Geometry, D]] = {
     val exPoly: Polygon = extent.toPolygon
 
     val clipped: Try[Geometry] = f.geom match {
@@ -82,10 +82,7 @@ object Clip {
       case _ => Try(f.geom.intersection(exPoly).toGeometry.get)
     }
 
-    clipped match {
-      case Failure(_) => Left(s"${f.data}: ${f.geom.reproject(WebMercator, LatLng).toGeoJson}")
-      case Success(g) => Right(Feature(g, f.data))
-    }
+    clipped.toOption.map(g => Feature(g, f.data))
   }
 
   /** Clips Features to a 3x3 grid surrounding the current Tile.
@@ -93,17 +90,17 @@ object Clip {
     * outside their original Tile, and helps avoid the pain of
     * restitching later.
     */
-  def byBufferedExtent[G <: Geometry, D](extent: Extent, f: Feature[G, D]): Either[String, Feature[Geometry, D]] =
+  def byBufferedExtent[G <: Geometry, D](extent: Extent, f: Feature[G, D]): Option[Feature[Geometry, D]] =
     byExtent(extent.expandBy(extent.width, extent.height), f)
 
   /** Bias the clipping strategy based on the incoming [[Geometry]]. */
-  def byHybrid[G <: Geometry, D](extent: Extent, f: Feature[G, D]): Either[String, Feature[Geometry, D]] = f.geom match {
-    case pnt: Point => Right(f)  /* A `Point` will always fall within the Extent */
-    case line: Line => Right(Feature(toNearestPoint(extent, line), f.data))
+  def byHybrid[G <: Geometry, D](extent: Extent, f: Feature[G, D]): Option[Feature[Geometry, D]] = f.geom match {
+    case pnt: Point => Some(f)  /* A `Point` will always fall within the Extent */
+    case line: Line => Some(Feature(toNearestPoint(extent, line), f.data))
     case poly: Polygon => byBufferedExtent(extent, f)
     case mply: MultiPolygon => byBufferedExtent(extent, f)
   }
 
   /** Yield an [[Feature]] as-is. */
-  def asIs[G <: Geometry, D](extent: Extent, f: Feature[G, D]): Either[String, Feature[G, D]] = Right(f)
+  def asIs[G <: Geometry, D](extent: Extent, f: Feature[G, D]): Option[Feature[G, D]] = Some(f)
 }

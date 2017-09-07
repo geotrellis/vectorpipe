@@ -1,9 +1,11 @@
 package vectorpipe
 
+import geotrellis.proj4._
 import geotrellis.raster.GridBounds
 import geotrellis.spark._
 import geotrellis.spark.tiling._
 import geotrellis.vector._
+import geotrellis.vector.io._
 import geotrellis.vectortile.VectorTile
 import org.apache.spark.rdd._
 
@@ -108,14 +110,11 @@ object VectorPipe {
     *
     * @param ld   The LayoutDefinition defining the area to gridify.
     * @param clip A function which represents a "clipping strategy".
-    * @return The pair `(OSMFeature, Extent)` represents the clipped Feature
-    *         along with its __original__ bounding envelope. This envelope
-    *         is to be encoded into the Feature's metadata within a VT,
-    *         and could be used later to aid the reconstruction of the original,
-    *         unclipped Feature.
+    * @param logError An IO function that will log any clipping failures.
     */
   def toGrid[G <: Geometry, D](
-    clip: (Extent, Feature[G, D]) => Either[String, Feature[G, D]],
+    clip: (Extent, Feature[G, D]) => Option[Feature[G, D]],
+    logError: (Extent, Feature[G, D]) => Unit,
     ld: LayoutDefinition,
     rdd: RDD[Feature[G, D]]
   ): RDD[(SpatialKey, Iterable[Feature[G, D]])] = {
@@ -138,8 +137,8 @@ object VectorPipe {
       /* Clip each geometry in some way */
       val clipped: List[Feature[G, D]] = iter.foldLeft(List.empty[Feature[G, D]]) { (acc, g) =>
         clip(kExt, g) match {
-          case Right(h) => h :: acc
-          case Left(_) => acc // TODO Log the failures!
+          case Some(h) => h :: acc
+          case None => logError(kExt, g); acc /* Sneaky IO to log the error */
         }
       }
 
@@ -182,5 +181,10 @@ object VectorPipe {
     val mt: MapKeyTransform = ld.mapTransform
 
     rdd.map({ case (k, iter) => (k, collate(mt(k), iter))})
+  }
+
+  /** Print any clipping errors to STDOUT - to be passed to [[toGrid]]. */
+  def stdout[G <: Geometry, D](e: Extent, f: Feature[G, D]): Unit = {
+    println(s"CLIP FAILURE W/ EXTENT: ${e}\nELEMENT METADATA: ${f.data}\nGEOM: ${f.geom.reproject(WebMercator, LatLng).toGeoJson}")
   }
 }

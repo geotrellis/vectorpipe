@@ -73,7 +73,7 @@ fine-grained choices.</p><h6>Metadata Transformation Functions</h6><p>One of the
 <a href="https://geotrellis.github.io/scaladocs/latest/#geotrellis.vectortile.package" target="_blank">geotrellis.vectortile</a></p><h4>On Winding Order</h4><p>VectorTiles require that Polygon exteriors have clockwise winding order,
 and that interior holes have counter-clockwise winding order. These assume
 that the origin <code>(0,0)</code> is in the <b>top-left</b> corner.</p><p><b>Any custom collator which does not call <code>generically</code> must correct
-for Polygon winding order manually.</b> This can be done via the <span class="extype" name="winding">winding</span>
+for Polygon winding order manually.</b> This can be done via the <a href="util/package.html#winding(p:geotrellis.vector.Polygon):geotrellis.vector.Polygon" class="extmbr" name="vectorpipe.util#winding">vectorpipe.util.winding</a>
 function.</p><p>But why correct for winding order at all? Well, OSM data makes no guarantee
 about what winding order its derived Polygons will have. We could correct
 winding order when our first <code>RDD[OSMFeature]</code> is created, except that its

@@ -65,6 +65,11 @@ on which clipping function you choose (from the <code class="highlighter-rouge">
 even your own custom one) the shape of the clipped Geometry will vary. See
 our Scaladocs for more detail on the available options.</p>
 
+<p>Admittedly, we sometimes can’t guarantee the validity of incoming vector data.
+Clipping is known to occasionally fail on large, complex multipolygons, so
+we skip over these failures while optionally allowing to log them. Any logging
+framework can be used.</p>
+
 <h3 id="collation-functions">Collation Functions</h3>
 
 <p>Once clipped and gridded by <code class="highlighter-rouge">VectorPipe.toGrid</code>, we have a <code class="highlighter-rouge">RDD[(SpatialKey,

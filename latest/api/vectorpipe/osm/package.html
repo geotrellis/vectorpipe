@@ -47,7 +47,7 @@
       </span>
       </h4>
       
-          <div id="comment" class="fullcommenttop"><div class="toggleContainer block">
+          <div id="comment" class="fullcommenttop"><div class="comment cmt"><p>Types and functions unique to working with OpenStreetMap data.</p></div><div class="toggleContainer block">
           <span class="toggle">Linear Supertypes</span>
           <div class="superTypes hiddenContent"><span class="extype" name="scala.AnyRef">AnyRef</span>, <span class="extype" name="scala.Any">Any</span></div>
         </div></div>
@@ -288,6 +288,26 @@
       <p class="shortcomment cmt">Given a path to an Apache ORC file containing OSM data, read out RDDs of each Element type.</p><div class="fullcomment"><div class="comment cmt"><p>Given a path to an Apache ORC file containing OSM data, read out RDDs of each Element type.
 If you want to read a file from S3, you must call <a href="../package.html#useS3(ss:org.apache.spark.sql.SparkSession):Unit" class="extmbr" name="vectorpipe#useS3">vectorpipe.useS3</a> first
 to properly configure Hadoop to read your S3 credentials.
+</p></div></div>
+    </li><li name="vectorpipe.osm#stdout" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="stdout[G&lt;:geotrellis.vector.Geometry](e:geotrellis.vector.Extent,f:geotrellis.vector.Feature[G,vectorpipe.util.Tree[vectorpipe.osm.ElementData]]):Unit"></a>
+      <a id="stdout[G&lt;:Geometry](Extent,Feature[G,Tree[ElementData]]):Unit"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">stdout</span><span class="tparams">[<span name="G">G &lt;: <span class="extype" name="geotrellis.vector.Geometry">Geometry</span></span>]</span><span class="params">(<span name="e">e: <span class="extype" name="geotrellis.vector.Extent">Extent</span></span>, <span name="f">f: <span class="extype" name="geotrellis.vector.Feature">Feature</span>[<span class="extype" name="vectorpipe.osm.stdout.G">G</span>, <a href="../util/Tree.html" class="extype" name="vectorpipe.util.Tree">Tree</a>[<a href="ElementData.html" class="extype" name="vectorpipe.osm.ElementData">ElementData</a>]]</span>)</span><span class="result">: <span class="extype" name="scala.Unit">Unit</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../index.html#vectorpipe.osm.package@stdout[G&lt;:geotrellis.vector.Geometry](e:geotrellis.vector.Extent,f:geotrellis.vector.Feature[G,vectorpipe.util.Tree[vectorpipe.osm.ElementData]]):Unit" title="Permalink" target="_top">
+        <img src="../../lib/permalink.png" alt="Permalink" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">Print any clipping errors to STDOUT.</p><div class="fullcomment"><div class="comment cmt"><p>Print any clipping errors to STDOUT. Less verbose than <a href="../VectorPipe$.html#stdout[G&lt;:geotrellis.vector.Geometry,D](e:geotrellis.vector.Extent,f:geotrellis.vector.Feature[G,D]):Unit" class="extmbr" name="vectorpipe.VectorPipe#stdout">vectorpipe.VectorPipe.stdout</a>,
+since only the offending element ID is printed instead of the entire metadata tree.</p><p>The geometry itself is printed as LatLng GeoJSON, so that you can copy-paste it into
+<a href="http://geojson.io" target="_blank">geojson.io</a>.
 </p></div></div>
     </li><li name="vectorpipe.osm#toFeatures" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="toFeatures(nodes:org.apache.spark.rdd.RDD[vectorpipe.osm.Node],ways:org.apache.spark.rdd.RDD[vectorpipe.osm.Way],relations:org.apache.spark.rdd.RDD[vectorpipe.osm.Relation]):org.apache.spark.rdd.RDD[vectorpipe.osm.package.OSMFeature]"></a>

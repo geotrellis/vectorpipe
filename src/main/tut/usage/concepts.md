@@ -71,6 +71,11 @@ on which clipping function you choose (from the `vectorpipe.Clip` object, or
 even your own custom one) the shape of the clipped Geometry will vary. See
 our Scaladocs for more detail on the available options.
 
+Admittedly, we sometimes can't guarantee the validity of incoming vector data.
+Clipping is known to occasionally fail on large, complex multipolygons, so
+we skip over these failures while optionally allowing to log them. Any logging
+framework can be used.
+
 ### Collation Functions
 
 Once clipped and gridded by `VectorPipe.toGrid`, we have a `RDD[(SpatialKey,

@@ -7,6 +7,7 @@ import geotrellis.spark.tiling._
 import geotrellis.vector._
 import geotrellis.vector.io._
 import geotrellis.vectortile.VectorTile
+import org.apache.log4j.Logger
 import org.apache.spark.rdd._
 
 // --- //
@@ -183,11 +184,16 @@ object VectorPipe {
     rdd.map({ case (k, iter) => (k, collate(mt(k), iter))})
   }
 
-  /** Print any clipping errors to STDOUT - to be passed to [[toGrid]]. */
-  def stdout[G <: Geometry, D](e: Extent, f: Feature[G, D]): Unit = {
-    println(s"CLIP FAILURE W/ EXTENT: ${e}\nELEMENT METADATA: ${f.data}\nGEOM: ${f.geom.reproject(WebMercator, LatLng).toGeoJson}")
-  }
+  private def logString[G <: Geometry, D](e: Extent, f: Feature[G, D]): String =
+    s"CLIP FAILURE W/ EXTENT: ${e}\nELEMENT METADATA: ${f.data}\nGEOM: ${f.geom.reproject(WebMercator, LatLng).toGeoJson}"
 
-  /** Don't log clipping failures. */
+  /** Print any clipping errors to STDOUT - to be passed to [[toGrid]]. */
+  def stdout[G <: Geometry, D](e: Extent, f: Feature[G, D]): Unit = println(logString(e, f))
+
+  /** Log a clipping error as an ERROR through Spark's default log4j - to be passed to [[toGrid]]. */
+  def log4j[G <: Geometry, D](e: Extent, f: Feature[G, D]): Unit =
+    Logger.getRootLogger().error(logString(e, f))
+
+  /** Don't log clipping failures - to be passed to [[toGrid]]. */
   def ignore[G <: Geometry, D](e: Extent, f: Feature[G, D]): Unit = Unit
 }

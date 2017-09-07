@@ -187,4 +187,7 @@ object VectorPipe {
   def stdout[G <: Geometry, D](e: Extent, f: Feature[G, D]): Unit = {
     println(s"CLIP FAILURE W/ EXTENT: ${e}\nELEMENT METADATA: ${f.data}\nGEOM: ${f.geom.reproject(WebMercator, LatLng).toGeoJson}")
   }
+
+  /** Don't log clipping failures. */
+  def ignore[G <: Geometry, D](e: Extent, f: Feature[G, D]): Unit = Unit
 }

@@ -33,7 +33,7 @@ val features: RDD[osm.OSMFeature] =
 
 /* All Geometries clipped to your `layout` grid */
 val featGrid: RDD[(SpatialKey, Iterable[osm.OSMFeature])] =
-  VectorPipe.toGrid(Clip.byHybrid, layout, features)
+  VectorPipe.toGrid(Clip.byHybrid, osm.stdout, layout, features)
 
 /* A grid of Vector Tiles */
 val tiles: RDD[(SpatialKey, VectorTile)] =

@@ -1,10 +1,13 @@
 package vectorpipe
 
+import geotrellis.proj4._
 import geotrellis.raster.GridBounds
 import geotrellis.spark._
 import geotrellis.spark.tiling._
 import geotrellis.vector._
+import geotrellis.vector.io._
 import geotrellis.vectortile.VectorTile
+import org.apache.log4j.Logger
 import org.apache.spark.rdd._
 
 // --- //
@@ -108,14 +111,11 @@ object VectorPipe {
     *
     * @param ld   The LayoutDefinition defining the area to gridify.
     * @param clip A function which represents a "clipping strategy".
-    * @return The pair `(OSMFeature, Extent)` represents the clipped Feature
-    *         along with its __original__ bounding envelope. This envelope
-    *         is to be encoded into the Feature's metadata within a VT,
-    *         and could be used later to aid the reconstruction of the original,
-    *         unclipped Feature.
+    * @param logError An IO function that will log any clipping failures.
     */
   def toGrid[G <: Geometry, D](
-    clip: (Extent, Feature[G, D]) => Feature[G, D],
+    clip: (Extent, Feature[G, D]) => Option[Feature[G, D]],
+    logError: (Extent, Feature[G, D]) => Unit,
     ld: LayoutDefinition,
     rdd: RDD[Feature[G, D]]
   ): RDD[(SpatialKey, Iterable[Feature[G, D]])] = {
@@ -132,12 +132,19 @@ object VectorPipe {
     /* Associate each Feature with a SpatialKey */
     val grid: RDD[(SpatialKey, Feature[G, D])] = rdd.flatMap(f => byIntersect(mt, f))
 
-    grid.groupByKey().map({ case (k, iter) =>
+    grid.groupByKey().map { case (k, iter) =>
       val kExt: Extent = mt(k)
 
       /* Clip each geometry in some way */
-      (k, iter.map(g => clip(kExt, g)))
-    })
+      val clipped: List[Feature[G, D]] = iter.foldLeft(List.empty[Feature[G, D]]) { (acc, g) =>
+        clip(kExt, g) match {
+          case Some(h) => h :: acc
+          case None => logError(kExt, g); acc /* Sneaky IO to log the error */
+        }
+      }
+
+      (k, clipped)
+    }
   }
 
   /* Takes advantage of the fact that most Geoms are small, and only occur in one Tile */
@@ -176,4 +183,17 @@ object VectorPipe {
 
     rdd.map({ case (k, iter) => (k, collate(mt(k), iter))})
   }
+
+  private def logString[G <: Geometry, D](e: Extent, f: Feature[G, D]): String =
+    s"CLIP FAILURE W/ EXTENT: ${e}\nELEMENT METADATA: ${f.data}\nGEOM: ${f.geom.reproject(WebMercator, LatLng).toGeoJson}"
+
+  /** Print any clipping errors to STDOUT - to be passed to [[toGrid]]. */
+  def stdout[G <: Geometry, D](e: Extent, f: Feature[G, D]): Unit = println(logString(e, f))
+
+  /** Log a clipping error as an ERROR through Spark's default log4j - to be passed to [[toGrid]]. */
+  def log4j[G <: Geometry, D](e: Extent, f: Feature[G, D]): Unit =
+    Logger.getRootLogger().error(logString(e, f))
+
+  /** Don't log clipping failures - to be passed to [[toGrid]]. */
+  def ignore[G <: Geometry, D](e: Extent, f: Feature[G, D]): Unit = Unit
 }

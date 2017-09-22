@@ -7,7 +7,9 @@ import geotrellis.spark.tiling._
 import geotrellis.vector._
 import geotrellis.vector.io._
 import geotrellis.vectortile.VectorTile
+import com.vividsolutions.jts.geom.prep.PreparedGeometryFactory
 import org.apache.log4j.Logger
+import org.apache.spark.Partitioner
 import org.apache.spark.rdd._
 
 // --- //
@@ -114,10 +116,11 @@ object VectorPipe {
     * @param logError An IO function that will log any clipping failures.
     */
   def toGrid[G <: Geometry, D](
-    clip: (Extent, Feature[G, D]) => Option[Feature[G, D]],
+    clip: (Extent, Feature[G, D], (Extent, G) => Boolean) => Option[Feature[G, D]],
     logError: (Extent, Feature[G, D]) => Unit,
     ld: LayoutDefinition,
-    rdd: RDD[Feature[G, D]]
+    rdd: RDD[Feature[G, D]],
+    partitioner: Partitioner
   ): RDD[(SpatialKey, Iterable[Feature[G, D]])] = {
 
     val mt: MapKeyTransform = ld.mapTransform
@@ -129,43 +132,251 @@ object VectorPipe {
     // TODO: This may be an unnecessary bottleneck.
     // val bounded: RDD[Feature[G, D]] = rdd.filter(f => f.geom.intersects(extent))
 
+    // TO NOTE: I moved the clip to before the shuffle, which cuts down on shuffle for larger
+    // geometries.
+
     /* Associate each Feature with a SpatialKey */
-    val grid: RDD[(SpatialKey, Feature[G, D])] = rdd.flatMap(f => byIntersect(mt, f))
+    val grid: RDD[(SpatialKey, Feature[G, D])] = rdd.flatMap(f => byIntersect(mt, f, clip, logError))
 
-    grid.groupByKey().map { case (k, iter) =>
-      val kExt: Extent = mt(k)
-
-      /* Clip each geometry in some way */
-      val clipped: List[Feature[G, D]] = iter.foldLeft(List.empty[Feature[G, D]]) { (acc, g) =>
-        clip(kExt, g) match {
-          case Some(h) => h :: acc
-          case None => logError(kExt, g); acc /* Sneaky IO to log the error */
-        }
-      }
-
-      (k, clipped)
-    }
+    grid.groupByKey(partitioner = partitioner)
   }
 
+  // TODO: Clean up, would be nice to have in GeoTrellis proper
+  import geotrellis.raster._
+  import geotrellis.raster.rasterize.{Rasterizer, Callback}
+  import geotrellis.raster.{GridBounds, RasterExtent, PixelIsArea}
+  import java.util.concurrent.ConcurrentHashMap
+  import collection.JavaConverters._
+  private def spatialKeysForMultiLine(multiLine: MultiLine, mt: MapKeyTransform): Iterator[SpatialKey] = {
+    val extent = multiLine.envelope
+    val bounds: GridBounds = mt(extent)
+    val options = Rasterizer.Options(includePartial=true, sampleType=PixelIsArea)
+
+    val boundsExtent: Extent = mt(bounds)
+    val rasterExtent = RasterExtent(boundsExtent, bounds.width, bounds.height)
+
+    /*
+     * Use the Rasterizer to construct  a list of tiles which meet
+     * the  query polygon.   That list  of tiles  is stored  as an
+     * array of  tuples which  is then  mapped-over to  produce an
+     * array of KeyBounds.
+     */
+    val tiles = new ConcurrentHashMap[(Int,Int), Unit]
+    val fn = new Callback {
+      def apply(col : Int, row : Int): Unit = {
+        val tile : (Int, Int) = (bounds.colMin + col, bounds.rowMin + row)
+        tiles.put(tile, Unit)
+      }
+    }
+
+    multiLine.foreach(rasterExtent, options)(fn)
+    tiles.keys.asScala.map { case (col, row) => SpatialKey(col, row) }
+  }
+
+  private def spatialKeysForMultiPolygon(multiPolygon: MultiPolygon, mt: MapKeyTransform): Iterator[SpatialKey] = {
+    val extent = multiPolygon.envelope
+    val bounds: GridBounds = mt(extent)
+    val options = Rasterizer.Options(includePartial=true, sampleType=PixelIsArea)
+    val boundsExtent: Extent = mt(bounds)
+    val rasterExtent = RasterExtent(boundsExtent, bounds.width, bounds.height)
+
+    /*
+     * Use the Rasterizer to construct  a list of tiles which meet
+     * the  query polygon.   That list  of tiles  is stored  as an
+     * array of  tuples which  is then  mapped-over to  produce an
+     * array of KeyBounds.
+     */
+    val tiles = new ConcurrentHashMap[(Int,Int), Unit]
+    val fn = new Callback {
+      def apply(col : Int, row : Int): Unit = {
+        val tile : (Int, Int) = (bounds.colMin + col, bounds.rowMin + row)
+        tiles.put(tile, Unit)
+      }
+    }
+
+    multiPolygon.foreach(rasterExtent, options)(fn)
+    tiles.keys.asScala.map { case (col, row) => SpatialKey(col, row) }
+  }
+
+
   /* Takes advantage of the fact that most Geoms are small, and only occur in one Tile */
-  private def byIntersect[G <: Geometry, D](
+  def byIntersect[G <: Geometry, D](
     mt: MapKeyTransform,
-    f: Feature[G, D]
+    f: Feature[G, D],
+    clip: (Extent, Feature[G, D], (Extent, G) => Boolean) => Option[Feature[G, D]],
+    logError: (Extent, Feature[G, D]) => Unit
   ): Iterator[(SpatialKey, Feature[G, D])] = {
 
-    val b: GridBounds = mt(f.geom.envelope)
+    def clipFeature(k: SpatialKey, f: Feature[G, D], contains: (Extent, G) => Boolean): Option[(SpatialKey, Feature[G, D])] = {
+      val kExt = mt(k)
+      clip(kExt, f, contains) match {
+        case Some(h) => Some(k -> h)
+        case None => logError(kExt, f); None /* Sneaky IO to log the error */
+      }
+    }
 
-    /* For most Geoms, this will only produce one [[SpatialKey]]. */
-    val keys: Iterator[SpatialKey] = for {
-      x <- Iterator.range(b.colMin, b.colMax+1)
-      y <- Iterator.range(b.rowMin, b.rowMax+1)
-    } yield SpatialKey(x, y)
+    // TODO: DRY out
+    // TODO: Better way to work around GeometryCollection results of clipping
+    val iterator =
+      f.geom match {
+        case p: Point =>
+          val k = mt(p)
+          Iterator((k, f))
+        case mp: MultiPoint =>
+          mp.points
+            .map(mt(_))
+            .distinct
+            .map(clipFeature(_, f, { (x, y) => true }))
+            .flatten
+            .iterator
+        case l: Line =>
+          val keys = spatialKeysForMultiLine(MultiLine(l), mt).toArray
 
-    /* Yes, this filter is necessary, since the Geom's _envelope_ could intersect
-     * grid cells that the Geom itself does not. Not excluding these false positives
-     * could lead to undefined behaviour later in the clipping step.
-     */
-    keys.filter(k => mt(k).toPolygon.intersects(f.geom)).map(k => (k, f))
+          val len = keys.length
+          var continue = true
+          var i = 0
+          val elems = scala.collection.mutable.ListBuffer[(SpatialKey, Feature[G, D])]()
+          val startTime = System.currentTimeMillis
+          while(i < len && continue) {
+            // How many will 5 seconds cut out? let's see!
+            if(System.currentTimeMillis - startTime > 5000) {
+              continue = false
+            } else {
+              val k = keys(i)
+              val kExt = mt(k)
+              clip(kExt, f, { (x,y) => false }) match {
+                case Some(f) => elems += k -> f
+                case None => continue = false
+              }
+            }
+            i += 1
+          }
+          if(!continue) { logError(Extent(0, 0, 1, 1), f) }
+
+          elems.iterator
+
+//          spatialKeysForMultiLine(MultiLine(l), mt).map(clipFeature(_, f, { (x,y) => false })).flatten
+        case ml: MultiLine =>
+          val keys = spatialKeysForMultiLine(ml, mt).toArray
+
+          val len = keys.length
+          var continue = true
+          var i = 0
+          val elems = scala.collection.mutable.ListBuffer[(SpatialKey, Feature[G, D])]()
+          val startTime = System.currentTimeMillis
+          while(i < len && continue) {
+            // How many will 5 seconds cut out? let's see!
+            if(System.currentTimeMillis - startTime > 5000) {
+              continue = false
+            } else {
+              val k = keys(i)
+              val kExt = mt(k)
+              clip(kExt, f, { (x,y) => false }) match {
+                case Some(f) => elems += k -> f
+                case None => continue = false
+              }
+            }
+            i += 1
+          }
+          if(!continue) { logError(Extent(0, 0, 1, 1), f) }
+
+          elems.iterator
+
+          //.map(clipFeature(_, f, { (x,y) => false })).flatten
+        case p: Polygon =>
+          val pg = PreparedGeometryFactory.prepare(p.jtsGeom)
+          val contains = { (extent: Extent, geom: G) =>
+            pg.contains(extent.toPolygon.jtsGeom)
+          }
+
+          val keys = spatialKeysForMultiPolygon(MultiPolygon(p), mt).toArray
+
+          // TODO: What to do about this
+          val len = keys.length
+          var continue = true
+          var i = 0
+          val elems = scala.collection.mutable.ListBuffer[(SpatialKey, Feature[G, D])]()
+          val startTime = System.currentTimeMillis
+          while(i < len && continue) {
+            // How many will 5 seconds cut out? let's see!
+            if(System.currentTimeMillis - startTime > 5000) {
+              continue = false
+            } else {
+              val k = keys(i)
+              val kExt = mt(k)
+              clip(kExt, f, contains) match {
+                case Some(f) => elems += k -> f
+                case None => continue = false
+              }
+            }
+            i += 1
+          }
+          if(!continue) { logError(Extent(0, 0, 1, 1), f) }
+
+          elems.iterator
+  //        spatialKeysForMultiPolygon(MultiPolygon(p), mt).map(clipFeature(_, f, contains)).flatten
+        case mp: MultiPolygon =>
+          val pg = PreparedGeometryFactory.prepare(mp.jtsGeom)
+          val contains = { (extent: Extent, geom: G) =>
+            pg.contains(extent.toPolygon.jtsGeom)
+          }
+
+          val keys = spatialKeysForMultiPolygon(mp, mt).toArray
+
+          // TODO: What to do about this
+          val len = keys.length
+          var continue = true
+          var i = 0
+          val elems = scala.collection.mutable.ListBuffer[(SpatialKey, Feature[G, D])]()
+          val startTime = System.currentTimeMillis
+          while(i < len && continue) {
+            // How many will 5 seconds cut out? let's see!
+            if(System.currentTimeMillis - startTime > 5000) {
+              continue = false
+            } else {
+              val k = keys(i)
+              val kExt = mt(k)
+              clip(kExt, f, contains) match {
+                case Some(f) => elems += k -> f
+                case None => continue = false
+              }
+            }
+            i += 1
+          }
+          if(!continue) { logError(Extent(0, 0, 1, 1), f) }
+
+          elems.iterator
+
+          //spatialKeysForMultiPolygon(mp, mt).map(clipFeature(_, f, contains)).flatten
+        case gc: GeometryCollection =>
+          // How did we get one of these? In case it does happen, use generic case.
+          val b: GridBounds = mt(f.geom.envelope)
+
+          /* For most Geoms, this will only produce one [[SpatialKey]]. */
+          val keys: Iterator[SpatialKey] = for {
+            x <- Iterator.range(b.colMin, b.colMax+1)
+            y <- Iterator.range(b.rowMin, b.rowMax+1)
+          } yield SpatialKey(x, y)
+
+          /* Yes, this filter is necessary, since the Geom's _envelope_ could intersect
+           * grid cells that the Geom itself does not. Not excluding these false positives
+           * could lead to undefined behaviour later in the clipping step.
+           */
+          keys.filter(k => mt(k).toPolygon.intersects(f.geom))
+              .map(k => clipFeature(k, f, { (x,y) => false })).flatten
+      }
+
+    iterator.flatMap { case (k, f) =>
+      f.geom match {
+        case gc: GeometryCollection =>
+          val validGeoms: Seq[Geometry] =
+            gc.points ++ gc.lines ++ gc.polygons ++
+            gc.multiPoints ++ gc.multiLines ++ gc.multiPolygons
+          validGeoms.map { g => k -> f.mapGeom { _ => g.asInstanceOf[G] } } // TODO: BOOOOOOO
+        case _ =>
+          Seq(k -> f)
+      }
+    }
   }
 
   /** Given a collection of GeoTrellis `Feature`s which have been associated
@@ -181,7 +392,9 @@ object VectorPipe {
   ): RDD[(SpatialKey, VectorTile)] = {
     val mt: MapKeyTransform = ld.mapTransform
 
-    rdd.map({ case (k, iter) => (k, collate(mt(k), iter))})
+    rdd.mapPartitions({ partition =>
+      partition.map { case (k, iter) => (k, collate(mt(k), iter)) }
+    }, preservesPartitioning = true)
   }
 
   private def logString[G <: Geometry, D](e: Extent, f: Feature[G, D]): String =

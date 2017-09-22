@@ -24,92 +24,92 @@ import vectorpipe.util._
 
 private[vectorpipe] object ElementToFeature {
 
-  /** Crush Relation Trees into groups of concrete, geometric Elements
-    * with all their parent metadata disseminated.
-    *
-    * Return type justification:
-    *   - Relations form Trees, so any given one will be pointed to by at most one other.
-    *   - Nodes and Ways can be pointed to by any number of Relations, and those
-    *     Relations can be part of different Trees. So the `Long` keys for
-    *     the Nodes and Ways may not be unique. Such Lists should be fused into
-    *     a Tree later by Spark.
-    */
-  private def flatForest(forest: Forest[Relation]): ParSeq[(Long, Seq[ElementData])] = {
-    forest.par.flatMap(t => flatTree(Seq.empty[ElementData], t))
-  }
+  // /** Crush Relation Trees into groups of concrete, geometric Elements
+  //   * with all their parent metadata disseminated.
+  //   *
+  //   * Return type justification:
+  //   *   - Relations form Trees, so any given one will be pointed to by at most one other.
+  //   *   - Nodes and Ways can be pointed to by any number of Relations, and those
+  //   *     Relations can be part of different Trees. So the `Long` keys for
+  //   *     the Nodes and Ways may not be unique. Such Lists should be fused into
+  //   *     a Tree later by Spark.
+  //   */
+  // private def flatForest(forest: Forest[Relation]): ParSeq[(Long, Seq[ElementData])] = {
+  //   forest.par.flatMap(t => flatTree(Seq.empty[ElementData], t))
+  // }
 
-  /** Assumptions:
-   *   - Multipolygons do not point to other relations.
-   *   - No geometric relations exist in relation trees (CAUTION: likely false).
-   */
-  private def flatTree(
-    parentData: Seq[ElementData],
-    tree: Tree[Relation]
-  ): Seq[(Long, Seq[ElementData])] = {
-    val data: Seq[ElementData] = tree.root.data +: parentData
+  // /** Assumptions:
+  //  *   - Multipolygons do not point to other relations.
+  //  *   - No geometric relations exist in relation trees (CAUTION: likely false).
+  //  */
+  // private def flatTree(
+  //   parentData: Seq[ElementData],
+  //   tree: Tree[Relation]
+  // ): Seq[(Long, Seq[ElementData])] = {
+  //   val data: Seq[ElementData] = tree.root.data +: parentData
 
-    // TODO: This String comparison is aweful! Use a sumtype!
-    val refs = tree.root.members.foldRight(Seq.empty[(Long, Seq[ElementData])])({
-      case (m, acc) if Set("node", "way").contains(m.`type`) => (m.ref, data) +: acc
-      case (_, acc) => acc
-    })
+  //   // TODO: This String comparison is aweful! Use a sumtype!
+  //   val refs = tree.root.members.foldRight(Seq.empty[(Long, Seq[ElementData])])({
+  //     case (m, acc) if Set("node", "way").contains(m.`type`) => (m.ref, data) +: acc
+  //     case (_, acc) => acc
+  //   })
 
-    /* Recurse across children, with this Relation's metadata passed down */
-    refs ++ tree.children.flatMap(t => flatTree(data, t))
-  }
+  //   /* Recurse across children, with this Relation's metadata passed down */
+  //   refs ++ tree.children.flatMap(t => flatTree(data, t))
+  // }
 
-  /** All Relation [[Tree]]s, broken from their original Graph structure
-    * via a topological sort.
-    */
-  private def relForest(rs: RDD[Relation]): Forest[Relation] = {
-    /* Relations which link out to other ones.
-     * ASSUMPTION: This Seq will have only a few thousand elements.
-     */
-    val hasOutgoing: Seq[(Long, Relation, Seq[Long])] =
-      rs.filter(r => r.subrelations.length > 0)
-        .map(r => (r.data.meta.id, r, r.subrelations))
-        .collect
-        .toSeq
+  // /** All Relation [[Tree]]s, broken from their original Graph structure
+  //   * via a topological sort.
+  //   */
+  // private def relForest(rs: RDD[Relation]): Forest[Relation] = {
+  //   /* Relations which link out to other ones.
+  //    * ASSUMPTION: This Seq will have only a few thousand elements.
+  //    */
+  //   val hasOutgoing: Seq[(Long, Relation, Seq[Long])] =
+  //     rs.filter(r => r.subrelations.length > 0)
+  //       .map(r => (r.data.meta.id, r, r.subrelations))
+  //       .collect
+  //       .toSeq
 
-    /* A giantish Forest of all OSM Relations which link to other relations.
-     * Note: The "leaves" are missing, which the next step finds.
-     */
-    val forest: Forest[Relation] = Graph.fromEdges(hasOutgoing).topologicalForest
+  //   /* A giantish Forest of all OSM Relations which link to other relations.
+  //    * Note: The "leaves" are missing, which the next step finds.
+  //    */
+  //   val forest: Forest[Relation] = Graph.fromEdges(hasOutgoing).topologicalForest
 
-    /* Relations which could be leaves in a Relation Tree */
-    val singletons: RDD[(Long, Relation)] =
-      rs.filter(r => r.subrelations.isEmpty).keyBy(r => r.data.meta.id)
+  //   /* Relations which could be leaves in a Relation Tree */
+  //   val singletons: RDD[(Long, Relation)] =
+  //     rs.filter(r => r.subrelations.isEmpty).keyBy(r => r.data.meta.id)
 
-    /* Find all leaves, and reconstruct the Trees */
-    forest.flatMap({ t =>
-      /* Leaf Relations that weren't already in this Tree */
-      val leaves: Seq[Relation] = t.leaves
-        .flatMap(_.subrelations)
-        .flatMap(rid => singletons.lookup(rid))
+  //   /* Find all leaves, and reconstruct the Trees */
+  //   forest.flatMap({ t =>
+  //     /* Leaf Relations that weren't already in this Tree */
+  //     val leaves: Seq[Relation] = t.leaves
+  //       .flatMap(_.subrelations)
+  //       .flatMap(rid => singletons.lookup(rid))
 
-      /* The real way to do this would be to use lenses to "set" the leaves.
-       * Haskell: `tree & deep (filtered (null . subForest) . subForest) %~ foo`
-       * where `foo` (in Scala) would do the RDD lookups.
-       */
-      Graph.fromEdges((t.preorder ++ leaves).map(r => (r.data.meta.id, r, r.subrelations)))
-        .topologicalForest
-        .map(cull)
-    })
-  }
+  //     /* The real way to do this would be to use lenses to "set" the leaves.
+  //      * Haskell: `tree & deep (filtered (null . subForest) . subForest) %~ foo`
+  //      * where `foo` (in Scala) would do the RDD lookups.
+  //      */
+  //     Graph.fromEdges((t.preorder ++ leaves).map(r => (r.data.meta.id, r, r.subrelations)))
+  //       .topologicalForest
+  //       .map(cull)
+  //   })
+  // }
 
-  /** Sanitize a Relation Tree, such that it doesn't contain any "refs"
-    * to a Relation which isn't a child of it in the Tree.
-    */
-  private def cull(t: Tree[Relation]): Tree[Relation] = {
-    val childIds: Set[Long] = t.children.map(_.root.data.meta.id).toSet
+  // /** Sanitize a Relation Tree, such that it doesn't contain any "refs"
+  //   * to a Relation which isn't a child of it in the Tree.
+  //   */
+  // private def cull(t: Tree[Relation]): Tree[Relation] = {
+  //   val childIds: Set[Long] = t.children.map(_.root.data.meta.id).toSet
 
-    Tree(
-      t.root.copy(members = t.root.members.filter({ m: Member =>
-        m.`type` != "relation" || childIds.contains(m.ref)
-      })),
-      t.children.map(cull)
-    )
-  }
+  //   Tree(
+  //     t.root.copy(members = t.root.members.filter({ m: Member =>
+  //       m.`type` != "relation" || childIds.contains(m.ref)
+  //     })),
+  //     t.children.map(cull)
+  //   )
+  // }
 
   /*
    * - Form all Relation Graphs
@@ -125,32 +125,52 @@ private[vectorpipe] object ElementToFeature {
    *  This includes Points, Lines, and Polygons which have no holes.
    *  Holed polygons are handled by [[multipolygons]], as they are represented
    *  by OSM Relations.
+   *
+   *  @note: The performance of this method is serviced by having a partitioner set
+   *         on the the nodes and ways.
    */
   def geometries(
-    nodes: RDD[Node],
-    ways: RDD[Way]
+    nodes: RDD[(Long, Node)],
+    ways: RDD[(Long, Way)]
   ): (RDD[OSMPoint], RDD[OSMLine], RDD[OSMPolygon]) = {
     /* You're a long way from finishing this operation. */
-    val links: RDD[(Long, Way)] = ways.flatMap(w => w.nodes.map(n => (n, w)))
+    // TODO: Don't map whole way, or else you shuffle whole way.
+    // Only map to way Id.
+    // Ways -> (WayId, Way) (partitioned)
+    // Ways -> (NodeId, WayId), Join to (NodeId, Node), map to (Node, It[WayId]), flatmap (WayId, NodeId),/
+    // Group by key with same partitioner, join to ways.
+    val nodesToWayIds: RDD[(Node, Iterable[Long])] =
+      nodes
+        .cogroup(
+          ways
+            .flatMap { case (wayId, way) =>
+              way.nodes.map { nodeId => (nodeId, wayId) }
+            }
+        )
+        .flatMap { case (_, (nodes, wayIds)) =>
+          if(nodes.isEmpty) { None }
+          else {
+            /* ASSUMPTION: `nodes` contains distinct elements */
+            val node = nodes.head
+            Some((node, wayIds))
+          }
+        }
 
-    /* Nodes and Ways bound by the Node ID. Independent Nodes appear here
-     * as well, but with an empty Iterable of Ways.
-     */
-    val grouped: RDD[(Iterable[Node], Iterable[Way])] =
-      nodes.map(n => (n.data.meta.id, n)).cogroup(links).map(_._2)
+
+    val wayIdsToNodes: RDD[(Long, Iterable[Node])] =
+      nodesToWayIds
+        .flatMap { case (node, wayIds) =>
+          wayIds.map(wayId => (wayId, node))
+        }
+        .groupByKey
 
     val linesPolys: RDD[Either[OSMLine, OSMPolygon]] =
-      grouped
-        .flatMap({ case (ns, ws) =>
-          /* ASSUMPTION: `ns` is always length 1 because of the `cogroup` */
-          val n = ns.head
+      ways
+        .join(wayIdsToNodes)
+        .flatMap { case (_, (way, nodes)) =>
 
-          ws.map(w => (w, n))
-        })
-        .groupByKey
-        .flatMap({ case (w, ns) =>
           /* De facto maximum of 2000 Nodes */
-          val sorted: Vector[Node] = ns.toVector.sortBy(n => n.data.meta.id)
+          val sorted: Vector[Node] = nodes.toVector.sortBy(n => n.data.meta.id)
 
           /* `get` is safe, the BTree is guaranteed to be populated,
            * since `ns` is guaranteed to be non-empty.
@@ -170,7 +190,8 @@ private[vectorpipe] object ElementToFeature {
 
           /* The actual node coordinates in the correct order */
           val (points, data): (Vector[(Double, Double)], Vector[ElementData]) =
-            w.nodes
+            way
+              .nodes
               .flatMap(n => tree.searchWith(n, pred))
               .map(n => ((n.lon, n.lat), n.data))
               .unzip
@@ -180,18 +201,19 @@ private[vectorpipe] object ElementToFeature {
           // Confirm why it would ever be empty.
           try {
             /* Segregate by which are purely Lines, and which form Polygons */
-            if (w.isLine) {
+            if (way.isLine) {
               // TODO: Report somehow that the Line was dropped for being degenerate.
               if (isDegenerateLine(points)) None else {
-                Some(Left(Feature(Line(points), Tree(w.data, data.map(_.pure[Tree])))))
+                Some(Left(Feature(Line(points), Tree(way.data, data.map(_.pure[Tree])))))
               }
             } else {
-              Some(Right(Feature(Polygon(points), Tree(w.data, data.map(_.pure[Tree])))))
+              Some(Right(Feature(Polygon(points), Tree(way.data, data.map(_.pure[Tree])))))
             }
           } catch {
             case e: Throwable => None // TODO Be more elegant about this?
           }
-        })
+
+        }
 
     // TODO: Improve this inefficient RDD splitting.
     val lines: RDD[OSMLine] = linesPolys.flatMap({
@@ -205,10 +227,8 @@ private[vectorpipe] object ElementToFeature {
     })
 
     /* Single Nodes unused in any Way */
-    val points: RDD[OSMPoint] = grouped.flatMap({ case (ns, ws) =>
+    val points: RDD[OSMPoint] = nodesToWayIds.flatMap({ case (n, ws) =>
       if (ws.isEmpty) {
-        val n = ns.head
-
         Some(Feature(Point(n.lon, n.lat), Tree.singleton(n.data)))
       } else {
         None
@@ -218,6 +238,7 @@ private[vectorpipe] object ElementToFeature {
     (points, lines, polys)
   }
 
+  // TODO - optimize. Also I suspect this is the cause of the hang in the Finland step.
   def multipolygons(
     lines: RDD[OSMLine],
     polys: RDD[OSMPolygon],
@@ -250,18 +271,22 @@ private[vectorpipe] object ElementToFeature {
           case _ => None
         }).toVector
 
-        /* All line segments, rougly in order of connecting to others. */
-        val sorted = spatialSort(ls.map(f => (f.geom.centroid.as[Point].get, f))).map(_._2)
+        // TODO: This code is suspect
+        //      I don't know what this is doing, commenting out for now.
+        //      I suspect this is the code that makes the 8th stage crazy slow.
 
-        /* All line segments which could fuse into Polygons */
-        val (dumpedLineCount, fusedLines) = fuseLines(sorted).run(0).value
+        // /* All line segments, roughly in order of connecting to others. */
+        // val sorted = spatialSort(ls.map(f => (f.geom.centroid.as[Point].get, f))).map(_._2)
+
+        // /* All line segments which could fuse into Polygons */
+        // val (dumpedLineCount, fusedLines) = fuseLines(sorted).run(0).value
 
         // if (dumpedLineCount > 0) println(s"LINES DUMPED BY fuseLines: ${dumpedLineCount}")
 
         val ps: Vector[OSMPolygon] = gs.flatMap({
           case Left(p) => Some(p)
           case _ => None
-        }).toVector ++ fusedLines
+        }).toVector //++ fusedLines
 
         val outerIds: Set[Long] = r.members.partition(_.role == "outer")._1.map(_.ref).toSet
 
@@ -366,34 +391,35 @@ private[vectorpipe] object ElementToFeature {
    */
   private def fuseLines(
     v: Vector[Feature[Line, Tree[ElementData]]]
-  ): State[Int, Vector[Feature[Polygon, Tree[ElementData]]]] = v match {
-    case Vector() => Vector.empty.pure[IntState]
-    case v if v.length == 1 => State.modify[Int](_ + 1).map(_ => Vector.empty)
-    case v => {
-      fuseOne(v).flatMap({
-        case None => fuseLines(v.tail)
-        case Some((f, d, i, rest)) => {
-          if (f.isClosed)
-            fuseLines(rest).map(c => Feature(Polygon(f), Tree(d.head.root, d)) +: c)
-          else {
-            /* The next sections of the currently accumulating Line may be far down
-             * the Vector, so we punt it forward to avoid wasted traversals
-             * and intersection checks.
-             * This is a band-aid around the fact that `spatialSort` doesn't
-             * place all sections of every fusable line in order; clumps of them
-             * can appear far apart in the Vector.
-             *
-             * If `i == 0`, the splitAt and `(++)` below are basically no-ops,
-             * so there's no point in any `if (i == 0) skipTheSplitAt`.
-             */
-            val (a, b) = rest.splitAt(i)
+  ): State[Int, Vector[Feature[Polygon, Tree[ElementData]]]] =
+    v match {
+      case Vector() => Vector.empty.pure[IntState]
+      case v if v.length == 1 => State.modify[Int](_ + 1).map(_ => Vector.empty)
+      case v => {
+        fuseOne(v).flatMap({
+          case None => fuseLines(v.tail)
+          case Some((f, d, i, rest)) => {
+            if (f.isClosed)
+              fuseLines(rest).map(c => Feature(Polygon(f), Tree(d.head.root, d)) +: c)
+            else {
+              /* The next sections of the currently accumulating Line may be far down
+               * the Vector, so we punt it forward to avoid wasted traversals
+               * and intersection checks.
+               * This is a band-aid around the fact that `spatialSort` doesn't
+               * place all sections of every fusable line in order; clumps of them
+               * can appear far apart in the Vector.
+               *
+               * If `i == 0`, the splitAt and `(++)` below are basically no-ops,
+               * so there's no point in any `if (i == 0) skipTheSplitAt`.
+               */
+              val (a, b) = rest.splitAt(i)
 
-            fuseLines(a ++ (Feature(f, Tree(d.head.root, d)) +: b))
+              fuseLines(a ++ (Feature(f, Tree(d.head.root, d)) +: b))
+            }
           }
-        }
-      })
+        })
+      }
     }
-  }
 
   /**
    * Fuse the head Line in the Vector with the first other Line possible.

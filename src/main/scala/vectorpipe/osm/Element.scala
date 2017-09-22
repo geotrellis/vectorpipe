@@ -136,8 +136,10 @@ case class ElementMeta(
 /** Extra element-specific metadata. */
 private[vectorpipe] sealed trait Extra
 
-private[vectorpipe] case class NodeExtra(point: Point, ways: Seq[Long]) extends Extra
+private[vectorpipe] case class NodeExtra(ways: Seq[Long]) extends Extra
 
 private[vectorpipe] case class WayExtra(relations: Seq[Long]) extends Extra
 
 private[vectorpipe] case class GeomExtra(envelope: Extent) extends Extra
+
+private[vectorpipe] case object NoExtra extends Extra

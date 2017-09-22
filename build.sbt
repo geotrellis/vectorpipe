@@ -15,10 +15,9 @@ scalacOptions := Seq(
 )
 
 libraryDependencies ++= Seq(
-  "com.azavea"                  %% "scaliper"              % "0.5.0-SNAPSHOT" % "test",
   "io.dylemma"                  %% "xml-spac"              % "0.3",
   "org.apache.spark"            %% "spark-hive"            % "2.2.0" % "provided",
-  "org.apache.hadoop"           %  "hadoop-aws"            % "2.8.1"
+  "org.apache.hadoop"           %  "hadoop-aws"            % "2.7.3" % "provided"
     exclude("javax.servlet",     "servlet-api")
     exclude("javax.servlet.jsp", "jsp-api")
     exclude("org.mortbay.jetty", "servlet-api"),

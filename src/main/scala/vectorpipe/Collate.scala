@@ -120,7 +120,7 @@ object Collate {
         (WayExtra(Seq(parent)), node.root) +: node.children.flatMap(t => work(node.root.meta.id, t))
 
       /* It's a Node that got eaten */
-      case Some(Right(p)) => Seq((NodeExtra(p, Seq(parent)), node.root))
+      case Some(Right(p)) => Seq((NodeExtra(Seq(parent)), node.root))
 
       /* Should never occur */
       case _ => sys.error("BOOM!"); Seq.empty
@@ -128,16 +128,16 @@ object Collate {
 
     d.root match {
       /* It was a top-level Node, not part of any Way */
-      case ElementData(_, _, Some(Left(extent))) if d.children.isEmpty =>
-        compressMeta(0, GeomExtra(extent), d.root)
+      case ElementData(_, _, None) if d.children.isEmpty =>
+        compressMeta(0, NoExtra, d.root)
 
       /* It was either a Way that became a Line/Poly, or a Relation that became a MultiPoly */
-      case ElementData(_, _, Some(Left(extent))) => {
+      case ElementData(_, _, None) => {
 
         /* Combine data for Nodes which were shared by multiple Ways */
         val kids = uniqueNodes(d.children.flatMap(t => work(d.root.meta.id, t)))
 
-        ((GeomExtra(extent), d.root) +: kids)
+        ((NoExtra, d.root) +: kids)
           .zipWithIndex
           .map({ case ((extra, meta), i) => compressMeta(i.toShort, extra, meta) })
           .reduce(_ ++ _)
@@ -157,7 +157,7 @@ object Collate {
   private def uniqueNodes(items: Seq[(Extra, ElementData)]): Seq[(Extra, ElementData)] = {
 
     val (nodes, others) = items.partition({
-      case (NodeExtra(_, _), _) => true
+      case (NodeExtra(_), _) => true
       case _ => false
     })
 
@@ -169,7 +169,7 @@ object Collate {
         case n if um.contains(n._2.meta.id) => {
           val m: NodeExtra = um(n._2.meta.id)._1.asInstanceOf[NodeExtra]
 
-          val foo = (NodeExtra(m.point, n._1.asInstanceOf[NodeExtra].ways ++ m.ways), n._2)
+          val foo = (NodeExtra(n._1.asInstanceOf[NodeExtra].ways ++ m.ways), n._2)
 
           um.update(n._2.meta.id, foo)
         }
@@ -207,18 +207,19 @@ object Collate {
       .toMap
 
     val extras: Map[String, Value] = extra match {
-      case NodeExtra(p, ws) => {
+      case NodeExtra(ws) => {
 
-        val latLng = Map(
-          Seq(prefix, 0x07.toChar).mkString -> VDouble(p.y),
-          Seq(prefix, 0x08.toChar).mkString -> VDouble(p.x)
-        )
+        // val latLng = Map(
+        //   Seq(prefix, 0x07.toChar).mkString -> VDouble(p.y),
+        //   Seq(prefix, 0x08.toChar).mkString -> VDouble(p.x)
+        // )
 
         val ways = ws.zipWithIndex
           .map({ case (v,i) => Seq(prefix, (i + 0x20).toChar).mkString -> VInt64(v) })
           .toMap
 
-        latLng ++ ways
+        //        latLng ++ ways
+        ways
       }
 
       case WayExtra(rs) =>
@@ -226,12 +227,14 @@ object Collate {
           .map({ case (v,i) => Seq(prefix, (i + 0x40).toChar).mkString -> VInt64(v) })
           .toMap
 
-      case GeomExtra(env) => Map(
-        Seq(prefix, 0x09.toChar).mkString -> VDouble(env.xmin),
-        Seq(prefix, 0x0a.toChar).mkString -> VDouble(env.ymin),
-        Seq(prefix, 0x0b.toChar).mkString -> VDouble(env.xmax),
-        Seq(prefix, 0x0c.toChar).mkString -> VDouble(env.ymax)
-      )
+      case _ => Map()
+
+      // case GeomExtra(env) => Map(
+      //   Seq(prefix, 0x09.toChar).mkString -> VDouble(env.xmin),
+      //   Seq(prefix, 0x0a.toChar).mkString -> VDouble(env.ymin),
+      //   Seq(prefix, 0x0b.toChar).mkString -> VDouble(env.xmax),
+      //   Seq(prefix, 0x0c.toChar).mkString -> VDouble(env.ymax)
+      // )
     }
 
     usuals ++ tags ++ extras

@@ -79,7 +79,7 @@ package object osm {
               (lat, lon, metaFromRow(row), tags)
             }
             .rdd
-            .map({ case (lat, lon, meta, tags) => Node(lat, lon, ElementData(meta, tags, Some(Right(Point(lon, lat))))) })
+            .map({ case (lat, lon, meta, tags) => Node(lat, lon, ElementData(meta, tags)) })
 
         val ways: RDD[Way] =
           data
@@ -93,7 +93,7 @@ package object osm {
               (nodes, metaFromRow(row), tags)
             }
             .rdd
-            .map({ case (nodes, meta, tags) => Way(nodes, ElementData(meta, tags, None)) })
+            .map({ case (nodes, meta, tags) => Way(nodes, ElementData(meta, tags)) })
 
         val relations: RDD[Relation] =
           data
@@ -132,7 +132,7 @@ package object osm {
               val members: Seq[Member] =
                 types.zip(refs).zip(roles).map { case ((ty, rf), ro) => Member(ty, rf, ro) }
 
-              Relation(members, ElementData(meta, tags, None))
+              Relation(members, ElementData(meta, tags))
             }
 
         Right((nodes, ways, relations))
@@ -223,12 +223,7 @@ package object osm {
     val pls: RDD[OSMFeature] = polys.map(identity)
     val mps: RDD[OSMFeature] = multiPolys.map(identity)
 
-    val geoms: RDD[OSMFeature] = pnt ++ lns ++ pls ++ mps
-
-    /* Add every Feature's bounding envelope to its metadata */
-    geoms.map({ f =>
-      f.copy(data = f.data.copy(root = f.data.root.copy(extra = Some(Left(f.geom.envelope)))))
-    })
+    pnt ++ lns ++ pls ++ mps
   }
 
 }

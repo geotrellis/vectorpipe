@@ -28,13 +28,13 @@ object Element {
 
   implicit val elementData: Parser[ElementData] = (
     elementMeta ~
-    Splitter(* \ "tag").asListOf[(String, String)].map(_.toMap)).as((meta, tags) => ElementData(meta, tags, None))
+    Splitter(* \ "tag").asListOf[(String, String)].map(_.toMap)).as((meta, tags) => ElementData(meta, tags))
 
   /* <node lat='49.5135613' lon='6.0095049' ... > */
   implicit val node: Parser[Node] = (
     Parser.forMandatoryAttribute("lat").map(_.toDouble) ~
     Parser.forMandatoryAttribute("lon").map(_.toDouble) ~
-    elementData).as((lat, lon, d) => Node(lat, lon, d.copy(extra = Some(Right(Point(lon, lat))))))
+    elementData).as((lat, lon, d) => Node(lat, lon, d))
 
   /*
    <way ... >
@@ -121,7 +121,7 @@ case class Member(
   ref: Long,
   role: String)
 
-case class ElementData(meta: ElementMeta, tagMap: Map[String, String], extra: Option[Either[Extent, Point]])
+case class ElementData(meta: ElementMeta, tagMap: Map[String, String])
 
 /** All Element types have these attributes in common. */
 case class ElementMeta(
@@ -132,12 +132,3 @@ case class ElementMeta(
   version: Long,
   timestamp: String,
   visible: Boolean)
-
-/** Extra element-specific metadata. */
-private[vectorpipe] sealed trait Extra
-
-private[vectorpipe] case class NodeExtra(point: Point, ways: Seq[Long]) extends Extra
-
-private[vectorpipe] case class WayExtra(relations: Seq[Long]) extends Extra
-
-private[vectorpipe] case class GeomExtra(envelope: Extent) extends Extra

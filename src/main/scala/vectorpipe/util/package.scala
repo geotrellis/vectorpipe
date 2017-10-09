@@ -5,12 +5,6 @@ import geotrellis.vector.Polygon
 
 package object util {
 
-  /** An abstract representation of a vertex. */
-  type Vertex = Int
-
-  /** A common alias for a collection of [[Tree]]s. */
-  type Forest[T] = Seq[Tree[T]]
-
   /** Ensure a [[geotrellis.vector.Polygon]] has the correct winding order
     * to be used in a [[VectorTile]].
     */

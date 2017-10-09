@@ -5,7 +5,6 @@ import java.time.ZonedDateTime
 import geotrellis.vector._
 import org.scalatest._
 import vectorpipe.osm._
-import vectorpipe.util.Tree
 
 // --- //
 

@@ -6,7 +6,7 @@ organization := "com.azavea"
 
 organizationName := "Azavea"
 
-scalaVersion := "2.11.11"
+scalaVersion in ThisBuild := "2.11.11"
 
 resolvers += Resolver.bintrayRepo("azavea", "maven")
 

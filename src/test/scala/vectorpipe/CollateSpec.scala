@@ -41,12 +41,8 @@ class CollateSpec extends FunSpec with Matchers {
       Collate.withoutMetadata(extent, Seq(Feature(geom, 1)))
     }
 
-    it("byAnalyticsLite") {
-      val tree = Tree(data0, Seq(Tree.singleton(data1), Tree.singleton(data2)))
-
-      //      println(tree.map(_.meta.id).pretty)
-
-      Collate.byAnalyticsLite(extent, Seq(Feature(geom, tree)))
+    it("byOSM") {
+      Collate.byOSM(extent, Seq(Feature(geom, data0)))
     }
   }
 }

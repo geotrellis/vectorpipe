@@ -111,7 +111,8 @@ case class Way(
 
 case class Relation(
   members: Seq[Member],
-  data: ElementData) extends Element {
+  data: ElementData
+) extends Element {
   /** The IDs of sub-relations that this Relation points to. */
   def subrelations: Seq[Long] = members.filter(_.`type` == "relation").map(_.ref)
 }

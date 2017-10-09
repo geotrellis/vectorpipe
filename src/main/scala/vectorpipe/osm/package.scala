@@ -18,11 +18,11 @@ import vectorpipe.util.Tree
 /** Types and functions unique to working with OpenStreetMap data. */
 package object osm {
 
-  type OSMFeature = Feature[Geometry, Tree[ElementData]]
-  private[vectorpipe] type OSMPoint = Feature[Point, Tree[ElementData]]
-  private[vectorpipe] type OSMLine = Feature[Line, Tree[ElementData]]
-  private[vectorpipe] type OSMPolygon = Feature[Polygon, Tree[ElementData]]
-  private[vectorpipe] type OSMMultiPoly = Feature[MultiPolygon, Tree[ElementData]]
+  type OSMFeature = Feature[Geometry, ElementData]
+  private[vectorpipe] type OSMPoint = Feature[Point, ElementData]
+  private[vectorpipe] type OSMLine = Feature[Line, ElementData]
+  private[vectorpipe] type OSMPolygon = Feature[Polygon, ElementData]
+  private[vectorpipe] type OSMMultiPoly = Feature[MultiPolygon, ElementData]
 
   /** Print any clipping errors to STDOUT. Less verbose than [[vectorpipe.VectorPipe.stdout]],
     * since only the offending element ID is printed instead of the entire metadata tree.

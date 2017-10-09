@@ -183,10 +183,10 @@ private[vectorpipe] object ElementToFeature {
             if (w.isLine) {
               // TODO: Report somehow that the Line was dropped for being degenerate.
               if (isDegenerateLine(points)) None else {
-                Some(Left(Feature(Line(points), Tree(w.data, data.map(_.pure[Tree])))))
+                Some(Left(Feature(Line(points), w.data)))
               }
             } else {
-              Some(Right(Feature(Polygon(points), Tree(w.data, data.map(_.pure[Tree])))))
+              Some(Right(Feature(Polygon(points), w.data)))
             }
           } catch {
             case e: Throwable => None // TODO Be more elegant about this?
@@ -209,7 +209,7 @@ private[vectorpipe] object ElementToFeature {
       if (ws.isEmpty) {
         val n = ns.head
 
-        Some(Feature(Point(n.lon, n.lat), Tree.singleton(n.data)))
+        Some(Feature(Point(n.lon, n.lat), n.data))
       } else {
         None
       }
@@ -229,11 +229,11 @@ private[vectorpipe] object ElementToFeature {
       relations.flatMap(r => r.members.map(m => (m.ref, r)))
 
     val lineLinks: RDD[(Long, OSMLine)] =
-      lines.map(f => (f.data.root.meta.id, f))
+      lines.map(f => (f.data.meta.id, f))
 
     /* All Polygons, Lines and Relations bound by their IDs */
     val grouped =
-      polys.map(f => (f.data.root.meta.id, f)).cogroup(lineLinks, relLinks).map(_._2)
+      polys.map(f => (f.data.meta.id, f)).cogroup(lineLinks, relLinks).map(_._2)
 
     val multipolys = grouped
       /* Assumption: Polygons and Lines exist in at most one "multipolygon" Relation */
@@ -243,7 +243,7 @@ private[vectorpipe] object ElementToFeature {
         case _ => None
       })
       .groupByKey
-      .flatMap({ case (r, gs) =>
+      .flatMap { case (r, gs) =>
         /* Fuse Lines into Polygons */
         val ls: Vector[OSMLine] = gs.flatMap({
           case Right(l) => Some(l)
@@ -251,7 +251,8 @@ private[vectorpipe] object ElementToFeature {
         }).toVector
 
         /* All line segments, rougly in order of connecting to others. */
-        val sorted = spatialSort(ls.map(f => (f.geom.centroid.as[Point].get, f))).map(_._2)
+        val sorted: Vector[Feature[Line, ElementData]] =
+          spatialSort(ls.map(f => (f.geom.centroid.as[Point].get, f))).map(_._2)
 
         /* All line segments which could fuse into Polygons */
         val (dumpedLineCount, fusedLines) = fuseLines(sorted).run(0).value
@@ -265,10 +266,10 @@ private[vectorpipe] object ElementToFeature {
 
         val outerIds: Set[Long] = r.members.partition(_.role == "outer")._1.map(_.ref).toSet
 
-        val (outers, inners) = ps.partition(f => outerIds.contains(f.data.root.meta.id))
+        val (outers, inners) = ps.partition(f => outerIds.contains(f.data.meta.id))
 
         /* Match outer and inner Polygons - O(n^2) */
-        val fused = outers.map({ o =>
+        val fused: Vector[Polygon] = outers.map({ o =>
           Polygon(
             o.geom.exterior,
             inners.filter(i => o.geom.contains(i.geom)).map(_.geom.exterior)
@@ -286,9 +287,9 @@ private[vectorpipe] object ElementToFeature {
            * Furthermore, winding order doesn't matter in OSM, but it does
            * in VectorTiles.
            */
-          Some(Feature(MultiPolygon(fused), Tree(r.data, outers.map(_.data) ++ inners.map(_.data))))
+          Some(Feature(MultiPolygon(fused), r.data))
         }
-      })
+      }
 
     /* Lines which were part of no Relation */
     val openLines = grouped.flatMap({
@@ -365,8 +366,8 @@ private[vectorpipe] object ElementToFeature {
    * be fused.
    */
   private def fuseLines(
-    v: Vector[Feature[Line, Tree[ElementData]]]
-  ): State[Int, Vector[Feature[Polygon, Tree[ElementData]]]] = v match {
+    v: Vector[Feature[Line, ElementData]]
+  ): State[Int, Vector[Feature[Polygon, ElementData]]] = v match {
     case Vector() => Vector.empty.pure[IntState]
     case v if v.length == 1 => State.modify[Int](_ + 1).map(_ => Vector.empty)
     case v => {
@@ -374,7 +375,7 @@ private[vectorpipe] object ElementToFeature {
         case None => fuseLines(v.tail)
         case Some((f, d, i, rest)) => {
           if (f.isClosed)
-            fuseLines(rest).map(c => Feature(Polygon(f), Tree(d.head.root, d)) +: c)
+            fuseLines(rest).map(c => Feature(Polygon(f), d.head) +: c)
           else {
             /* The next sections of the currently accumulating Line may be far down
              * the Vector, so we punt it forward to avoid wasted traversals
@@ -388,7 +389,7 @@ private[vectorpipe] object ElementToFeature {
              */
             val (a, b) = rest.splitAt(i)
 
-            fuseLines(a ++ (Feature(f, Tree(d.head.root, d)) +: b))
+            fuseLines(a ++ (Feature(f, d.head) +: b))
           }
         }
       })
@@ -401,7 +402,7 @@ private[vectorpipe] object ElementToFeature {
    */
   private def fuseOne(
     v: Vector[OSMLine]
-  ): State[Int, Option[(Line, Seq[Tree[ElementData]], Int, Vector[OSMLine])]] = {
+  ): State[Int, Option[(Line, Seq[ElementData], Int, Vector[OSMLine])]] = {
     val h = v.head
     val t = v.tail
 
@@ -418,7 +419,7 @@ private[vectorpipe] object ElementToFeature {
         val (a, b) = t.splitAt(i)
 
         /* Hand-hold the typechecker */
-        val res: Option[(Line, Seq[Tree[ElementData]], Int, Vector[OSMLine])] =
+        val res: Option[(Line, Seq[ElementData], Int, Vector[OSMLine])] =
           Some((line, Seq(h.data, f.data), i, a ++ b.tail))
 
         /* Return early */

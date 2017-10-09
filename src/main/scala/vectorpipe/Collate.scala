@@ -104,20 +104,19 @@ object Collate {
   def withoutMetadata[G <: Geometry, D](tileExtent: Extent, geoms: Iterable[Feature[G, D]]): VectorTile =
     generically(tileExtent, geoms, byGeomType, { _: D => Map.empty })
 
-  /** Similar behaviour to [[byAnalytics]], except that recursive metadata
-    * is not stored.
-    */
-  def byAnalyticsLite(tileExtent: Extent, geoms: Iterable[OSMFeature]): VectorTile = {
-    def metadata(d: Tree[ElementData]): Map[String, Value] = {
+  // TODO What about the tag metadata?
+  /** Give each Geometry type its own VectorTile layer, and store the [[ElementData]] as-is. */
+  def byOSM(tileExtent: Extent, geoms: Iterable[OSMFeature]): VectorTile = {
+    def metadata(d: ElementData): Map[String, Value] = {
 
       Map(
-        "id"            -> VInt64(d.root.meta.id),
-        "user"          -> VString(d.root.meta.user),
-        "userId"        -> VString(d.root.meta.userId),
-        "changeSet"     -> VInt64(d.root.meta.changeSet.toLong),
-        "version"       -> VInt64(d.root.meta.version.toLong),
-        "timestamp"     -> VString(d.root.meta.timestamp.toString),
-        "visible"       -> VBool(d.root.meta.visible)
+        "id"            -> VInt64(d.meta.id),
+        "user"          -> VString(d.meta.user),
+        "userId"        -> VString(d.meta.userId),
+        "changeSet"     -> VInt64(d.meta.changeSet.toLong),
+        "version"       -> VInt64(d.meta.version.toLong),
+        "timestamp"     -> VString(d.meta.timestamp.toString),
+        "visible"       -> VBool(d.meta.visible)
       )
     }
 
@@ -125,7 +124,7 @@ object Collate {
   }
 
   def withStringMetadata[G <: Geometry](tileExtent: Extent, geoms: Iterable[Feature[G, Map[String, String]]]): VectorTile =
-    generically(tileExtent, geoms, byGeomType, { d: Map[String,String] => d.mapValues(VString) })
+    generically(tileExtent, geoms, byGeomType, { d: Map[String,String] => d.map { case (k,v) => (k, VString(v)) }})
 
   /** Given some Feature and a way to determine which [[Layer]] it should
     * belong to (by layer name), collate each Feature into the appropriate

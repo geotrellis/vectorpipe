@@ -24,16 +24,6 @@ package object osm {
   private[vectorpipe] type OSMPolygon = Feature[Polygon, ElementData]
   private[vectorpipe] type OSMMultiPoly = Feature[MultiPolygon, ElementData]
 
-  /** Print any clipping errors to STDOUT. Less verbose than [[vectorpipe.VectorPipe.stdout]],
-    * since only the offending element ID is printed instead of the entire metadata tree.
-    *
-    * The geometry itself is printed as LatLng GeoJSON, so that you can copy-paste it into
-    * [[http://geojson.io geojson.io]].
-    */
-  def stdout[G <: Geometry](e: Extent, f: Feature[G, Tree[ElementData]]): Unit = {
-    println(s"CLIP FAILURE W/ EXTENT: ${e}\nELEMENT ID: ${f.data.root.meta.id}\nGEOM: ${f.geom.reproject(WebMercator, LatLng).toGeoJson}")
-  }
-
   /** Given a path to an OSM XML file, parse it into usable types. */
   def fromLocalXML(path: String)(implicit sc: SparkContext): Either[String, (RDD[Node], RDD[Way], RDD[Relation])] = {
     /* A byte stream, so as to not tax the heap */
@@ -156,7 +146,7 @@ package object osm {
    * [[Feature]]s. In order to mix the various subtypes together, they've
    * been upcasted internally to [[Geometry]]. Note:
    * {{{
-   * type OSMFeature = Feature[Geometry, Tree[ElementData]]
+   * type OSMFeature = Feature[Geometry, ElementData]
    * }}}
    *
    * ===Behaviour===
@@ -197,9 +187,6 @@ package object osm {
     val geomRelations: RDD[Relation] = relations.filter({ r =>
       r.data.tagMap.get("type") == Some("multipolygon")
     })
-
-    // TODO Use the results on this!
-    //val toDisseminate: ParSeq[(Long, Seq[ElementData])] = E2F.flatForest(E2F.relForest(rawRelations))
 
     val (points, rawLines, rawPolys) = E2F.geometries(nodes, ways)
 

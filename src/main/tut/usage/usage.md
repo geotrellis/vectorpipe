@@ -37,7 +37,7 @@ val featGrid: RDD[(SpatialKey, Iterable[osm.OSMFeature])] =
 
 /* A grid of Vector Tiles */
 val tiles: RDD[(SpatialKey, VectorTile)] =
-  VectorPipe.toVectorTile(Collate.byAnalytics, layout, featGrid)
+  VectorPipe.toVectorTile(Collate.byAnalyticsLite, layout, featGrid)
 
 /* Further processing here, writing to S3, etc. */
 

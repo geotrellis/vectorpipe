@@ -266,6 +266,15 @@ private[vectorpipe] object ElementToFeature {
 
         val outerIds: Set[Long] = r.members.partition(_.role == "outer")._1.map(_.ref).toSet
 
+        /* While `fuseLines` above does dump most metadata while it's fusing, it at least
+         * keeps the metadata of one of the Lines that made up the final Polygon.
+         * It's the original ID of the Line that is stored in its parent Relation
+         * as a "member", so checking here for the presence of the Line's ID is all
+         * that's necessary to confirm the whole Polygon.
+         *
+         * Geometries which were already Polygons (and thus didn't need extra fusing)
+         * will naturally do the right thing here.
+         */
         val (outers, inners) = ps.partition(f => outerIds.contains(f.data.meta.id))
 
         /* Match outer and inner Polygons - O(n^2) */
@@ -365,9 +374,7 @@ private[vectorpipe] object ElementToFeature {
    * Note: The [[State]] monad usage here is for counting Lines which couldn't
    * be fused.
    */
-  private def fuseLines(
-    v: Vector[Feature[Line, ElementData]]
-  ): State[Int, Vector[Feature[Polygon, ElementData]]] = v match {
+  private def fuseLines(v: Vector[OSMLine]): State[Int, Vector[OSMPolygon]] = v match {
     case Vector() => Vector.empty.pure[IntState]
     case v if v.length == 1 => State.modify[Int](_ + 1).map(_ => Vector.empty)
     case v => {
@@ -375,7 +382,7 @@ private[vectorpipe] object ElementToFeature {
         case None => fuseLines(v.tail)
         case Some((f, d, i, rest)) => {
           if (f.isClosed)
-            fuseLines(rest).map(c => Feature(Polygon(f), d.head) +: c)
+            fuseLines(rest).map(c => Feature(Polygon(f), d) +: c)
           else {
             /* The next sections of the currently accumulating Line may be far down
              * the Vector, so we punt it forward to avoid wasted traversals
@@ -389,7 +396,7 @@ private[vectorpipe] object ElementToFeature {
              */
             val (a, b) = rest.splitAt(i)
 
-            fuseLines(a ++ (Feature(f, d.head) +: b))
+            fuseLines(a ++ (Feature(f, d) +: b))
           }
         }
       })
@@ -402,7 +409,7 @@ private[vectorpipe] object ElementToFeature {
    */
   private def fuseOne(
     v: Vector[OSMLine]
-  ): State[Int, Option[(Line, Seq[ElementData], Int, Vector[OSMLine])]] = {
+  ): State[Int, Option[(Line, ElementData, Int, Vector[OSMLine])]] = {
     val h = v.head
     val t = v.tail
 
@@ -419,8 +426,8 @@ private[vectorpipe] object ElementToFeature {
         val (a, b) = t.splitAt(i)
 
         /* Hand-hold the typechecker */
-        val res: Option[(Line, Seq[ElementData], Int, Vector[OSMLine])] =
-          Some((line, Seq(h.data, f.data), i, a ++ b.tail))
+        val res: Option[(Line, ElementData, Int, Vector[OSMLine])] =
+          Some((line, h.data, i, a ++ b.tail))
 
         /* Return early */
         return res.pure[IntState]

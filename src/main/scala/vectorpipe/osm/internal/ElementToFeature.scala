@@ -118,7 +118,8 @@ private[vectorpipe] object ElementToFeature {
   def multipolygons(
     lines: RDD[OSMLine],
     polys: RDD[OSMPolygon],
-    relations: RDD[Relation]
+    relations: RDD[Relation],
+    logError: Feature[Line, ElementData] => Unit
   ): (RDD[OSMMultiPoly], RDD[OSMLine], RDD[OSMPolygon]) = {
     // filter out polys that are used in relations
     // merge RDDs back together
@@ -154,7 +155,8 @@ private[vectorpipe] object ElementToFeature {
         /* All line segments which could fuse into Polygons */
         val (unfusedLines, fusedLines) = fuseLines(sorted).run(List.empty).value
 
-        // if (dumpedLineCount > 0) println(s"LINES DUMPED BY fuseLines: ${dumpedLineCount}")
+        /* Log each `Line` which failed to fuse */
+        unfusedLines.foreach(logError)
 
         val ps: Vector[OSMPolygon] = gs.flatMap({
           case Left(p) => Some(p)

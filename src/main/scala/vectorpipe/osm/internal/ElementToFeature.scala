@@ -6,8 +6,10 @@ import cats.data.State
 import cats.implicits._
 import com.vividsolutions.jts.geom.LineString
 import com.vividsolutions.jts.operation.linemerge.LineMerger
+import geotrellis.proj4._
 import geotrellis.util._
 import geotrellis.vector._
+import geotrellis.vector.io._
 import org.apache.spark.rdd._
 import spire.std.any._
 import vectorpipe.osm._
@@ -115,12 +117,12 @@ private[vectorpipe] object ElementToFeature {
     (points, lines, polys)
   }
 
-  def multipolygons(
-    lines: RDD[OSMLine],
-    polys: RDD[OSMPolygon],
-    relations: RDD[Relation],
-    logError: Feature[Line, ElementData] => Unit
-  ): (RDD[OSMMultiPoly], RDD[OSMLine], RDD[OSMPolygon]) = {
+  /** A way to render an OSM Line that failed to be reconstructed into a Polygon. */
+  private def errorFusing(f: OSMLine): String =
+    s"LINE FUSION FAILURE\nELEMENT METADATA: ${f.data}\nGEOM: ${f.geom.reproject(WebMercator, LatLng).toGeoJson}"
+
+  def multipolygons(lines: RDD[OSMLine], polys: RDD[OSMPolygon], relations: RDD[Relation])
+                   (logError: (OSMLine => String) => (OSMLine => Unit)): (RDD[OSMMultiPoly], RDD[OSMLine], RDD[OSMPolygon]) = {
     // filter out polys that are used in relations
     // merge RDDs back together
     val relLinks: RDD[(Long, Relation)] =
@@ -156,7 +158,7 @@ private[vectorpipe] object ElementToFeature {
         val (unfusedLines, fusedLines) = fuseLines(sorted).run(List.empty).value
 
         /* Log each `Line` which failed to fuse */
-        unfusedLines.foreach(logError)
+        unfusedLines.foreach(logError(errorFusing))
 
         val ps: Vector[OSMPolygon] = gs.flatMap({
           case Left(p) => Some(p)

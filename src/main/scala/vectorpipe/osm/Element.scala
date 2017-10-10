@@ -12,7 +12,7 @@ sealed trait Element {
   def data: ElementData
 }
 
-object Element {
+private[vectorpipe] object Element {
   implicit val elementMeta: Parser[ElementMeta] = (
     Parser.forMandatoryAttribute("id").map(_.toLong) ~
     Parser.forOptionalAttribute("user").map(_.getOrElse("anonymous")) ~

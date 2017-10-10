@@ -113,12 +113,9 @@ object VectorPipe {
     * @param clip A function which represents a "clipping strategy".
     * @param logError An IO function that will log any clipping failures.
     */
-  def toGrid[G <: Geometry, D](
-    clip: (Extent, Feature[G, D]) => Option[Feature[G, D]],
-    logError: (Extent, Feature[G, D]) => Unit,
-    ld: LayoutDefinition,
-    rdd: RDD[Feature[G, D]]
-  ): RDD[(SpatialKey, Iterable[Feature[G, D]])] = {
+  def toGrid[G <: Geometry, D](ld: LayoutDefinition, rdd: RDD[Feature[G, D]])
+            (clip: (Extent, Feature[G, D]) => Option[Feature[G, D]])
+            (logError: (((Extent, Feature[G, D])) => String) => ((Extent, Feature[G, D])) => Unit): RDD[(SpatialKey, Iterable[Feature[G, D]])] = {
 
     val mt: MapKeyTransform = ld.mapTransform
 
@@ -132,6 +129,11 @@ object VectorPipe {
     /* Associate each Feature with a SpatialKey */
     val grid: RDD[(SpatialKey, Feature[G, D])] = rdd.flatMap(f => byIntersect(mt, f))
 
+    /** A way to render some Geometry that failed to clip. */
+    val errorClipping: ((Extent, Feature[G, D])) => String = { case (e, f) =>
+      s"CLIP FAILURE W/ EXTENT: ${e}\nELEMENT METADATA: ${f.data}\nGEOM: ${f.geom.reproject(WebMercator, LatLng).toGeoJson}"
+    }
+
     grid.groupByKey().map { case (k, iter) =>
       val kExt: Extent = mt(k)
 
@@ -139,7 +141,7 @@ object VectorPipe {
       val clipped: List[Feature[G, D]] = iter.foldLeft(List.empty[Feature[G, D]]) { (acc, g) =>
         clip(kExt, g) match {
           case Some(h) => h :: acc
-          case None => logError(kExt, g); acc /* Sneaky IO to log the error */
+          case None => logError(errorClipping)((kExt, g)); acc /* Sneaky IO to log the error */
         }
       }
 
@@ -174,26 +176,22 @@ object VectorPipe {
     *
     * @see [[vectorpipe.Collate]]
     */
-  def toVectorTile[G <: Geometry, D](
-    collate: (Extent, Iterable[Feature[G, D]]) => VectorTile,
-    ld: LayoutDefinition,
-    rdd: RDD[(SpatialKey, Iterable[Feature[G, D]])]
-  ): RDD[(SpatialKey, VectorTile)] = {
+  def toVectorTile[G <: Geometry, D](ld: LayoutDefinition, rdd: RDD[(SpatialKey, Iterable[Feature[G, D]])])
+                  (collate: (Extent, Iterable[Feature[G, D]]) => VectorTile): RDD[(SpatialKey, VectorTile)] = {
     val mt: MapKeyTransform = ld.mapTransform
 
     rdd.map({ case (k, iter) => (k, collate(mt(k), iter))})
   }
 
-  private def logString[G <: Geometry, D](e: Extent, f: Feature[G, D]): String =
-    s"CLIP FAILURE W/ EXTENT: ${e}\nELEMENT METADATA: ${f.data}\nGEOM: ${f.geom.reproject(WebMercator, LatLng).toGeoJson}"
 
-  /** Print any clipping errors to STDOUT - to be passed to [[toGrid]]. */
-  def stdout[G <: Geometry, D](e: Extent, f: Feature[G, D]): Unit = println(logString(e, f))
 
-  /** Log a clipping error as an ERROR through Spark's default log4j - to be passed to [[toGrid]]. */
-  def log4j[G <: Geometry, D](e: Extent, f: Feature[G, D]): Unit =
-    Logger.getRootLogger().error(logString(e, f))
+  /** Log an error to STDOUT. */
+  def logToStdout[A](f: A => String): A => Unit = { a => println(f(a)) }
 
-  /** Don't log clipping failures - to be passed to [[toGrid]]. */
-  def ignore[G <: Geometry, D](e: Extent, f: Feature[G, D]): Unit = Unit
+  /** Log an error as an ERROR through Spark's default log4j. */
+  def logToLog4j[A](f: A => String): A => Unit = { a => Logger.getRootLogger().error(f(a)) }
+
+  /** Skip over some failure. */
+  def logNothing[A](f: A => String): A => Unit = { _ => Unit }
+
 }

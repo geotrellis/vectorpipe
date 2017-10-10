@@ -177,12 +177,8 @@ package object osm {
    *     across its child members. Otherwise, Relations are "dropped"
    *     from the output.
    */
-  def toFeatures(
-    nodes: RDD[Node],
-    ways: RDD[Way],
-    relations: RDD[Relation],
-    logError: Feature[Line, ElementData] => Unit
-  ): RDD[OSMFeature] = {
+  def toFeatures(nodes: RDD[Node], ways: RDD[Way], relations: RDD[Relation])
+                (logError: (Feature[Line, ElementData] => String) => Feature[Line, ElementData] => Unit): RDD[OSMFeature] = {
 
     /* All Geometric OSM Relations.
      * A (likely false) assumption made in the `flatTree` function is that
@@ -207,7 +203,7 @@ package object osm {
      */
     val simplePolys = rawPolys.filter(_.geom.isValid)
 
-    val (multiPolys, lines, polys) = E2F.multipolygons(rawLines, simplePolys, geomRelations, logError)
+    val (multiPolys, lines, polys) = E2F.multipolygons(rawLines, simplePolys, geomRelations)(logError)
 
     /* A trick to allow us to fuse the RDDs of various Geom types */
     val pnt: RDD[OSMFeature] = points.map(identity)
@@ -217,17 +213,5 @@ package object osm {
 
     pnt ++ lns ++ pls ++ mps
   }
-
-  private def logString[G <: Geometry, D](f: Feature[G, D]): String =
-    s"LINE FUSION FAILURE\nELEMENT METADATA: ${f.data}\nGEOM: ${f.geom.reproject(WebMercator, LatLng).toGeoJson}"
-
-  /** Print line-fusion failures to STDOUT - to be passed to [[toFeatures]]. */
-  def stdout(f: Feature[Line, ElementData]): Unit = println(logString(f))
-
-  /** Log line-fusion failures as an ERROR through Spark's default log4j - to be passed to [[toFeatures]]. */
-  def log4j(f: Feature[Line, ElementData]): Unit = Logger.getRootLogger().error(logString(f))
-
-  /** Don't log any line-fusion failures - to be passed to [[toFeatures]]. */
-  def ignore(f: Feature[Line, ElementData]): Unit = Unit
 
 }

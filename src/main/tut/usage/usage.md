@@ -29,7 +29,7 @@ val (nodes, ways, relations): (RDD[osm.Node], RDD[osm.Way], RDD[osm.Relation]) =
  * Note: type OSMFeature = Feature[Geometry, Tree[ElementData]]
  */
 val features: RDD[osm.OSMFeature] =
-  osm.toFeatures(nodes, ways, relations)
+  osm.toFeatures(nodes, ways, relations, osm.stdout)
 
 /* All Geometries clipped to your `layout` grid */
 val featGrid: RDD[(SpatialKey, Iterable[osm.OSMFeature])] =

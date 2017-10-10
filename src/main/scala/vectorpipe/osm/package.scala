@@ -7,6 +7,7 @@ import scala.util.{ Failure, Success, Try }
 import geotrellis.proj4._
 import geotrellis.vector._
 import geotrellis.vector.io._
+import org.apache.log4j.Logger
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql._
@@ -216,5 +217,17 @@ package object osm {
 
     pnt ++ lns ++ pls ++ mps
   }
+
+  private def logString[G <: Geometry, D](f: Feature[G, D]): String =
+    s"LINE FUSION FAILURE\nELEMENT METADATA: ${f.data}\nGEOM: ${f.geom.reproject(WebMercator, LatLng).toGeoJson}"
+
+  /** Print line-fusion failures to STDOUT - to be passed to [[toFeatures]]. */
+  def stdout(f: Feature[Line, ElementData]): Unit = println(logString(f))
+
+  /** Log line-fusion failures as an ERROR through Spark's default log4j - to be passed to [[toFeatures]]. */
+  def log4j(f: Feature[Line, ElementData]): Unit = Logger.getRootLogger().error(logString(f))
+
+  /** Don't log any line-fusion failures - to be passed to [[toFeatures]]. */
+  def ignore(f: Feature[Line, ElementData]): Unit = Unit
 
 }

@@ -5,7 +5,6 @@ import java.time.ZonedDateTime
 import geotrellis.vector._
 import org.scalatest._
 import vectorpipe.osm._
-import vectorpipe.util.Tree
 
 // --- //
 
@@ -23,20 +22,17 @@ class CollateSpec extends FunSpec with Matchers {
 
   val data0 = ElementData(
     ElementMeta(1037, "colin", "8765", 5, 1, ZonedDateTime.now.toString, true),
-    Map("object" -> "flagpole"),
-    None
+    Map("object" -> "flagpole")
   )
 
   val data1 = ElementData(
     ElementMeta(10000, "colin", "8765", 5, 1, ZonedDateTime.now.toString, true),
-    Map("route" -> "footpath"),
-    None
+    Map("route" -> "footpath")
   )
 
   val data2 = ElementData(
     ElementMeta(100123, "colin", "8765", 5, 1, ZonedDateTime.now.toString, true),
-    Map("place" -> "park"),
-    None
+    Map("place" -> "park")
   )
 
   describe("Collation Functions") {
@@ -44,12 +40,8 @@ class CollateSpec extends FunSpec with Matchers {
       Collate.withoutMetadata(extent, Seq(Feature(geom, 1)))
     }
 
-    it("byAnalytics") {
-      val tree = Tree(data0, Seq(Tree.singleton(data1), Tree.singleton(data2)))
-
-      //      println(tree.map(_.meta.id).pretty)
-
-      Collate.byAnalytics(extent, Seq(Feature(geom, tree)))
+    it("byOSM") {
+      Collate.byOSM(extent, Seq(Feature(geom, data0)))
     }
   }
 }

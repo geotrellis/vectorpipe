@@ -11,28 +11,17 @@ import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql._
 import vectorpipe.osm.internal.{ ElementToFeature => E2F }
-import vectorpipe.util.Tree
 
 // --- //
 
 /** Types and functions unique to working with OpenStreetMap data. */
 package object osm {
 
-  type OSMFeature = Feature[Geometry, Tree[ElementData]]
-  private[vectorpipe] type OSMPoint = Feature[Point, Tree[ElementData]]
-  private[vectorpipe] type OSMLine = Feature[Line, Tree[ElementData]]
-  private[vectorpipe] type OSMPolygon = Feature[Polygon, Tree[ElementData]]
-  private[vectorpipe] type OSMMultiPoly = Feature[MultiPolygon, Tree[ElementData]]
-
-  /** Print any clipping errors to STDOUT. Less verbose than [[vectorpipe.VectorPipe.stdout]],
-    * since only the offending element ID is printed instead of the entire metadata tree.
-    *
-    * The geometry itself is printed as LatLng GeoJSON, so that you can copy-paste it into
-    * [[http://geojson.io geojson.io]].
-    */
-  def stdout[G <: Geometry](e: Extent, f: Feature[G, Tree[ElementData]]): Unit = {
-    println(s"CLIP FAILURE W/ EXTENT: ${e}\nELEMENT ID: ${f.data.root.meta.id}\nGEOM: ${f.geom.reproject(WebMercator, LatLng).toGeoJson}")
-  }
+  type OSMFeature = Feature[Geometry, ElementData]
+  private[vectorpipe] type OSMPoint = Feature[Point, ElementData]
+  private[vectorpipe] type OSMLine = Feature[Line, ElementData]
+  private[vectorpipe] type OSMPolygon = Feature[Polygon, ElementData]
+  private[vectorpipe] type OSMMultiPoly = Feature[MultiPolygon, ElementData]
 
   /** Given a path to an OSM XML file, parse it into usable types. */
   def fromLocalXML(path: String)(implicit sc: SparkContext): Either[String, (RDD[Node], RDD[Way], RDD[Relation])] = {
@@ -79,7 +68,7 @@ package object osm {
               (lat, lon, metaFromRow(row), tags)
             }
             .rdd
-            .map({ case (lat, lon, meta, tags) => Node(lat, lon, ElementData(meta, tags, Some(Right(Point(lon, lat))))) })
+            .map({ case (lat, lon, meta, tags) => Node(lat, lon, ElementData(meta, tags)) })
 
         val ways: RDD[Way] =
           data
@@ -93,7 +82,7 @@ package object osm {
               (nodes, metaFromRow(row), tags)
             }
             .rdd
-            .map({ case (nodes, meta, tags) => Way(nodes, ElementData(meta, tags, None)) })
+            .map({ case (nodes, meta, tags) => Way(nodes, ElementData(meta, tags)) })
 
         val relations: RDD[Relation] =
           data
@@ -132,7 +121,7 @@ package object osm {
               val members: Seq[Member] =
                 types.zip(refs).zip(roles).map { case ((ty, rf), ro) => Member(ty, rf, ro) }
 
-              Relation(members, ElementData(meta, tags, None))
+              Relation(members, ElementData(meta, tags))
             }
 
         Right((nodes, ways, relations))
@@ -156,7 +145,7 @@ package object osm {
    * [[Feature]]s. In order to mix the various subtypes together, they've
    * been upcasted internally to [[Geometry]]. Note:
    * {{{
-   * type OSMFeature = Feature[Geometry, Tree[ElementData]]
+   * type OSMFeature = Feature[Geometry, ElementData]
    * }}}
    *
    * ===Behaviour===
@@ -198,9 +187,6 @@ package object osm {
       r.data.tagMap.get("type") == Some("multipolygon")
     })
 
-    // TODO Use the results on this!
-    //val toDisseminate: ParSeq[(Long, Seq[ElementData])] = E2F.flatForest(E2F.relForest(rawRelations))
-
     val (points, rawLines, rawPolys) = E2F.geometries(nodes, ways)
 
     /* Depending on the dataset used, `Way` data may be incomplete. That is,
@@ -223,12 +209,7 @@ package object osm {
     val pls: RDD[OSMFeature] = polys.map(identity)
     val mps: RDD[OSMFeature] = multiPolys.map(identity)
 
-    val geoms: RDD[OSMFeature] = pnt ++ lns ++ pls ++ mps
-
-    /* Add every Feature's bounding envelope to its metadata */
-    geoms.map({ f =>
-      f.copy(data = f.data.copy(root = f.data.root.copy(extra = Some(Left(f.geom.envelope)))))
-    })
+    pnt ++ lns ++ pls ++ mps
   }
 
 }

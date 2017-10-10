@@ -15,110 +15,7 @@ import vectorpipe.util._
 
 // --- //
 
-/* TODOS
- *
- * Hell, but what about relations that have mixed member types? (ways + other relations)
- * See Relation #47796. It has ways, single nodes, and a relation labelled a "subarea".
- *
- */
-
 private[vectorpipe] object ElementToFeature {
-
-  /** Crush Relation Trees into groups of concrete, geometric Elements
-    * with all their parent metadata disseminated.
-    *
-    * Return type justification:
-    *   - Relations form Trees, so any given one will be pointed to by at most one other.
-    *   - Nodes and Ways can be pointed to by any number of Relations, and those
-    *     Relations can be part of different Trees. So the `Long` keys for
-    *     the Nodes and Ways may not be unique. Such Lists should be fused into
-    *     a Tree later by Spark.
-    */
-  private def flatForest(forest: Forest[Relation]): ParSeq[(Long, Seq[ElementData])] = {
-    forest.par.flatMap(t => flatTree(Seq.empty[ElementData], t))
-  }
-
-  /** Assumptions:
-   *   - Multipolygons do not point to other relations.
-   *   - No geometric relations exist in relation trees (CAUTION: likely false).
-   */
-  private def flatTree(
-    parentData: Seq[ElementData],
-    tree: Tree[Relation]
-  ): Seq[(Long, Seq[ElementData])] = {
-    val data: Seq[ElementData] = tree.root.data +: parentData
-
-    // TODO: This String comparison is aweful! Use a sumtype!
-    val refs = tree.root.members.foldRight(Seq.empty[(Long, Seq[ElementData])])({
-      case (m, acc) if Set("node", "way").contains(m.`type`) => (m.ref, data) +: acc
-      case (_, acc) => acc
-    })
-
-    /* Recurse across children, with this Relation's metadata passed down */
-    refs ++ tree.children.flatMap(t => flatTree(data, t))
-  }
-
-  /** All Relation [[Tree]]s, broken from their original Graph structure
-    * via a topological sort.
-    */
-  private def relForest(rs: RDD[Relation]): Forest[Relation] = {
-    /* Relations which link out to other ones.
-     * ASSUMPTION: This Seq will have only a few thousand elements.
-     */
-    val hasOutgoing: Seq[(Long, Relation, Seq[Long])] =
-      rs.filter(r => r.subrelations.length > 0)
-        .map(r => (r.data.meta.id, r, r.subrelations))
-        .collect
-        .toSeq
-
-    /* A giantish Forest of all OSM Relations which link to other relations.
-     * Note: The "leaves" are missing, which the next step finds.
-     */
-    val forest: Forest[Relation] = Graph.fromEdges(hasOutgoing).topologicalForest
-
-    /* Relations which could be leaves in a Relation Tree */
-    val singletons: RDD[(Long, Relation)] =
-      rs.filter(r => r.subrelations.isEmpty).keyBy(r => r.data.meta.id)
-
-    /* Find all leaves, and reconstruct the Trees */
-    forest.flatMap({ t =>
-      /* Leaf Relations that weren't already in this Tree */
-      val leaves: Seq[Relation] = t.leaves
-        .flatMap(_.subrelations)
-        .flatMap(rid => singletons.lookup(rid))
-
-      /* The real way to do this would be to use lenses to "set" the leaves.
-       * Haskell: `tree & deep (filtered (null . subForest) . subForest) %~ foo`
-       * where `foo` (in Scala) would do the RDD lookups.
-       */
-      Graph.fromEdges((t.preorder ++ leaves).map(r => (r.data.meta.id, r, r.subrelations)))
-        .topologicalForest
-        .map(cull)
-    })
-  }
-
-  /** Sanitize a Relation Tree, such that it doesn't contain any "refs"
-    * to a Relation which isn't a child of it in the Tree.
-    */
-  private def cull(t: Tree[Relation]): Tree[Relation] = {
-    val childIds: Set[Long] = t.children.map(_.root.data.meta.id).toSet
-
-    Tree(
-      t.root.copy(members = t.root.members.filter({ m: Member =>
-        m.`type` != "relation" || childIds.contains(m.ref)
-      })),
-      t.children.map(cull)
-    )
-  }
-
-  /*
-   * - Form all Relation Graphs
-   * - Break into a Relation Forest, then RDD[Tree[Relation]]
-   * - Reduce this to RDD[(Relation, Tree[ElementData])]
-   * - ???
-   * - Cull any members who are relations, but aren't children in the tree
-   * - For every Relation, copy its metadata to any member which isn't a relation.
-   */
 
   /**
    * Every OSM Node and Way converted to GeoTrellis Geometries.
@@ -183,10 +80,10 @@ private[vectorpipe] object ElementToFeature {
             if (w.isLine) {
               // TODO: Report somehow that the Line was dropped for being degenerate.
               if (isDegenerateLine(points)) None else {
-                Some(Left(Feature(Line(points), Tree(w.data, data.map(_.pure[Tree])))))
+                Some(Left(Feature(Line(points), w.data)))
               }
             } else {
-              Some(Right(Feature(Polygon(points), Tree(w.data, data.map(_.pure[Tree])))))
+              Some(Right(Feature(Polygon(points), w.data)))
             }
           } catch {
             case e: Throwable => None // TODO Be more elegant about this?
@@ -209,7 +106,7 @@ private[vectorpipe] object ElementToFeature {
       if (ws.isEmpty) {
         val n = ns.head
 
-        Some(Feature(Point(n.lon, n.lat), Tree.singleton(n.data)))
+        Some(Feature(Point(n.lon, n.lat), n.data))
       } else {
         None
       }
@@ -229,11 +126,11 @@ private[vectorpipe] object ElementToFeature {
       relations.flatMap(r => r.members.map(m => (m.ref, r)))
 
     val lineLinks: RDD[(Long, OSMLine)] =
-      lines.map(f => (f.data.root.meta.id, f))
+      lines.map(f => (f.data.meta.id, f))
 
     /* All Polygons, Lines and Relations bound by their IDs */
     val grouped =
-      polys.map(f => (f.data.root.meta.id, f)).cogroup(lineLinks, relLinks).map(_._2)
+      polys.map(f => (f.data.meta.id, f)).cogroup(lineLinks, relLinks).map(_._2)
 
     val multipolys = grouped
       /* Assumption: Polygons and Lines exist in at most one "multipolygon" Relation */
@@ -243,7 +140,7 @@ private[vectorpipe] object ElementToFeature {
         case _ => None
       })
       .groupByKey
-      .flatMap({ case (r, gs) =>
+      .flatMap { case (r, gs) =>
         /* Fuse Lines into Polygons */
         val ls: Vector[OSMLine] = gs.flatMap({
           case Right(l) => Some(l)
@@ -251,7 +148,8 @@ private[vectorpipe] object ElementToFeature {
         }).toVector
 
         /* All line segments, rougly in order of connecting to others. */
-        val sorted = spatialSort(ls.map(f => (f.geom.centroid.as[Point].get, f))).map(_._2)
+        val sorted: Vector[Feature[Line, ElementData]] =
+          spatialSort(ls.map(f => (f.geom.centroid.as[Point].get, f))).map(_._2)
 
         /* All line segments which could fuse into Polygons */
         val (dumpedLineCount, fusedLines) = fuseLines(sorted).run(0).value
@@ -265,10 +163,19 @@ private[vectorpipe] object ElementToFeature {
 
         val outerIds: Set[Long] = r.members.partition(_.role == "outer")._1.map(_.ref).toSet
 
-        val (outers, inners) = ps.partition(f => outerIds.contains(f.data.root.meta.id))
+        /* While `fuseLines` above does dump most metadata while it's fusing, it at least
+         * keeps the metadata of one of the Lines that made up the final Polygon.
+         * It's the original ID of the Line that is stored in its parent Relation
+         * as a "member", so checking here for the presence of the Line's ID is all
+         * that's necessary to confirm the whole Polygon.
+         *
+         * Geometries which were already Polygons (and thus didn't need extra fusing)
+         * will naturally do the right thing here.
+         */
+        val (outers, inners) = ps.partition(f => outerIds.contains(f.data.meta.id))
 
         /* Match outer and inner Polygons - O(n^2) */
-        val fused = outers.map({ o =>
+        val fused: Vector[Polygon] = outers.map({ o =>
           Polygon(
             o.geom.exterior,
             inners.filter(i => o.geom.contains(i.geom)).map(_.geom.exterior)
@@ -286,9 +193,9 @@ private[vectorpipe] object ElementToFeature {
            * Furthermore, winding order doesn't matter in OSM, but it does
            * in VectorTiles.
            */
-          Some(Feature(MultiPolygon(fused), Tree(r.data, outers.map(_.data) ++ inners.map(_.data))))
+          Some(Feature(MultiPolygon(fused), r.data))
         }
-      })
+      }
 
     /* Lines which were part of no Relation */
     val openLines = grouped.flatMap({
@@ -364,9 +271,7 @@ private[vectorpipe] object ElementToFeature {
    * Note: The [[State]] monad usage here is for counting Lines which couldn't
    * be fused.
    */
-  private def fuseLines(
-    v: Vector[Feature[Line, Tree[ElementData]]]
-  ): State[Int, Vector[Feature[Polygon, Tree[ElementData]]]] = v match {
+  private def fuseLines(v: Vector[OSMLine]): State[Int, Vector[OSMPolygon]] = v match {
     case Vector() => Vector.empty.pure[IntState]
     case v if v.length == 1 => State.modify[Int](_ + 1).map(_ => Vector.empty)
     case v => {
@@ -374,7 +279,7 @@ private[vectorpipe] object ElementToFeature {
         case None => fuseLines(v.tail)
         case Some((f, d, i, rest)) => {
           if (f.isClosed)
-            fuseLines(rest).map(c => Feature(Polygon(f), Tree(d.head.root, d)) +: c)
+            fuseLines(rest).map(c => Feature(Polygon(f), d) +: c)
           else {
             /* The next sections of the currently accumulating Line may be far down
              * the Vector, so we punt it forward to avoid wasted traversals
@@ -388,7 +293,7 @@ private[vectorpipe] object ElementToFeature {
              */
             val (a, b) = rest.splitAt(i)
 
-            fuseLines(a ++ (Feature(f, Tree(d.head.root, d)) +: b))
+            fuseLines(a ++ (Feature(f, d) +: b))
           }
         }
       })
@@ -401,7 +306,7 @@ private[vectorpipe] object ElementToFeature {
    */
   private def fuseOne(
     v: Vector[OSMLine]
-  ): State[Int, Option[(Line, Seq[Tree[ElementData]], Int, Vector[OSMLine])]] = {
+  ): State[Int, Option[(Line, ElementData, Int, Vector[OSMLine])]] = {
     val h = v.head
     val t = v.tail
 
@@ -418,8 +323,8 @@ private[vectorpipe] object ElementToFeature {
         val (a, b) = t.splitAt(i)
 
         /* Hand-hold the typechecker */
-        val res: Option[(Line, Seq[Tree[ElementData]], Int, Vector[OSMLine])] =
-          Some((line, Seq(h.data, f.data), i, a ++ b.tail))
+        val res: Option[(Line, ElementData, Int, Vector[OSMLine])] =
+          Some((line, h.data, i, a ++ b.tail))
 
         /* Return early */
         return res.pure[IntState]

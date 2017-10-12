@@ -6,8 +6,10 @@ import cats.data.State
 import cats.implicits._
 import com.vividsolutions.jts.geom.LineString
 import com.vividsolutions.jts.operation.linemerge.LineMerger
+import geotrellis.proj4._
 import geotrellis.util._
 import geotrellis.vector._
+import geotrellis.vector.io._
 import org.apache.spark.rdd._
 import spire.std.any._
 import vectorpipe.osm._
@@ -115,7 +117,12 @@ private[vectorpipe] object ElementToFeature {
     (points, lines, polys)
   }
 
+  /** A way to render an OSM Line that failed to be reconstructed into a Polygon. */
+  private def errorFusing(f: OSMLine): String =
+    s"LINE FUSION FAILURE\nELEMENT METADATA: ${f.data}\nGEOM: ${f.geom.reproject(WebMercator, LatLng).toGeoJson}"
+
   def multipolygons(
+    logError: (OSMLine => String) => OSMLine => Unit,
     lines: RDD[OSMLine],
     polys: RDD[OSMPolygon],
     relations: RDD[Relation]
@@ -152,9 +159,10 @@ private[vectorpipe] object ElementToFeature {
           spatialSort(ls.map(f => (f.geom.centroid.as[Point].get, f))).map(_._2)
 
         /* All line segments which could fuse into Polygons */
-        val (dumpedLineCount, fusedLines) = fuseLines(sorted).run(0).value
+        val (unfusedLines, fusedLines) = fuseLines(sorted).run(List.empty).value
 
-        // if (dumpedLineCount > 0) println(s"LINES DUMPED BY fuseLines: ${dumpedLineCount}")
+        /* Log each `Line` which failed to fuse */
+        unfusedLines.foreach(logError(errorFusing))
 
         val ps: Vector[OSMPolygon] = gs.flatMap({
           case Left(p) => Some(p)
@@ -256,7 +264,7 @@ private[vectorpipe] object ElementToFeature {
   }
 
   /* Code smell to massage the Applicative use below */
-  private type IntState[T] = State[Int, T]
+  private type LineState[T] = State[List[OSMLine], T]
 
   /**
    * ASSUMPTIONS:
@@ -271,32 +279,30 @@ private[vectorpipe] object ElementToFeature {
    * Note: The [[State]] monad usage here is for counting Lines which couldn't
    * be fused.
    */
-  private def fuseLines(v: Vector[OSMLine]): State[Int, Vector[OSMPolygon]] = v match {
-    case Vector() => Vector.empty.pure[IntState]
-    case v if v.length == 1 => State.modify[Int](_ + 1).map(_ => Vector.empty)
-    case v => {
-      fuseOne(v).flatMap({
-        case None => fuseLines(v.tail)
-        case Some((f, d, i, rest)) => {
-          if (f.isClosed)
-            fuseLines(rest).map(c => Feature(Polygon(f), d) +: c)
-          else {
-            /* The next sections of the currently accumulating Line may be far down
-             * the Vector, so we punt it forward to avoid wasted traversals
-             * and intersection checks.
-             * This is a band-aid around the fact that `spatialSort` doesn't
-             * place all sections of every fusable line in order; clumps of them
-             * can appear far apart in the Vector.
-             *
-             * If `i == 0`, the splitAt and `(++)` below are basically no-ops,
-             * so there's no point in any `if (i == 0) skipTheSplitAt`.
-             */
-            val (a, b) = rest.splitAt(i)
+  private def fuseLines(v: Vector[OSMLine]): State[List[OSMLine], Vector[OSMPolygon]] = v match {
+    case Vector()  => Vector.empty.pure[LineState]
+    case Vector(h) => State.modify[List[OSMLine]](h :: _).map(_ => Vector.empty)
+    case v => fuseOne(v) match {
+      case None => State.modify[List[OSMLine]](v.head :: _) >> fuseLines(v.tail)
+      case Some((f, d, i, rest)) => {
+        if (f.isClosed)
+          fuseLines(rest).map(c => Feature(Polygon(f), d) +: c)
+        else {
+          /* The next sections of the currently accumulating Line may be far down
+           * the Vector, so we punt it forward to avoid wasted traversals
+           * and intersection checks.
+           * This is a band-aid around the fact that `spatialSort` doesn't
+           * place all sections of every fusable line in order; clumps of them
+           * can appear far apart in the Vector.
+           *
+           * If `i == 0`, the splitAt and `(++)` below are basically no-ops,
+           * so there's no point in any `if (i == 0) skipTheSplitAt`.
+           */
+          val (a, b) = rest.splitAt(i)
 
-            fuseLines(a ++ (Feature(f, d) +: b))
-          }
+          fuseLines(a ++ (Feature(f, d) +: b))
         }
-      })
+      }
     }
   }
 
@@ -304,13 +310,11 @@ private[vectorpipe] object ElementToFeature {
    * Fuse the head Line in the Vector with the first other Line possible.
    * This borrows [[fuseLines]]'s assumptions.
    */
-  private def fuseOne(
-    v: Vector[OSMLine]
-  ): State[Int, Option[(Line, ElementData, Int, Vector[OSMLine])]] = {
+  private def fuseOne(v: Vector[OSMLine]): Option[(Line, ElementData, Int, Vector[OSMLine])] = {
     val h = v.head
     val t = v.tail
 
-    // TODO: Use a `while` instead?
+    // TODO: Use a `while` instead? Scala `for` is slow.
     for ((f, i) <- t.zipWithIndex) {
       if (h.geom.touches(f.geom)) { /* Found two lines that should fuse */
         val lm = new LineMerger /* from JTS */
@@ -322,16 +326,13 @@ private[vectorpipe] object ElementToFeature {
 
         val (a, b) = t.splitAt(i)
 
-        /* Hand-hold the typechecker */
-        val res: Option[(Line, ElementData, Int, Vector[OSMLine])] =
-          Some((line, h.data, i, a ++ b.tail))
-
         /* Return early */
-        return res.pure[IntState]
+        return Some((line, h.data, i, a ++ b.tail))
       }
     }
 
-    State.modify[Int](_ + 1).map(_ => None)
+    /* The line `h` didn't fuse! */
+    None
   }
 
   /** Is a given line illegal? */

@@ -114,7 +114,7 @@
         <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a href="ElementData.html"><span class="name">ElementData</span></a><span class="params">(<span name="meta">meta: <a href="ElementMeta.html" class="extype" name="vectorpipe.osm.ElementMeta">ElementMeta</a></span>, <span name="tagMap">tagMap: <span class="extype" name="scala.Predef.Map">Map</span>[<span class="extype" name="scala.Predef.String">String</span>, <span class="extype" name="scala.Predef.String">String</span>]</span>, <span name="extra">extra: <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="scala.Either">Either</span>[<span class="extype" name="geotrellis.vector.Extent">Extent</span>, <span class="extype" name="geotrellis.vector.Point">Point</span>]]</span>)</span><span class="result"> extends <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+        <a href="ElementData.html"><span class="name">ElementData</span></a><span class="params">(<span name="meta">meta: <a href="ElementMeta.html" class="extype" name="vectorpipe.osm.ElementMeta">ElementMeta</a></span>, <span name="tagMap">tagMap: <span class="extype" name="scala.Predef.Map">Map</span>[<span class="extype" name="scala.Predef.String">String</span>, <span class="extype" name="scala.Predef.String">String</span>]</span>)</span><span class="result"> extends <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       </h4><span class="permalink">
       <a href="../../index.html#vectorpipe.osm.package@ElementDataextendsProductwithSerializable" title="Permalink" target="_top">
@@ -175,7 +175,7 @@
       <p class="shortcomment cmt">Some point in the world, which could represent a location or small object
  like a park bench or flagpole.</p>
     </li><li name="vectorpipe.osm.OSMFeature" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="OSMFeature=geotrellis.vector.Feature[geotrellis.vector.Geometry,vectorpipe.util.Tree[vectorpipe.osm.ElementData]]"></a>
+      <a id="OSMFeature=geotrellis.vector.Feature[geotrellis.vector.Geometry,vectorpipe.osm.ElementData]"></a>
       <a id="OSMFeature:OSMFeature"></a>
       <h4 class="signature">
       <span class="modifier_kind">
@@ -183,10 +183,10 @@
         <span class="kind">type</span>
       </span>
       <span class="symbol">
-        <span class="name">OSMFeature</span><span class="result"> = <span class="extype" name="geotrellis.vector.Feature">Feature</span>[<span class="extype" name="geotrellis.vector.Geometry">Geometry</span>, <a href="../util/Tree.html" class="extype" name="vectorpipe.util.Tree">Tree</a>[<a href="ElementData.html" class="extype" name="vectorpipe.osm.ElementData">ElementData</a>]]</span>
+        <span class="name">OSMFeature</span><span class="result"> = <span class="extype" name="geotrellis.vector.Feature">Feature</span>[<span class="extype" name="geotrellis.vector.Geometry">Geometry</span>, <a href="ElementData.html" class="extype" name="vectorpipe.osm.ElementData">ElementData</a>]</span>
       </span>
       </h4><span class="permalink">
-      <a href="../../index.html#vectorpipe.osm.package@OSMFeature=geotrellis.vector.Feature[geotrellis.vector.Geometry,vectorpipe.util.Tree[vectorpipe.osm.ElementData]]" title="Permalink" target="_top">
+      <a href="../../index.html#vectorpipe.osm.package@OSMFeature=geotrellis.vector.Feature[geotrellis.vector.Geometry,vectorpipe.osm.ElementData]" title="Permalink" target="_top">
         <img src="../../lib/permalink.png" alt="Permalink" />
       </a>
     </span>
@@ -235,24 +235,7 @@
 
         <div id="values" class="values members">
               <h3>Value Members</h3>
-              <ol><li name="vectorpipe.osm.Element" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="Element"></a>
-      <a id="Element:Element"></a>
-      <h4 class="signature">
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">object</span>
-      </span>
-      <span class="symbol">
-        <a href="Element$.html"><span class="name">Element</span></a>
-      </span>
-      </h4><span class="permalink">
-      <a href="../../index.html#vectorpipe.osm.package@Element" title="Permalink" target="_top">
-        <img src="../../lib/permalink.png" alt="Permalink" />
-      </a>
-    </span>
-      
-    </li><li name="vectorpipe.osm#fromLocalXML" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
+              <ol><li name="vectorpipe.osm#fromLocalXML" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="fromLocalXML(path:String)(implicitsc:org.apache.spark.SparkContext):Either[String,(org.apache.spark.rdd.RDD[vectorpipe.osm.Node],org.apache.spark.rdd.RDD[vectorpipe.osm.Way],org.apache.spark.rdd.RDD[vectorpipe.osm.Relation])]"></a>
       <a id="fromLocalXML(String)(SparkContext):Either[String,(RDD[Node],RDD[Way],RDD[Relation])]"></a>
       <h4 class="signature">
@@ -289,46 +272,26 @@
 If you want to read a file from S3, you must call <a href="../package.html#useS3(ss:org.apache.spark.sql.SparkSession):Unit" class="extmbr" name="vectorpipe#useS3">vectorpipe.useS3</a> first
 to properly configure Hadoop to read your S3 credentials.
 </p></div></div>
-    </li><li name="vectorpipe.osm#stdout" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="stdout[G&lt;:geotrellis.vector.Geometry](e:geotrellis.vector.Extent,f:geotrellis.vector.Feature[G,vectorpipe.util.Tree[vectorpipe.osm.ElementData]]):Unit"></a>
-      <a id="stdout[G&lt;:Geometry](Extent,Feature[G,Tree[ElementData]]):Unit"></a>
-      <h4 class="signature">
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">def</span>
-      </span>
-      <span class="symbol">
-        <span class="name">stdout</span><span class="tparams">[<span name="G">G &lt;: <span class="extype" name="geotrellis.vector.Geometry">Geometry</span></span>]</span><span class="params">(<span name="e">e: <span class="extype" name="geotrellis.vector.Extent">Extent</span></span>, <span name="f">f: <span class="extype" name="geotrellis.vector.Feature">Feature</span>[<span class="extype" name="vectorpipe.osm.stdout.G">G</span>, <a href="../util/Tree.html" class="extype" name="vectorpipe.util.Tree">Tree</a>[<a href="ElementData.html" class="extype" name="vectorpipe.osm.ElementData">ElementData</a>]]</span>)</span><span class="result">: <span class="extype" name="scala.Unit">Unit</span></span>
-      </span>
-      </h4><span class="permalink">
-      <a href="../../index.html#vectorpipe.osm.package@stdout[G&lt;:geotrellis.vector.Geometry](e:geotrellis.vector.Extent,f:geotrellis.vector.Feature[G,vectorpipe.util.Tree[vectorpipe.osm.ElementData]]):Unit" title="Permalink" target="_top">
-        <img src="../../lib/permalink.png" alt="Permalink" />
-      </a>
-    </span>
-      <p class="shortcomment cmt">Print any clipping errors to STDOUT.</p><div class="fullcomment"><div class="comment cmt"><p>Print any clipping errors to STDOUT. Less verbose than <a href="../VectorPipe$.html#stdout[G&lt;:geotrellis.vector.Geometry,D](e:geotrellis.vector.Extent,f:geotrellis.vector.Feature[G,D]):Unit" class="extmbr" name="vectorpipe.VectorPipe#stdout">vectorpipe.VectorPipe.stdout</a>,
-since only the offending element ID is printed instead of the entire metadata tree.</p><p>The geometry itself is printed as LatLng GeoJSON, so that you can copy-paste it into
-<a href="http://geojson.io" target="_blank">geojson.io</a>.
-</p></div></div>
     </li><li name="vectorpipe.osm#toFeatures" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="toFeatures(nodes:org.apache.spark.rdd.RDD[vectorpipe.osm.Node],ways:org.apache.spark.rdd.RDD[vectorpipe.osm.Way],relations:org.apache.spark.rdd.RDD[vectorpipe.osm.Relation]):org.apache.spark.rdd.RDD[vectorpipe.osm.package.OSMFeature]"></a>
-      <a id="toFeatures(RDD[Node],RDD[Way],RDD[Relation]):RDD[OSMFeature]"></a>
+      <a id="toFeatures(logError:(geotrellis.vector.Feature[geotrellis.vector.Line,vectorpipe.osm.ElementData]=&gt;String)=&gt;(geotrellis.vector.Feature[geotrellis.vector.Line,vectorpipe.osm.ElementData]=&gt;Unit),nodes:org.apache.spark.rdd.RDD[vectorpipe.osm.Node],ways:org.apache.spark.rdd.RDD[vectorpipe.osm.Way],relations:org.apache.spark.rdd.RDD[vectorpipe.osm.Relation]):org.apache.spark.rdd.RDD[vectorpipe.osm.package.OSMFeature]"></a>
+      <a id="toFeatures(((Feature[Line,ElementData])⇒String)⇒(Feature[Line,ElementData])⇒Unit,RDD[Node],RDD[Way],RDD[Relation]):RDD[OSMFeature]"></a>
       <h4 class="signature">
       <span class="modifier_kind">
         <span class="modifier"></span>
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">toFeatures</span><span class="params">(<span name="nodes">nodes: <span class="extype" name="org.apache.spark.rdd.RDD">RDD</span>[<a href="Node.html" class="extype" name="vectorpipe.osm.Node">Node</a>]</span>, <span name="ways">ways: <span class="extype" name="org.apache.spark.rdd.RDD">RDD</span>[<a href="Way.html" class="extype" name="vectorpipe.osm.Way">Way</a>]</span>, <span name="relations">relations: <span class="extype" name="org.apache.spark.rdd.RDD">RDD</span>[<a href="Relation.html" class="extype" name="vectorpipe.osm.Relation">Relation</a>]</span>)</span><span class="result">: <span class="extype" name="org.apache.spark.rdd.RDD">RDD</span>[<a href="#OSMFeature=geotrellis.vector.Feature[geotrellis.vector.Geometry,vectorpipe.util.Tree[vectorpipe.osm.ElementData]]" class="extmbr" name="vectorpipe.osm.OSMFeature">OSMFeature</a>]</span>
+        <span class="name">toFeatures</span><span class="params">(<span name="logError">logError: ((<span class="extype" name="geotrellis.vector.Feature">Feature</span>[<span class="extype" name="geotrellis.vector.Line">Line</span>, <a href="ElementData.html" class="extype" name="vectorpipe.osm.ElementData">ElementData</a>]) ⇒ <span class="extype" name="scala.Predef.String">String</span>) ⇒ (<span class="extype" name="geotrellis.vector.Feature">Feature</span>[<span class="extype" name="geotrellis.vector.Line">Line</span>, <a href="ElementData.html" class="extype" name="vectorpipe.osm.ElementData">ElementData</a>]) ⇒ <span class="extype" name="scala.Unit">Unit</span></span>, <span name="nodes">nodes: <span class="extype" name="org.apache.spark.rdd.RDD">RDD</span>[<a href="Node.html" class="extype" name="vectorpipe.osm.Node">Node</a>]</span>, <span name="ways">ways: <span class="extype" name="org.apache.spark.rdd.RDD">RDD</span>[<a href="Way.html" class="extype" name="vectorpipe.osm.Way">Way</a>]</span>, <span name="relations">relations: <span class="extype" name="org.apache.spark.rdd.RDD">RDD</span>[<a href="Relation.html" class="extype" name="vectorpipe.osm.Relation">Relation</a>]</span>)</span><span class="result">: <span class="extype" name="org.apache.spark.rdd.RDD">RDD</span>[<a href="#OSMFeature=geotrellis.vector.Feature[geotrellis.vector.Geometry,vectorpipe.osm.ElementData]" class="extmbr" name="vectorpipe.osm.OSMFeature">OSMFeature</a>]</span>
       </span>
       </h4><span class="permalink">
-      <a href="../../index.html#vectorpipe.osm.package@toFeatures(nodes:org.apache.spark.rdd.RDD[vectorpipe.osm.Node],ways:org.apache.spark.rdd.RDD[vectorpipe.osm.Way],relations:org.apache.spark.rdd.RDD[vectorpipe.osm.Relation]):org.apache.spark.rdd.RDD[vectorpipe.osm.package.OSMFeature]" title="Permalink" target="_top">
+      <a href="../../index.html#vectorpipe.osm.package@toFeatures(logError:(geotrellis.vector.Feature[geotrellis.vector.Line,vectorpipe.osm.ElementData]=&gt;String)=&gt;(geotrellis.vector.Feature[geotrellis.vector.Line,vectorpipe.osm.ElementData]=&gt;Unit),nodes:org.apache.spark.rdd.RDD[vectorpipe.osm.Node],ways:org.apache.spark.rdd.RDD[vectorpipe.osm.Way],relations:org.apache.spark.rdd.RDD[vectorpipe.osm.Relation]):org.apache.spark.rdd.RDD[vectorpipe.osm.package.OSMFeature]" title="Permalink" target="_top">
         <img src="../../lib/permalink.png" alt="Permalink" />
       </a>
     </span>
       <p class="shortcomment cmt">Convert an RDD of raw OSM <a href="Element.html" class="extype" name="vectorpipe.osm.Element">Element</a>s into interpreted GeoTrellis
 <span class="extype" name="Feature">Feature</span>s.</p><div class="fullcomment"><div class="comment cmt"><p>Convert an RDD of raw OSM <a href="Element.html" class="extype" name="vectorpipe.osm.Element">Element</a>s into interpreted GeoTrellis
 <span class="extype" name="Feature">Feature</span>s. In order to mix the various subtypes together, they've
-been upcasted internally to <span class="extype" name="Geometry">Geometry</span>. Note:</p><pre><span class="kw">type</span> OSMFeature = Feature[Geometry, Tree[ElementData]]</pre><h5>Behaviour</h5><p>This algorithm aims to losslessly &quot;sanitize&quot; its input data,
+been upcasted internally to <span class="extype" name="Geometry">Geometry</span>. Note:</p><pre><span class="kw">type</span> OSMFeature = Feature[Geometry, ElementData]</pre><h5>Behaviour</h5><p>This algorithm aims to losslessly &quot;sanitize&quot; its input data,
 in that it will break down malformed Relation structures, as
 well as cull member references to Elements which no longer
 exist (or exist outside the subset of data you're working

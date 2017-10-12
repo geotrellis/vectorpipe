@@ -192,45 +192,6 @@ all Polygons.
       </a>
     </span>
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>Any</dd></dl></div>
-    </li><li name="vectorpipe.Collate#byAnalytics" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="byAnalytics(tileExtent:geotrellis.vector.Extent,geoms:Iterable[vectorpipe.osm.OSMFeature]):geotrellis.vectortile.VectorTile"></a>
-      <a id="byAnalytics(Extent,Iterable[OSMFeature]):VectorTile"></a>
-      <h4 class="signature">
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">def</span>
-      </span>
-      <span class="symbol">
-        <span class="name">byAnalytics</span><span class="params">(<span name="tileExtent">tileExtent: <span class="extype" name="geotrellis.vector.Extent">Extent</span></span>, <span name="geoms">geoms: <span class="extype" name="scala.Iterable">Iterable</span>[<a href="osm/package.html#OSMFeature=geotrellis.vector.Feature[geotrellis.vector.Geometry,vectorpipe.util.Tree[vectorpipe.osm.ElementData]]" class="extmbr" name="vectorpipe.osm.OSMFeature">OSMFeature</a>]</span>)</span><span class="result">: <span class="extype" name="geotrellis.vectortile.VectorTile">VectorTile</span></span>
-      </span>
-      </h4><span class="permalink">
-      <a href="../index.html#vectorpipe.Collate$@byAnalytics(tileExtent:geotrellis.vector.Extent,geoms:Iterable[vectorpipe.osm.OSMFeature]):geotrellis.vectortile.VectorTile" title="Permalink" target="_top">
-        <img src="../lib/permalink.png" alt="Permalink" />
-      </a>
-    </span>
-      <p class="shortcomment cmt">Collate Features into &quot;Analytic VectorTiles&quot;.</p><div class="fullcomment"><div class="comment cmt"><p>Collate Features into &quot;Analytic VectorTiles&quot;. These aim to hold their
-data in such a way that it is as close to an isomorphism with the original
-OSM data as possible. Their Geometries are organised into three Layers:
-&quot;points&quot;, &quot;lines&quot;, and &quot;polygons&quot;.
-</p></div></div>
-    </li><li name="vectorpipe.Collate#byAnalyticsLite" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="byAnalyticsLite(tileExtent:geotrellis.vector.Extent,geoms:Iterable[vectorpipe.osm.OSMFeature]):geotrellis.vectortile.VectorTile"></a>
-      <a id="byAnalyticsLite(Extent,Iterable[OSMFeature]):VectorTile"></a>
-      <h4 class="signature">
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">def</span>
-      </span>
-      <span class="symbol">
-        <span class="name">byAnalyticsLite</span><span class="params">(<span name="tileExtent">tileExtent: <span class="extype" name="geotrellis.vector.Extent">Extent</span></span>, <span name="geoms">geoms: <span class="extype" name="scala.Iterable">Iterable</span>[<a href="osm/package.html#OSMFeature=geotrellis.vector.Feature[geotrellis.vector.Geometry,vectorpipe.util.Tree[vectorpipe.osm.ElementData]]" class="extmbr" name="vectorpipe.osm.OSMFeature">OSMFeature</a>]</span>)</span><span class="result">: <span class="extype" name="geotrellis.vectortile.VectorTile">VectorTile</span></span>
-      </span>
-      </h4><span class="permalink">
-      <a href="../index.html#vectorpipe.Collate$@byAnalyticsLite(tileExtent:geotrellis.vector.Extent,geoms:Iterable[vectorpipe.osm.OSMFeature]):geotrellis.vectortile.VectorTile" title="Permalink" target="_top">
-        <img src="../lib/permalink.png" alt="Permalink" />
-      </a>
-    </span>
-      <p class="shortcomment cmt">Similar behaviour to <a href="#byAnalytics(tileExtent:geotrellis.vector.Extent,geoms:Iterable[vectorpipe.osm.OSMFeature]):geotrellis.vectortile.VectorTile" class="extmbr" name="vectorpipe.Collate#byAnalytics">byAnalytics</a>, except that recursive metadata
-is not stored.</p>
     </li><li name="vectorpipe.Collate#byGeomType" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="byGeomType[G&lt;:geotrellis.vector.Geometry,D](f:geotrellis.vector.Feature[G,D]):String"></a>
       <a id="byGeomType[G&lt;:Geometry,D](Feature[G,D]):String"></a>
@@ -251,6 +212,23 @@ is not stored.</p>
 Geometries by their subtype, naming three <code>Layer</code>s: <code>points</code>, <code>lines</code> and
 <code>polygons</code>.
 </p></div></div>
+    </li><li name="vectorpipe.Collate#byOSM" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="byOSM(tileExtent:geotrellis.vector.Extent,geoms:Iterable[vectorpipe.osm.OSMFeature]):geotrellis.vectortile.VectorTile"></a>
+      <a id="byOSM(Extent,Iterable[OSMFeature]):VectorTile"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">byOSM</span><span class="params">(<span name="tileExtent">tileExtent: <span class="extype" name="geotrellis.vector.Extent">Extent</span></span>, <span name="geoms">geoms: <span class="extype" name="scala.Iterable">Iterable</span>[<a href="osm/package.html#OSMFeature=geotrellis.vector.Feature[geotrellis.vector.Geometry,vectorpipe.osm.ElementData]" class="extmbr" name="vectorpipe.osm.OSMFeature">OSMFeature</a>]</span>)</span><span class="result">: <span class="extype" name="geotrellis.vectortile.VectorTile">VectorTile</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../index.html#vectorpipe.Collate$@byOSM(tileExtent:geotrellis.vector.Extent,geoms:Iterable[vectorpipe.osm.OSMFeature]):geotrellis.vectortile.VectorTile" title="Permalink" target="_top">
+        <img src="../lib/permalink.png" alt="Permalink" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">Give each Geometry type its own VectorTile layer, and store the <span class="extype" name="ElementData">ElementData</span> as-is.</p>
     </li><li name="scala.AnyRef#clone" visbl="prt" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="clone():Object"></a>
       <a id="clone():AnyRef"></a>

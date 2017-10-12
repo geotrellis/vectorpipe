@@ -88,68 +88,7 @@
 
         <div id="types" class="types members">
               <h3>Type Members</h3>
-              <ol><li name="vectorpipe.util.Forest" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="Forest[T]=Seq[vectorpipe.util.Tree[T]]"></a>
-      <a id="Forest[T]:Forest[T]"></a>
-      <h4 class="signature">
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">type</span>
-      </span>
-      <span class="symbol">
-        <span class="name">Forest</span><span class="tparams">[<span name="T">T</span>]</span><span class="result"> = <span class="extype" name="scala.collection.Seq">Seq</span>[<a href="Tree.html" class="extype" name="vectorpipe.util.Tree">Tree</a>[<span class="extype" name="vectorpipe.util.Forest.T">T</span>]]</span>
-      </span>
-      </h4><span class="permalink">
-      <a href="../../index.html#vectorpipe.util.package@Forest[T]=Seq[vectorpipe.util.Tree[T]]" title="Permalink" target="_top">
-        <img src="../../lib/permalink.png" alt="Permalink" />
-      </a>
-    </span>
-      <p class="shortcomment cmt">A common alias for a collection of <a href="Tree.html" class="extype" name="vectorpipe.util.Tree">Tree</a>s.</p>
-    </li><li name="vectorpipe.util.Graph" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="Graph[K,V]extendsSerializable"></a>
-      <a id="Graph[K,V]:Graph[K,V]"></a>
-      <h4 class="signature">
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">class</span>
-      </span>
-      <span class="symbol">
-        <a href="Graph.html"><span class="name">Graph</span></a><span class="tparams">[<span name="K">K</span>, <span name="V">V</span>]</span><span class="result"> extends <span class="extype" name="scala.Serializable">Serializable</span></span>
-      </span>
-      </h4><span class="permalink">
-      <a href="../../index.html#vectorpipe.util.package@Graph[K,V]extendsSerializable" title="Permalink" target="_top">
-        <img src="../../lib/permalink.png" alt="Permalink" />
-      </a>
-    </span>
-      <p class="shortcomment cmt">Adapted from the Haskell implementation, which was based on the paper
-<i>Structuring Depth-First Search Algorithms in Haskell</i> by David King
-and John Launchbury.</p><div class="fullcomment"><div class="comment cmt"><p>Adapted from the Haskell implementation, which was based on the paper
-<i>Structuring Depth-First Search Algorithms in Haskell</i> by David King
-and John Launchbury.</p><p><code>Graph</code> has a private constructor. To create an instance of a <code>Graph</code>, use
-<a href="Graph$.html#fromEdges[K,V](edges:Seq[(K,V,Seq[K])])(implicitevidence$2:spire.algebra.Order[K]):vectorpipe.util.Graph[K,V]" class="extmbr" name="vectorpipe.util.Graph#fromEdges">Graph.fromEdges</a>.</p><h5>Usage</h5><p>The two main methods of interest are <code>get</code>:</p><pre><span class="cmt">// Try to find a node value that corresponds to a given key.</span>
-Graph.get: K <span class="kw">=&gt;</span> <span class="std">Option</span>[V]</pre><p>and <code>topologicalForest</code>. Given the disconnected Graph:</p><pre>  <span class="num">5</span>      <span class="num">1</span>
- / \    / \
-<span class="num">6</span>   <span class="num">7</span>  <span class="num">2</span>   <span class="num">3</span>
- \ /    \ /
-  <span class="num">8</span>      <span class="num">4</span></pre><p><code>topologicalForest</code> converts this into a <a href="#Forest[T]=Seq[vectorpipe.util.Tree[T]]" class="extmbr" name="vectorpipe.util.Forest">Forest</a> of topologically
-sorted spanning <a href="Tree.html" class="extype" name="vectorpipe.util.Tree">Tree</a>s:</p><pre><span class="kw">val</span> g: Graph = ...  <span class="cmt">// From above.</span>
-
-g.topologicalForest.foreach(t <span class="kw">=&gt;</span> println(t.pretty))
-
-<span class="cmt">// The above prints:</span>
-└── <span class="num">5</span>
-    ├── <span class="num">6</span>
-    │   └── <span class="num">8</span>
-    │       └── ∅
-    └── <span class="num">7</span>
-        └── ∅
-└── <span class="num">1</span>
-    ├── <span class="num">2</span>
-    │   └── <span class="num">4</span>
-    │       └── ∅
-    └── <span class="num">3</span>
-        └── ∅</pre></div></div>
-    </li><li name="vectorpipe.util.LayerMetadata" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+              <ol><li name="vectorpipe.util.LayerMetadata" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="LayerMetadata[K]extendsProductwithSerializable"></a>
       <a id="LayerMetadata[K]:LayerMetadata[K]"></a>
       <h4 class="signature">
@@ -166,41 +105,6 @@ g.topologicalForest.foreach(t <span class="kw">=&gt;</span> println(t.pretty))
       </a>
     </span>
       <p class="shortcomment cmt">Minimalist Layer-level metadata.</p><div class="fullcomment"><div class="comment cmt"><p>Minimalist Layer-level metadata. Necessary for writing layers of VectorTiles.</p></div></div>
-    </li><li name="vectorpipe.util.Tree" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="Tree[T]extendsSerializablewithProduct"></a>
-      <a id="Tree[T]:Tree[T]"></a>
-      <h4 class="signature">
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">case class</span>
-      </span>
-      <span class="symbol">
-        <a href="Tree.html"><span class="name">Tree</span></a><span class="tparams">[<span name="T">T</span>]</span><span class="params">(<span name="root">root: <span class="extype" name="vectorpipe.util.Tree.T">T</span></span>, <span name="children">children: <span class="extype" name="scala.Seq">Seq</span>[<a href="Tree.html" class="extype" name="vectorpipe.util.Tree">Tree</a>[<span class="extype" name="vectorpipe.util.Tree.T">T</span>]]</span>)</span><span class="result"> extends <span class="extype" name="scala.Serializable">Serializable</span> with <span class="extype" name="scala.Product">Product</span></span>
-      </span>
-      </h4><span class="permalink">
-      <a href="../../index.html#vectorpipe.util.package@Tree[T]extendsSerializablewithProduct" title="Permalink" target="_top">
-        <img src="../../lib/permalink.png" alt="Permalink" />
-      </a>
-    </span>
-      <p class="shortcomment cmt">A typical immutable Tree implementation, mysteriously absent from
- Scala's standard library.</p>
-    </li><li name="vectorpipe.util.Vertex" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="Vertex=Int"></a>
-      <a id="Vertex:Vertex"></a>
-      <h4 class="signature">
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">type</span>
-      </span>
-      <span class="symbol">
-        <span class="name">Vertex</span><span class="result"> = <span class="extype" name="scala.Int">Int</span></span>
-      </span>
-      </h4><span class="permalink">
-      <a href="../../index.html#vectorpipe.util.package@Vertex=Int" title="Permalink" target="_top">
-        <img src="../../lib/permalink.png" alt="Permalink" />
-      </a>
-    </span>
-      <p class="shortcomment cmt">An abstract representation of a vertex.</p>
     </li></ol>
             </div>
 
@@ -208,24 +112,7 @@ g.topologicalForest.foreach(t <span class="kw">=&gt;</span> println(t.pretty))
 
         <div id="values" class="values members">
               <h3>Value Members</h3>
-              <ol><li name="vectorpipe.util.Graph" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="Graph"></a>
-      <a id="Graph:Graph"></a>
-      <h4 class="signature">
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">object</span>
-      </span>
-      <span class="symbol">
-        <a href="Graph$.html"><span class="name">Graph</span></a><span class="result"> extends <span class="extype" name="scala.Serializable">Serializable</span></span>
-      </span>
-      </h4><span class="permalink">
-      <a href="../../index.html#vectorpipe.util.package@Graph" title="Permalink" target="_top">
-        <img src="../../lib/permalink.png" alt="Permalink" />
-      </a>
-    </span>
-      
-    </li><li name="vectorpipe.util.LayerMetadata" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
+              <ol><li name="vectorpipe.util.LayerMetadata" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="LayerMetadata"></a>
       <a id="LayerMetadata:LayerMetadata"></a>
       <h4 class="signature">
@@ -238,23 +125,6 @@ g.topologicalForest.foreach(t <span class="kw">=&gt;</span> println(t.pretty))
       </span>
       </h4><span class="permalink">
       <a href="../../index.html#vectorpipe.util.package@LayerMetadata" title="Permalink" target="_top">
-        <img src="../../lib/permalink.png" alt="Permalink" />
-      </a>
-    </span>
-      
-    </li><li name="vectorpipe.util.Tree" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="Tree"></a>
-      <a id="Tree:Tree"></a>
-      <h4 class="signature">
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">object</span>
-      </span>
-      <span class="symbol">
-        <a href="Tree$.html"><span class="name">Tree</span></a><span class="result"> extends <span class="extype" name="scala.Serializable">Serializable</span></span>
-      </span>
-      </h4><span class="permalink">
-      <a href="../../index.html#vectorpipe.util.package@Tree" title="Permalink" target="_top">
         <img src="../../lib/permalink.png" alt="Permalink" />
       </a>
     </span>

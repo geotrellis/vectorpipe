@@ -113,9 +113,12 @@ object VectorPipe {
     * @param clip A function which represents a "clipping strategy".
     * @param logError An IO function that will log any clipping failures.
     */
-  def toGrid[G <: Geometry, D](ld: LayoutDefinition, rdd: RDD[Feature[G, D]])
-            (clip: (Extent, Feature[G, D]) => Option[Feature[G, D]])
-            (logError: (((Extent, Feature[G, D])) => String) => ((Extent, Feature[G, D])) => Unit): RDD[(SpatialKey, Iterable[Feature[G, D]])] = {
+  def toGrid[G <: Geometry, D](
+    clip: (Extent, Feature[G, D]) => Option[Feature[G, D]],
+    logError: (((Extent, Feature[G, D])) => String) => ((Extent, Feature[G, D])) => Unit,
+    ld: LayoutDefinition,
+    rdd: RDD[Feature[G, D]]
+  ): RDD[(SpatialKey, Iterable[Feature[G, D]])] = {
 
     val mt: MapKeyTransform = ld.mapTransform
 
@@ -141,7 +144,10 @@ object VectorPipe {
       val clipped: List[Feature[G, D]] = iter.foldLeft(List.empty[Feature[G, D]]) { (acc, g) =>
         clip(kExt, g) match {
           case Some(h) => h :: acc
-          case None => logError(errorClipping)((kExt, g)); acc /* Sneaky IO to log the error */
+          case None => {
+            logError(errorClipping)((kExt, g)) /* Sneaky IO to log the error */
+            acc
+          }
         }
       }
 
@@ -176,14 +182,15 @@ object VectorPipe {
     *
     * @see [[vectorpipe.Collate]]
     */
-  def toVectorTile[G <: Geometry, D](ld: LayoutDefinition, rdd: RDD[(SpatialKey, Iterable[Feature[G, D]])])
-                  (collate: (Extent, Iterable[Feature[G, D]]) => VectorTile): RDD[(SpatialKey, VectorTile)] = {
+  def toVectorTile[G <: Geometry, D](
+    collate: (Extent, Iterable[Feature[G, D]]) => VectorTile,
+    ld: LayoutDefinition,
+    rdd: RDD[(SpatialKey, Iterable[Feature[G, D]])]
+  ): RDD[(SpatialKey, VectorTile)] = {
     val mt: MapKeyTransform = ld.mapTransform
 
     rdd.map({ case (k, iter) => (k, collate(mt(k), iter))})
   }
-
-
 
   /** Log an error to STDOUT. */
   def logToStdout[A](f: A => String): A => Unit = { a => println(f(a)) }

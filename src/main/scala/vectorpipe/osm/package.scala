@@ -177,8 +177,12 @@ package object osm {
    *     across its child members. Otherwise, Relations are "dropped"
    *     from the output.
    */
-  def toFeatures(nodes: RDD[Node], ways: RDD[Way], relations: RDD[Relation])
-                (logError: (Feature[Line, ElementData] => String) => Feature[Line, ElementData] => Unit): RDD[OSMFeature] = {
+  def toFeatures(
+    logError: (Feature[Line, ElementData] => String) => Feature[Line, ElementData] => Unit,
+    nodes: RDD[Node],
+    ways: RDD[Way],
+    relations: RDD[Relation]
+  ): RDD[OSMFeature] = {
 
     /* All Geometric OSM Relations.
      * A (likely false) assumption made in the `flatTree` function is that
@@ -203,7 +207,7 @@ package object osm {
      */
     val simplePolys = rawPolys.filter(_.geom.isValid)
 
-    val (multiPolys, lines, polys) = E2F.multipolygons(rawLines, simplePolys, geomRelations)(logError)
+    val (multiPolys, lines, polys) = E2F.multipolygons(logError, rawLines, simplePolys, geomRelations)
 
     /* A trick to allow us to fuse the RDDs of various Geom types */
     val pnt: RDD[OSMFeature] = points.map(identity)

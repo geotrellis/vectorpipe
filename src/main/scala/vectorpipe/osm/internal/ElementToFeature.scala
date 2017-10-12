@@ -121,8 +121,12 @@ private[vectorpipe] object ElementToFeature {
   private def errorFusing(f: OSMLine): String =
     s"LINE FUSION FAILURE\nELEMENT METADATA: ${f.data}\nGEOM: ${f.geom.reproject(WebMercator, LatLng).toGeoJson}"
 
-  def multipolygons(lines: RDD[OSMLine], polys: RDD[OSMPolygon], relations: RDD[Relation])
-                   (logError: (OSMLine => String) => (OSMLine => Unit)): (RDD[OSMMultiPoly], RDD[OSMLine], RDD[OSMPolygon]) = {
+  def multipolygons(
+    logError: (OSMLine => String) => OSMLine => Unit,
+    lines: RDD[OSMLine],
+    polys: RDD[OSMPolygon],
+    relations: RDD[Relation]
+  ): (RDD[OSMMultiPoly], RDD[OSMLine], RDD[OSMPolygon]) = {
     // filter out polys that are used in relations
     // merge RDDs back together
     val relLinks: RDD[(Long, Relation)] =

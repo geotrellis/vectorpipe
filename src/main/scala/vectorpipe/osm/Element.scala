@@ -1,6 +1,6 @@
 package vectorpipe.osm
 
-import java.time.ZonedDateTime
+import java.time._
 
 import geotrellis.vector.{ Extent, Point }
 import io.dylemma.spac._
@@ -19,7 +19,7 @@ private[vectorpipe] object Element {
     Parser.forOptionalAttribute("uid").map(_.getOrElse("anonymous")) ~
     Parser.forMandatoryAttribute("changeset").map(_.toLong) ~
     Parser.forMandatoryAttribute("version").map(_.toLong) ~
-    Parser.forMandatoryAttribute("timestamp") ~
+    Parser.forMandatoryAttribute("timestamp").map(Instant.parse(_)) ~
     Parser.forOptionalAttribute("visible").map(_.map(_.toBoolean).getOrElse(false))).as(ElementMeta)
 
   /* <tag k='access' v='permissive' /> */
@@ -131,5 +131,5 @@ case class ElementMeta(
   userId: String,
   changeSet: Long,
   version: Long,
-  timestamp: String,
+  timestamp: Instant,
   visible: Boolean)

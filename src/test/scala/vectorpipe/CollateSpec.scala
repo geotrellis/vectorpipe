@@ -1,6 +1,6 @@
 package vectorpipe
 
-import java.time.ZonedDateTime
+import java.time.Instant
 
 import geotrellis.vector._
 import org.scalatest._
@@ -21,17 +21,17 @@ class CollateSpec extends FunSpec with Matchers {
   )
 
   val data0 = ElementData(
-    ElementMeta(1037, "colin", "8765", 5, 1, ZonedDateTime.now.toString, true),
+    ElementMeta(1037, "colin", "8765", 5, 1, Instant.now, true),
     Map("object" -> "flagpole")
   )
 
   val data1 = ElementData(
-    ElementMeta(10000, "colin", "8765", 5, 1, ZonedDateTime.now.toString, true),
+    ElementMeta(10000, "colin", "8765", 5, 1, Instant.now, true),
     Map("route" -> "footpath")
   )
 
   val data2 = ElementData(
-    ElementMeta(100123, "colin", "8765", 5, 1, ZonedDateTime.now.toString, true),
+    ElementMeta(100123, "colin", "8765", 5, 1, Instant.now, true),
     Map("place" -> "park")
   )
 

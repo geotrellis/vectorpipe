@@ -142,7 +142,7 @@ package object osm {
       row.getAs[Long]("uid").toString, // TODO Use a `Long` in the datatype instead?
       row.getAs[Long]("changeset"),
       row.getAs[Long]("version"),
-      row.getAs[java.sql.Timestamp]("timestamp").toString,
+      row.getAs[java.sql.Timestamp]("timestamp").toInstant,
       row.getAs[Boolean]("visible"))
   }
 

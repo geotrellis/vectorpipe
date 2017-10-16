@@ -1,8 +1,5 @@
 package vectorpipe.osm.internal
 
-import java.time.Instant
-
-import scala.annotation.tailrec
 import scala.collection.parallel.ParSeq
 
 import cats.data.State
@@ -21,67 +18,6 @@ import vectorpipe.util._
 // --- //
 
 private[vectorpipe] object ElementToFeature {
-
-  /** Given likely unordered collections of Ways and their associated Nodes,
-    * construct GeoTrellis Lines such that:
-    *   - there is a Line present for every updated Way
-    *   - there is a Line present for every set of updated Nodes (i.e. those with matching timestamps)
-    */
-  private def lines(ways: List[Way], nodes: List[Node]): List[OSMLine] = {
-
-    @tailrec def work(ws: List[Way], ls: List[OSMLine]): List[OSMLine] = ws match {
-      case Nil => ls
-      case w :: rest => {
-
-        /* Y2K bug here, except it won't manifest until the end of the year 1 billion AD */
-        val nextTime: Instant = if (rest.isEmpty) Instant.MAX else rest.head.data.meta.timestamp
-
-        /* Each full set of Nodes that would have existed for each time slice. */
-        val allSlices: Stream[(Instant, Map[Long, Node])] =
-          pincer(w.data.meta.timestamp, nextTime, nodes)
-            .groupBy(_.data.meta.timestamp)
-            .toStream
-            .sortBy { case (i, _) => i }
-            .scanLeft((w.data.meta.timestamp, recentNodes(w, nodes))) { case ((_, p), (i, changes)) =>
-
-              val replaced: Map[Long, Node] = changes.foldLeft(p) {
-                /* The Node was deleted from this Way */
-                case (acc, node) if !node.data.meta.visible => acc - node.data.meta.id
-                /* The Node was moved or had its metadata updated */
-                case (acc, node) => acc.updated(node.data.meta.id, node)
-              }
-
-              (i, replaced)
-            }
-
-        val everyLine: Stream[OSMLine] = allSlices.map { case (i, ns) =>
-          Feature(
-            Line(ns.values.map(n => Point(n.lon, n.lat))),
-            w.data.copy(meta = w.data.meta.copy(timestamp = i)) // TODO Overwrite more values?
-          )
-        }
-
-        work(rest, ls ++ everyLine)
-      }
-    }
-
-    /* Ensure the Ways are sorted before proceeding */
-    work(ways.sortBy(_.data.meta.timestamp), Nil)
-  }
-
-  /** Given a collection of all Nodes ever associated with a [[Way]], which subset
-    * of them are the "most recent" from the perspective of the given Way?
-    */
-  private def recentNodes(way: Way, nodes: List[Node]): Map[Long, Node] = {
-    nodes
-      .filter(!_.data.meta.timestamp.isAfter(way.data.meta.timestamp))
-      .groupBy(_.data.meta.id)
-      .map { case (k, ns) => (k, ns.maxBy(_.data.meta.timestamp)) }
-  }
-
-  /** Find all the Nodes that were created/changed between two timestamps. */
-  private def pincer(t0: Instant, t1: Instant, nodes: List[Node]): List[Node] =
-    nodes.filter(n => n.data.meta.timestamp.isAfter(t0) && n.data.meta.timestamp.isBefore(t1))
 
   /**
    * Every OSM Node and Way converted to GeoTrellis Geometries.

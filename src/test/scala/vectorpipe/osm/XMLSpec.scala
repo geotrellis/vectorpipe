@@ -12,7 +12,8 @@ class XMLSpec extends FunSpec with Matchers {
 
   def parseOSM(file: String) = {
     val xml: InputStream = new FileInputStream(file)
-    val res: Try[(List[Node], List[Way], List[Relation])] = Element.elements.parse(xml)
+    val res: Try[(List[(Long, Node)], List[(Long, Way)], List[(Long, Relation)])] =
+      Element.elements.parse(xml)
 
     res match {
       case Success(_) => ()

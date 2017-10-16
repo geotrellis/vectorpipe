@@ -25,7 +25,9 @@ package object osm {
   private[vectorpipe] type OSMMultiPoly = Feature[MultiPolygon, ElementData]
 
   /** Given a path to an OSM XML file, parse it into usable types. */
-  def fromLocalXML(path: String)(implicit sc: SparkContext): Either[String, (RDD[Node], RDD[Way], RDD[Relation])] = {
+  def fromLocalXML(
+    path: String
+  )(implicit sc: SparkContext): Either[String, (RDD[(Long, Node)], RDD[(Long, Way)], RDD[(Long, Relation)])] = {
     /* A byte stream, so as to not tax the heap */
     Try(new FileInputStream(path): InputStream).flatMap(xml => Element.elements.parse(xml)) match {
       case Failure(e) => Left(e.toString)

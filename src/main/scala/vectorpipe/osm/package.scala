@@ -40,7 +40,9 @@ package object osm {
     * If you want to read a file from S3, you must call [[vectorpipe.useS3]] first
     * to properly configure Hadoop to read your S3 credentials.
     */
-  def fromORC(path: String)(implicit ss: SparkSession): Either[String, (RDD[Node], RDD[Way], RDD[Relation])] = {
+  def fromORC(
+    path: String
+  )(implicit ss: SparkSession): Either[String, (RDD[(Long, Node)], RDD[(Long, Way)], RDD[(Long, Relation)])] = {
     Try(ss.read.orc(path)) match {
       case Failure(e) => Left(e.toString)
       case Success(data) => Right(fromDataFrame(data))
@@ -50,7 +52,9 @@ package object osm {
   /** Given a [[DataFrame]] that follows [[https://github.com/mojodna/osm2orc#schema this table schema]],
     * read out RDDs of each [[Element]] type.
     */
-  def fromDataFrame(data: DataFrame)(implicit ss: SparkSession): (RDD[Node], RDD[Way], RDD[Relation]) = {
+  def fromDataFrame(
+    data: DataFrame
+  )(implicit ss: SparkSession): (RDD[(Long, Node)], RDD[(Long, Way)], RDD[(Long, Relation)]) = {
     /* Necessary for the `map` transformation below to work */
     import ss.implicits._
 
@@ -65,7 +69,7 @@ package object osm {
      * How the `Member`s list below is handled is an example of this.
      * Moral of the story: avoid reflection and other runtime trickery.
      */
-    val nodes: RDD[Node] =
+    val nodes: RDD[(Long, Node)] =
       data
         .select("lat", "lon", "id", "user", "uid", "changeset", "version", "timestamp", "visible", "tags")
         .where("type = 'node'")
@@ -78,9 +82,9 @@ package object osm {
           (lat, lon, metaFromRow(row), tags)
         }
         .rdd
-        .map({ case (lat, lon, meta, tags) => Node(lat, lon, ElementData(meta, tags)) })
+        .map({ case (lat, lon, meta, tags) => (meta.id, Node(lat, lon, ElementData(meta, tags))) })
 
-    val ways: RDD[Way] =
+    val ways: RDD[(Long, Way)] =
       data
         .select($"nds.ref".alias("nds"), $"id", $"user", $"uid", $"changeset", $"version", $"timestamp", $"visible", $"tags")
         .where("type = 'way'")
@@ -92,9 +96,9 @@ package object osm {
           (nodes, metaFromRow(row), tags)
         }
         .rdd
-        .map({ case (nodes, meta, tags) => Way(nodes, ElementData(meta, tags)) })
+        .map({ case (nodes, meta, tags) => (meta.id, Way(nodes, ElementData(meta, tags))) })
 
-    val relations: RDD[Relation] =
+    val relations: RDD[(Long, Relation)] =
       data
         .select($"members.type".alias("types"), $"members.ref".alias("refs"), $"members.role".alias("roles"), $"id", $"user", $"uid", $"changeset", $"version", $"timestamp", $"visible", $"tags")
         .where("type = 'relation'")
@@ -131,7 +135,7 @@ package object osm {
           val members: Seq[Member] =
             types.zip(refs).zip(roles).map { case ((ty, rf), ro) => Member(ty, rf, ro) }
 
-          Relation(members, ElementData(meta, tags))
+          (meta.id, Relation(members, ElementData(meta, tags)))
         }
 
     (nodes, ways, relations)

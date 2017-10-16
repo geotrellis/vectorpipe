@@ -12,9 +12,9 @@ import vectorpipe.osm._
 
 private[vectorpipe] object PlanetHistory {
 
-  // TODO This type signature will eventually change to accomodate Polygons as well
-  def geometries(nodes: RDD[(Long, Node)], ways: RDD[(Long, Way)]): RDD[OSMLine] =
-    joinedWays(nodes, ways).flatMap { case (id, (ws, ns)) => lines(ws.toList, ns.toList) }
+  // TODO Temporary?
+  def lines(nodes: RDD[(Long, Node)], ways: RDD[(Long, Way)]): RDD[OSMLine] =
+    joinedWays(nodes, ways).flatMap { case (id, (ws, ns)) => linesAndPolys(ws.toList, ns.toList)._1 }
 
   /** Given one RDD of nodes and one of ways, produce an RDD of all nodes/ways keyed by the WayID
     * to which they are all related.
@@ -40,14 +40,19 @@ private[vectorpipe] object PlanetHistory {
   }
 
   /** Given likely unordered collections of Ways and their associated Nodes,
-    * construct GeoTrellis Lines such that:
+    * construct GeoTrellis Lines and Polygons such that:
     *   - there is a Line present for every updated Way
     *   - there is a Line present for every set of updated Nodes (i.e. those with matching timestamps)
+    *   - there is a Polygon present instead of a Line from the above two conditions when the Way is "closed"
     */
-  private def lines(ways: List[Way], nodes: List[Node]): List[OSMLine] = {
+  private def linesAndPolys(ways: List[Way], nodes: List[Node]): (Stream[OSMLine], Stream[OSMPolygon]) = {
 
-    @tailrec def work(ws: List[Way], ls: List[OSMLine]): List[OSMLine] = ws match {
-      case Nil => ls
+    @tailrec def work(
+      ws: List[Way],
+      ls: Stream[OSMLine],
+      ps: Stream[OSMPolygon]
+    ): (Stream[OSMLine], Stream[OSMPolygon]) = ws match {
+      case Nil => (ls, ps)
       case w :: rest => {
 
         /* Y2K bug here, except it won't manifest until the end of the year 1 billion AD */
@@ -55,7 +60,7 @@ private[vectorpipe] object PlanetHistory {
 
         /* Each full set of Nodes that would have existed for each time slice. */
         val allSlices: Stream[(Instant, Map[Long, Node])] =
-          pincer(w.data.meta.timestamp, nextTime, nodes)
+          changedNodes(w.data.meta.timestamp, nextTime, nodes)
             .groupBy(_.data.meta.timestamp)
             .toStream
             .sortBy { case (i, _) => i }
@@ -71,19 +76,31 @@ private[vectorpipe] object PlanetHistory {
               (i, replaced)
             }
 
-        val everyLine: Stream[OSMLine] = allSlices.map { case (i, ns) =>
-          Feature(
-            Line(ns.values.map(n => Point(n.lon, n.lat))),
-            w.data.copy(meta = w.data.meta.copy(timestamp = i)) // TODO Overwrite more values?
-          )
+        if (w.isClosed) {
+          val everyPoly: Stream[OSMPolygon] = allSlices.map { case (i, ns) =>
+            Feature(
+              Polygon(Line(ns.values.map(n => Point(n.lon, n.lat)))),
+              w.data.copy(meta = w.data.meta.copy(timestamp = i)) // TODO Overwrite more values?
+            )
+          }
+
+          work(rest, ls, ps #::: everyPoly)
+        } else {
+          val everyLine: Stream[OSMLine] = allSlices.map { case (i, ns) =>
+            Feature(
+              Line(ns.values.map(n => Point(n.lon, n.lat))),
+              w.data.copy(meta = w.data.meta.copy(timestamp = i)) // TODO Overwrite more values?
+            )
+          }
+
+          work(rest, ls #::: everyLine, ps)
         }
 
-        work(rest, ls ++ everyLine)
       }
     }
 
     /* Ensure the Ways are sorted before proceeding */
-    work(ways.sortBy(_.data.meta.timestamp), Nil)
+    work(ways.sortBy(_.data.meta.timestamp), Stream.empty, Stream.empty)
   }
 
   /** Given a collection of all Nodes ever associated with a [[Way]], which subset
@@ -97,7 +114,7 @@ private[vectorpipe] object PlanetHistory {
   }
 
   /** Find all the Nodes that were created/changed between two timestamps. */
-  private def pincer(t0: Instant, t1: Instant, nodes: List[Node]): List[Node] =
+  private def changedNodes(t0: Instant, t1: Instant, nodes: List[Node]): List[Node] =
     nodes.filter(n => n.data.meta.timestamp.isAfter(t0) && n.data.meta.timestamp.isBefore(t1))
 
 }

@@ -11,7 +11,7 @@ import org.apache.log4j.Logger
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql._
-import vectorpipe.osm.internal.{ ElementToFeature => E2F }
+import vectorpipe.osm.internal.{ ElementToFeature => E2F, PlanetHistory }
 
 // --- //
 
@@ -220,7 +220,10 @@ package object osm {
     val pls: RDD[OSMFeature] = polys.map(identity)
     val mps: RDD[OSMFeature] = multiPolys.map(identity)
 
-    pnt ++ lns ++ pls ++ mps
+    nodes.sparkContext.union(pnt, lns, pls, mps)
   }
 
+  /** All Lines that could be reconstructed from OSM Elements. */
+  def toLines(nodes: RDD[(Long, Node)], ways: RDD[(Long, Way)]): RDD[Feature[Line, ElementData]] =
+    PlanetHistory.lines(nodes, ways)
 }

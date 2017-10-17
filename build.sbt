@@ -15,7 +15,6 @@ scalacOptions := Seq(
 )
 
 libraryDependencies ++= Seq(
-  "com.azavea"                  %% "scaliper"              % "0.5.0-SNAPSHOT" % "test",
   "io.dylemma"                  %% "xml-spac"              % "0.3",
   "org.apache.spark"            %% "spark-hive"            % "2.2.0" % "provided",
   "org.apache.hadoop"           %  "hadoop-aws"            % "2.8.1"

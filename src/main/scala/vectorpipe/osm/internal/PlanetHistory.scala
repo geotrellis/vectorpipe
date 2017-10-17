@@ -45,7 +45,7 @@ private[vectorpipe] object PlanetHistory {
     *   - there is a Line present for every set of updated Nodes (i.e. those with matching timestamps)
     *   - there is a Polygon present instead of a Line from the above two conditions when the Way is "closed"
     */
-  private def linesAndPolys(ways: List[Way], nodes: List[Node]): (Stream[OSMLine], Stream[OSMPolygon]) = {
+  private[vectorpipe] def linesAndPolys(ways: List[Way], nodes: List[Node]): (Stream[OSMLine], Stream[OSMPolygon]) = {
 
     @tailrec def work(
       ws: List[Way],

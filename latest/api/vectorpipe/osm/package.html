@@ -131,7 +131,7 @@
         <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a href="ElementMeta.html"><span class="name">ElementMeta</span></a><span class="params">(<span name="id">id: <span class="extype" name="scala.Long">Long</span></span>, <span name="user">user: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="userId">userId: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="changeSet">changeSet: <span class="extype" name="scala.Long">Long</span></span>, <span name="version">version: <span class="extype" name="scala.Long">Long</span></span>, <span name="timestamp">timestamp: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="visible">visible: <span class="extype" name="scala.Boolean">Boolean</span></span>)</span><span class="result"> extends <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+        <a href="ElementMeta.html"><span class="name">ElementMeta</span></a><span class="params">(<span name="id">id: <span class="extype" name="scala.Long">Long</span></span>, <span name="user">user: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="userId">userId: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="changeSet">changeSet: <span class="extype" name="scala.Long">Long</span></span>, <span name="version">version: <span class="extype" name="scala.Long">Long</span></span>, <span name="timestamp">timestamp: <span class="extype" name="java.time.Instant">Instant</span></span>, <span name="visible">visible: <span class="extype" name="scala.Boolean">Boolean</span></span>)</span><span class="result"> extends <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       </h4><span class="permalink">
       <a href="../../index.html#vectorpipe.osm.package@ElementMetaextendsProductwithSerializable" title="Permalink" target="_top">
@@ -235,36 +235,54 @@
 
         <div id="values" class="values members">
               <h3>Value Members</h3>
-              <ol><li name="vectorpipe.osm#fromLocalXML" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="fromLocalXML(path:String)(implicitsc:org.apache.spark.SparkContext):Either[String,(org.apache.spark.rdd.RDD[vectorpipe.osm.Node],org.apache.spark.rdd.RDD[vectorpipe.osm.Way],org.apache.spark.rdd.RDD[vectorpipe.osm.Relation])]"></a>
-      <a id="fromLocalXML(String)(SparkContext):Either[String,(RDD[Node],RDD[Way],RDD[Relation])]"></a>
+              <ol><li name="vectorpipe.osm#fromDataFrame" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="fromDataFrame(data:org.apache.spark.sql.DataFrame)(implicitss:org.apache.spark.sql.SparkSession):(org.apache.spark.rdd.RDD[(Long,vectorpipe.osm.Node)],org.apache.spark.rdd.RDD[(Long,vectorpipe.osm.Way)],org.apache.spark.rdd.RDD[(Long,vectorpipe.osm.Relation)])"></a>
+      <a id="fromDataFrame(DataFrame)(SparkSession):(RDD[(Long,Node)],RDD[(Long,Way)],RDD[(Long,Relation)])"></a>
       <h4 class="signature">
       <span class="modifier_kind">
         <span class="modifier"></span>
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">fromLocalXML</span><span class="params">(<span name="path">path: <span class="extype" name="scala.Predef.String">String</span></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="sc">sc: <span class="extype" name="org.apache.spark.SparkContext">SparkContext</span></span>)</span><span class="result">: <span class="extype" name="scala.Either">Either</span>[<span class="extype" name="scala.Predef.String">String</span>, (<span class="extype" name="org.apache.spark.rdd.RDD">RDD</span>[<a href="Node.html" class="extype" name="vectorpipe.osm.Node">Node</a>], <span class="extype" name="org.apache.spark.rdd.RDD">RDD</span>[<a href="Way.html" class="extype" name="vectorpipe.osm.Way">Way</a>], <span class="extype" name="org.apache.spark.rdd.RDD">RDD</span>[<a href="Relation.html" class="extype" name="vectorpipe.osm.Relation">Relation</a>])]</span>
+        <span class="name">fromDataFrame</span><span class="params">(<span name="data">data: <span class="extype" name="org.apache.spark.sql.DataFrame">DataFrame</span></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="ss">ss: <span class="extype" name="org.apache.spark.sql.SparkSession">SparkSession</span></span>)</span><span class="result">: (<span class="extype" name="org.apache.spark.rdd.RDD">RDD</span>[(<span class="extype" name="scala.Long">Long</span>, <a href="Node.html" class="extype" name="vectorpipe.osm.Node">Node</a>)], <span class="extype" name="org.apache.spark.rdd.RDD">RDD</span>[(<span class="extype" name="scala.Long">Long</span>, <a href="Way.html" class="extype" name="vectorpipe.osm.Way">Way</a>)], <span class="extype" name="org.apache.spark.rdd.RDD">RDD</span>[(<span class="extype" name="scala.Long">Long</span>, <a href="Relation.html" class="extype" name="vectorpipe.osm.Relation">Relation</a>)])</span>
       </span>
       </h4><span class="permalink">
-      <a href="../../index.html#vectorpipe.osm.package@fromLocalXML(path:String)(implicitsc:org.apache.spark.SparkContext):Either[String,(org.apache.spark.rdd.RDD[vectorpipe.osm.Node],org.apache.spark.rdd.RDD[vectorpipe.osm.Way],org.apache.spark.rdd.RDD[vectorpipe.osm.Relation])]" title="Permalink" target="_top">
+      <a href="../../index.html#vectorpipe.osm.package@fromDataFrame(data:org.apache.spark.sql.DataFrame)(implicitss:org.apache.spark.sql.SparkSession):(org.apache.spark.rdd.RDD[(Long,vectorpipe.osm.Node)],org.apache.spark.rdd.RDD[(Long,vectorpipe.osm.Way)],org.apache.spark.rdd.RDD[(Long,vectorpipe.osm.Relation)])" title="Permalink" target="_top">
+        <img src="../../lib/permalink.png" alt="Permalink" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">Given a <span class="extype" name="DataFrame">DataFrame</span> that follows <a href="https://github.com/mojodna/osm2orc#schema" target="_blank">this table schema</a>,
+read out RDDs of each <a href="Element.html" class="extype" name="vectorpipe.osm.Element">Element</a> type.</p>
+    </li><li name="vectorpipe.osm#fromLocalXML" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="fromLocalXML(path:String)(implicitsc:org.apache.spark.SparkContext):Either[String,(org.apache.spark.rdd.RDD[(Long,vectorpipe.osm.Node)],org.apache.spark.rdd.RDD[(Long,vectorpipe.osm.Way)],org.apache.spark.rdd.RDD[(Long,vectorpipe.osm.Relation)])]"></a>
+      <a id="fromLocalXML(String)(SparkContext):Either[String,(RDD[(Long,Node)],RDD[(Long,Way)],RDD[(Long,Relation)])]"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">fromLocalXML</span><span class="params">(<span name="path">path: <span class="extype" name="scala.Predef.String">String</span></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="sc">sc: <span class="extype" name="org.apache.spark.SparkContext">SparkContext</span></span>)</span><span class="result">: <span class="extype" name="scala.Either">Either</span>[<span class="extype" name="scala.Predef.String">String</span>, (<span class="extype" name="org.apache.spark.rdd.RDD">RDD</span>[(<span class="extype" name="scala.Long">Long</span>, <a href="Node.html" class="extype" name="vectorpipe.osm.Node">Node</a>)], <span class="extype" name="org.apache.spark.rdd.RDD">RDD</span>[(<span class="extype" name="scala.Long">Long</span>, <a href="Way.html" class="extype" name="vectorpipe.osm.Way">Way</a>)], <span class="extype" name="org.apache.spark.rdd.RDD">RDD</span>[(<span class="extype" name="scala.Long">Long</span>, <a href="Relation.html" class="extype" name="vectorpipe.osm.Relation">Relation</a>)])]</span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../index.html#vectorpipe.osm.package@fromLocalXML(path:String)(implicitsc:org.apache.spark.SparkContext):Either[String,(org.apache.spark.rdd.RDD[(Long,vectorpipe.osm.Node)],org.apache.spark.rdd.RDD[(Long,vectorpipe.osm.Way)],org.apache.spark.rdd.RDD[(Long,vectorpipe.osm.Relation)])]" title="Permalink" target="_top">
         <img src="../../lib/permalink.png" alt="Permalink" />
       </a>
     </span>
       <p class="shortcomment cmt">Given a path to an OSM XML file, parse it into usable types.</p>
     </li><li name="vectorpipe.osm#fromORC" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="fromORC(path:String)(implicitss:org.apache.spark.sql.SparkSession):Either[String,(org.apache.spark.rdd.RDD[vectorpipe.osm.Node],org.apache.spark.rdd.RDD[vectorpipe.osm.Way],org.apache.spark.rdd.RDD[vectorpipe.osm.Relation])]"></a>
-      <a id="fromORC(String)(SparkSession):Either[String,(RDD[Node],RDD[Way],RDD[Relation])]"></a>
+      <a id="fromORC(path:String)(implicitss:org.apache.spark.sql.SparkSession):Either[String,(org.apache.spark.rdd.RDD[(Long,vectorpipe.osm.Node)],org.apache.spark.rdd.RDD[(Long,vectorpipe.osm.Way)],org.apache.spark.rdd.RDD[(Long,vectorpipe.osm.Relation)])]"></a>
+      <a id="fromORC(String)(SparkSession):Either[String,(RDD[(Long,Node)],RDD[(Long,Way)],RDD[(Long,Relation)])]"></a>
       <h4 class="signature">
       <span class="modifier_kind">
         <span class="modifier"></span>
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">fromORC</span><span class="params">(<span name="path">path: <span class="extype" name="scala.Predef.String">String</span></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="ss">ss: <span class="extype" name="org.apache.spark.sql.SparkSession">SparkSession</span></span>)</span><span class="result">: <span class="extype" name="scala.Either">Either</span>[<span class="extype" name="scala.Predef.String">String</span>, (<span class="extype" name="org.apache.spark.rdd.RDD">RDD</span>[<a href="Node.html" class="extype" name="vectorpipe.osm.Node">Node</a>], <span class="extype" name="org.apache.spark.rdd.RDD">RDD</span>[<a href="Way.html" class="extype" name="vectorpipe.osm.Way">Way</a>], <span class="extype" name="org.apache.spark.rdd.RDD">RDD</span>[<a href="Relation.html" class="extype" name="vectorpipe.osm.Relation">Relation</a>])]</span>
+        <span class="name">fromORC</span><span class="params">(<span name="path">path: <span class="extype" name="scala.Predef.String">String</span></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="ss">ss: <span class="extype" name="org.apache.spark.sql.SparkSession">SparkSession</span></span>)</span><span class="result">: <span class="extype" name="scala.Either">Either</span>[<span class="extype" name="scala.Predef.String">String</span>, (<span class="extype" name="org.apache.spark.rdd.RDD">RDD</span>[(<span class="extype" name="scala.Long">Long</span>, <a href="Node.html" class="extype" name="vectorpipe.osm.Node">Node</a>)], <span class="extype" name="org.apache.spark.rdd.RDD">RDD</span>[(<span class="extype" name="scala.Long">Long</span>, <a href="Way.html" class="extype" name="vectorpipe.osm.Way">Way</a>)], <span class="extype" name="org.apache.spark.rdd.RDD">RDD</span>[(<span class="extype" name="scala.Long">Long</span>, <a href="Relation.html" class="extype" name="vectorpipe.osm.Relation">Relation</a>)])]</span>
       </span>
       </h4><span class="permalink">
-      <a href="../../index.html#vectorpipe.osm.package@fromORC(path:String)(implicitss:org.apache.spark.sql.SparkSession):Either[String,(org.apache.spark.rdd.RDD[vectorpipe.osm.Node],org.apache.spark.rdd.RDD[vectorpipe.osm.Way],org.apache.spark.rdd.RDD[vectorpipe.osm.Relation])]" title="Permalink" target="_top">
+      <a href="../../index.html#vectorpipe.osm.package@fromORC(path:String)(implicitss:org.apache.spark.sql.SparkSession):Either[String,(org.apache.spark.rdd.RDD[(Long,vectorpipe.osm.Node)],org.apache.spark.rdd.RDD[(Long,vectorpipe.osm.Way)],org.apache.spark.rdd.RDD[(Long,vectorpipe.osm.Relation)])]" title="Permalink" target="_top">
         <img src="../../lib/permalink.png" alt="Permalink" />
       </a>
     </span>
@@ -306,6 +324,23 @@ unparse: RDD[Element] <span class="kw">=&gt;</span> XML</pre><p>then:</p><pre>un
     across its child members. Otherwise, Relations are &quot;dropped&quot;
     from the output.
 </li></ul></div></div>
+    </li><li name="vectorpipe.osm#toLines" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="toLines(nodes:org.apache.spark.rdd.RDD[(Long,vectorpipe.osm.Node)],ways:org.apache.spark.rdd.RDD[(Long,vectorpipe.osm.Way)]):org.apache.spark.rdd.RDD[geotrellis.vector.Feature[geotrellis.vector.Line,vectorpipe.osm.ElementData]]"></a>
+      <a id="toLines(RDD[(Long,Node)],RDD[(Long,Way)]):RDD[Feature[Line,ElementData]]"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">toLines</span><span class="params">(<span name="nodes">nodes: <span class="extype" name="org.apache.spark.rdd.RDD">RDD</span>[(<span class="extype" name="scala.Long">Long</span>, <a href="Node.html" class="extype" name="vectorpipe.osm.Node">Node</a>)]</span>, <span name="ways">ways: <span class="extype" name="org.apache.spark.rdd.RDD">RDD</span>[(<span class="extype" name="scala.Long">Long</span>, <a href="Way.html" class="extype" name="vectorpipe.osm.Way">Way</a>)]</span>)</span><span class="result">: <span class="extype" name="org.apache.spark.rdd.RDD">RDD</span>[<span class="extype" name="geotrellis.vector.Feature">Feature</span>[<span class="extype" name="geotrellis.vector.Line">Line</span>, <a href="ElementData.html" class="extype" name="vectorpipe.osm.ElementData">ElementData</a>]]</span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../index.html#vectorpipe.osm.package@toLines(nodes:org.apache.spark.rdd.RDD[(Long,vectorpipe.osm.Node)],ways:org.apache.spark.rdd.RDD[(Long,vectorpipe.osm.Way)]):org.apache.spark.rdd.RDD[geotrellis.vector.Feature[geotrellis.vector.Line,vectorpipe.osm.ElementData]]" title="Permalink" target="_top">
+        <img src="../../lib/permalink.png" alt="Permalink" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">All Lines that could be reconstructed from OSM Elements.</p>
     </li></ol>
             </div>
 

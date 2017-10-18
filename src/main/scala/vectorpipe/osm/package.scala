@@ -82,7 +82,11 @@ package object osm {
           (lat, lon, metaFromRow(row), tags)
         }
         .rdd
-        .map({ case (lat, lon, meta, tags) => (meta.id, Node(lat, lon, ElementData(meta, tags))) })
+        .map { case (lat, lon, rawMeta, tags) =>
+          val meta: ElementMeta = makeMeta(rawMeta)
+
+          (meta.id, Node(lat, lon, ElementData(meta, tags)))
+        }
 
     val ways: RDD[(Long, Way)] =
       data
@@ -96,7 +100,11 @@ package object osm {
           (nodes, metaFromRow(row), tags)
         }
         .rdd
-        .map({ case (nodes, meta, tags) => (meta.id, Way(nodes, ElementData(meta, tags))) })
+        .map { case (nodes, rawMeta, tags) =>
+          val meta: ElementMeta = makeMeta(rawMeta)
+
+          (meta.id, Way(nodes, ElementData(meta, tags)))
+        }
 
     val relations: RDD[(Long, Relation)] =
       data
@@ -118,7 +126,7 @@ package object osm {
           (types, refs, roles, metaFromRow(row), tags)
         }
         .rdd
-        .map { case (types, refs, roles, meta, tags) =>
+        .map { case (types, refs, roles, rawMeta, tags) =>
           /* Scala has no `zip3` or `zipWith`, so we have to combine these three Seqs
            * somewhat inefficiently. This line really needs improvement.
            *
@@ -135,21 +143,28 @@ package object osm {
           val members: Seq[Member] =
             types.zip(refs).zip(roles).map { case ((ty, rf), ro) => Member(ty, rf, ro) }
 
+          val meta: ElementMeta = makeMeta(rawMeta)
+
           (meta.id, Relation(members, ElementData(meta, tags)))
         }
 
     (nodes, ways, relations)
   }
 
-  private def metaFromRow(row: Row): ElementMeta = {
-    ElementMeta(
+  /** An unfortunate necessity to avoid reflection errors involving `java.time.Instant` */
+  private def makeMeta(m: (Long, String, String, Long, Long, Long, Boolean)): ElementMeta =
+    ElementMeta(m._1, m._2, m._3, m._4, m._5, java.time.Instant.ofEpochMilli(m._6), m._7)
+
+  private def metaFromRow(row: Row): (Long, String, String, Long, Long, Long, Boolean) = {
+    (
       row.getAs[Long]("id"),
       row.getAs[String]("user"),
       row.getAs[Long]("uid").toString, // TODO Use a `Long` in the datatype instead?
       row.getAs[Long]("changeset"),
       row.getAs[Long]("version"),
-      row.getAs[java.sql.Timestamp]("timestamp").toInstant,
-      row.getAs[Boolean]("visible"))
+      row.getAs[java.sql.Timestamp]("timestamp").toInstant.toEpochMilli,
+      row.getAs[Boolean]("visible")
+    )
   }
 
   /**

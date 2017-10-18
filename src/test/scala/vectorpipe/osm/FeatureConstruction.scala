@@ -9,9 +9,9 @@ import vectorpipe.osm.internal.PlanetHistory
 
 class FeatureConstruction extends FunSpec with Matchers {
 
-  val wayMeta  = ElementMeta(1, "colin", "123abc", 1, 1, Instant.ofEpochMilli(10), true)
+  val wayMeta  = ElementMeta(1, "colin", 123, 1, 1, Instant.ofEpochMilli(10), true)
   val wayData  = ElementData(wayMeta, Map.empty)
-  val nodeMeta = ElementMeta(2, "colin", "123abc", 1, 1, Instant.ofEpochMilli(5), true)
+  val nodeMeta = ElementMeta(2, "colin", 123, 1, 1, Instant.ofEpochMilli(5), true)
   val nodeData = ElementData(nodeMeta, Map.empty)
   val node1 = Node(90, 90, nodeData)
   val node2 = Node(91, 91, nodeData.copy(meta = nodeData.meta.copy(id = 3)))
@@ -36,7 +36,7 @@ class FeatureConstruction extends FunSpec with Matchers {
   ).map { case (id, v, time) =>
       val (lat, lon) = locations(id.toLong)
 
-      Node(lat, lon, ElementData(ElementMeta(id, "colin", "123abc", 1, v, Instant.ofEpochMilli(time), true), Map.empty))
+      Node(lat, lon, ElementData(ElementMeta(id, "colin", 123, 1, v, Instant.ofEpochMilli(time), true), Map.empty))
   }
 
   describe("linesAndPolys") {

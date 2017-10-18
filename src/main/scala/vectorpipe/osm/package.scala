@@ -152,14 +152,14 @@ package object osm {
   }
 
   /** An unfortunate necessity to avoid reflection errors involving `java.time.Instant` */
-  private def makeMeta(m: (Long, String, String, Long, Long, Long, Boolean)): ElementMeta =
+  private def makeMeta(m: (Long, String, Long, Long, Long, Long, Boolean)): ElementMeta =
     ElementMeta(m._1, m._2, m._3, m._4, m._5, java.time.Instant.ofEpochMilli(m._6), m._7)
 
-  private def metaFromRow(row: Row): (Long, String, String, Long, Long, Long, Boolean) = {
+  private def metaFromRow(row: Row): (Long, String, Long, Long, Long, Long, Boolean) = {
     (
       row.getAs[Long]("id"),
       row.getAs[String]("user"),
-      row.getAs[Long]("uid").toString, // TODO Use a `Long` in the datatype instead?
+      row.getAs[Long]("uid"),
       row.getAs[Long]("changeset"),
       row.getAs[Long]("version"),
       row.getAs[java.sql.Timestamp]("timestamp").toInstant.toEpochMilli,

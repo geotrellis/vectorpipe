@@ -16,7 +16,7 @@ private[vectorpipe] object Element {
   implicit val elementMeta: Parser[ElementMeta] = (
     Parser.forMandatoryAttribute("id").map(_.toLong) ~
     Parser.forOptionalAttribute("user").map(_.getOrElse("anonymous")) ~
-    Parser.forOptionalAttribute("uid").map(_.getOrElse("anonymous")) ~
+    Parser.forOptionalAttribute("uid").map(_.map(_.toLong).getOrElse(0L)) ~
     Parser.forMandatoryAttribute("changeset").map(_.toLong) ~
     Parser.forMandatoryAttribute("version").map(_.toLong) ~
     Parser.forMandatoryAttribute("timestamp").map(Instant.parse(_)) ~
@@ -128,7 +128,7 @@ case class ElementData(meta: ElementMeta, tagMap: Map[String, String])
 case class ElementMeta(
   id: Long,
   user: String,
-  userId: String,
+  userId: Long,
   changeSet: Long,
   version: Long,
   timestamp: Instant,

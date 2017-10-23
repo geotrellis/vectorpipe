@@ -8,7 +8,10 @@ organizationName := "Azavea"
 
 scalaVersion in ThisBuild := "2.11.11"
 
-resolvers += Resolver.bintrayRepo("azavea", "maven")
+resolvers ++= Seq(
+  "locationtech-releases" at "https://repo.locationtech.org/content/groups/releases",
+  Resolver.bintrayRepo("azavea", "maven")
+)
 
 scalacOptions := Seq(
   "-Ypartial-unification"
@@ -21,10 +24,10 @@ libraryDependencies ++= Seq(
     exclude("javax.servlet.jsp", "jsp-api")
     exclude("org.mortbay.jetty", "servlet-api"),
   "org.apache.spark"            %% "spark-hive"            % "2.2.0" % "provided",
-  "org.locationtech.geotrellis" %% "geotrellis-spark"      % "1.2.0-SNAPSHOT",
-  "org.locationtech.geotrellis" %% "geotrellis-util"       % "1.2.0-SNAPSHOT",
-  "org.locationtech.geotrellis" %% "geotrellis-vector"     % "1.2.0-SNAPSHOT",
-  "org.locationtech.geotrellis" %% "geotrellis-vectortile" % "1.2.0-SNAPSHOT",
+  "org.locationtech.geotrellis" %% "geotrellis-spark"      % "1.2.0-RC1",
+  "org.locationtech.geotrellis" %% "geotrellis-util"       % "1.2.0-RC1",
+  "org.locationtech.geotrellis" %% "geotrellis-vector"     % "1.2.0-RC1",
+  "org.locationtech.geotrellis" %% "geotrellis-vectortile" % "1.2.0-RC1",
   "org.scalatest"               %% "scalatest"             % "3.0.1" % "test",
   "org.spire-math"              %% "spire"                 % "0.13.0",
   "org.typelevel"               %% "cats-core"             % "1.0.0-MF"

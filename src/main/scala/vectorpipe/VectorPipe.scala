@@ -120,60 +120,47 @@ object VectorPipe {
     rdd: RDD[Feature[G, D]]
   ): RDD[(SpatialKey, Iterable[Feature[G, D]])] = {
 
-    val mt: MapKeyTransform = ld.mapTransform
-
-    /* Initial bounding box for capturing Features */
-    val extent: Polygon = ld.extent.toPolygon
-
-    /* Filter once to reduce later workload */
-    // TODO: This may be an unnecessary bottleneck.
-    // val bounded: RDD[Feature[G, D]] = rdd.filter(f => f.geom.intersects(extent))
-
-    /* Associate each Feature with a SpatialKey */
-    val grid: RDD[(SpatialKey, Feature[G, D])] = rdd.flatMap(f => byIntersect(mt, f))
-
     /** A way to render some Geometry that failed to clip. */
     val errorClipping: ((Extent, Feature[G, D])) => String = { case (e, f) =>
       s"CLIP FAILURE W/ EXTENT: ${e}\nELEMENT METADATA: ${f.data}\nGEOM: ${f.geom.reproject(WebMercator, LatLng).toGeoJson}"
     }
 
-    grid.groupByKey().map { case (k, iter) =>
-      val kExt: Extent = mt(k)
+    val mt: MapKeyTransform = ld.mapTransform
+
+    /* Initial bounding box for capturing Features */
+    val extent: Polygon = ld.extent.toPolygon
+
+    /* Associate each Feature with its SpatialKeys*/
+    val withKeys: RDD[(Iterator[SpatialKey], Feature[G, D])] = rdd.map(f => (byIntersect(mt, f.geom), f))
+
+    /* Clip every Feature */
+    val grid: RDD[(SpatialKey, Feature[G, D])] = withKeys.flatMap { case (ks, f) =>
 
       /* Clip each geometry in some way */
-      val clipped: List[Feature[G, D]] = iter.foldLeft(List.empty[Feature[G, D]]) { (acc, g) =>
-        clip(kExt, g) match {
-          case Some(h) => h :: acc
+      ks.foldLeft(List.empty[(SpatialKey, Feature[G, D])]) { (acc, k) =>
+        val kExt: Extent = k.extent(ld)
+
+        clip(kExt, f) match {
+          case Some(h) => (k, h) :: acc
           case None => {
-            logError(errorClipping)((kExt, g)) /* Sneaky IO to log the error */
+            logError(errorClipping)((kExt, f)) /* Sneaky IO to log the error */
             acc
           }
         }
       }
-
-      (k, clipped)
     }
+
+    grid.groupByKey()
   }
 
   /* Takes advantage of the fact that most Geoms are small, and only occur in one Tile */
-  private def byIntersect[G <: Geometry, D](
-    mt: MapKeyTransform,
-    f: Feature[G, D]
-  ): Iterator[(SpatialKey, Feature[G, D])] = {
-
-    val b: GridBounds = mt(f.geom.envelope)
-
-    /* For most Geoms, this will only produce one [[SpatialKey]]. */
-    val keys: Iterator[SpatialKey] = for {
-      x <- Iterator.range(b.colMin, b.colMax+1)
-      y <- Iterator.range(b.rowMin, b.rowMax+1)
-    } yield SpatialKey(x, y)
-
-    /* Yes, this filter is necessary, since the Geom's _envelope_ could intersect
-     * grid cells that the Geom itself does not. Not excluding these false positives
-     * could lead to undefined behaviour later in the clipping step.
-     */
-    keys.filter(k => mt(k).toPolygon.intersects(f.geom)).map(k => (k, f))
+  private def byIntersect[G <: Geometry](mt: MapKeyTransform, g: G): Iterator[SpatialKey] = g match {
+    case p:  Point        => Iterator.single(mt.pointToKey(p))
+    case mp: MultiPoint   => mp.points.map(mt.pointToKey(_)).toSet.iterator
+    case l:  Line         => mt.multiLineToKeys(MultiLine(l))
+    case ml: MultiLine    => mt.multiLineToKeys(ml)
+    case p:  Polygon      => mt.multiPolygonToKeys(MultiPolygon(p))
+    case mp: MultiPolygon => mt.multiPolygonToKeys(mp)
   }
 
   /** Given a collection of GeoTrellis `Feature`s which have been associated

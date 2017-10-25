@@ -112,7 +112,7 @@ object Collate {
       Map(
         "id"            -> VInt64(d.meta.id),
         "user"          -> VString(d.meta.user),
-        "userId"        -> VString(d.meta.userId),
+        "userId"        -> VInt64(d.meta.userId),
         "changeSet"     -> VInt64(d.meta.changeSet.toLong),
         "version"       -> VInt64(d.meta.version.toLong),
         "timestamp"     -> VString(d.meta.timestamp.toString),

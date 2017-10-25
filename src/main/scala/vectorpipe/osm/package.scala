@@ -11,7 +11,7 @@ import org.apache.log4j.Logger
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql._
-import vectorpipe.osm.internal.{ ElementToFeature => E2F }
+import vectorpipe.osm.internal.{ ElementToFeature => E2F, PlanetHistory }
 
 // --- //
 
@@ -25,7 +25,9 @@ package object osm {
   private[vectorpipe] type OSMMultiPoly = Feature[MultiPolygon, ElementData]
 
   /** Given a path to an OSM XML file, parse it into usable types. */
-  def fromLocalXML(path: String)(implicit sc: SparkContext): Either[String, (RDD[Node], RDD[Way], RDD[Relation])] = {
+  def fromLocalXML(
+    path: String
+  )(implicit sc: SparkContext): Either[String, (RDD[(Long, Node)], RDD[(Long, Way)], RDD[(Long, Relation)])] = {
     /* A byte stream, so as to not tax the heap */
     Try(new FileInputStream(path): InputStream).flatMap(xml => Element.elements.parse(xml)) match {
       case Failure(e) => Left(e.toString)
@@ -38,7 +40,21 @@ package object osm {
     * If you want to read a file from S3, you must call [[vectorpipe.useS3]] first
     * to properly configure Hadoop to read your S3 credentials.
     */
-  def fromORC(path: String)(implicit ss: SparkSession): Either[String, (RDD[Node], RDD[Way], RDD[Relation])] = {
+  def fromORC(
+    path: String
+  )(implicit ss: SparkSession): Either[String, (RDD[(Long, Node)], RDD[(Long, Way)], RDD[(Long, Relation)])] = {
+    Try(ss.read.orc(path)) match {
+      case Failure(e) => Left(e.toString)
+      case Success(data) => Right(fromDataFrame(data))
+    }
+  }
+
+  /** Given a [[DataFrame]] that follows [[https://github.com/mojodna/osm2orc#schema this table schema]],
+    * read out RDDs of each [[Element]] type.
+    */
+  def fromDataFrame(
+    data: DataFrame
+  )(implicit ss: SparkSession): (RDD[(Long, Node)], RDD[(Long, Way)], RDD[(Long, Relation)]) = {
     /* Necessary for the `map` transformation below to work */
     import ss.implicits._
 
@@ -53,92 +69,102 @@ package object osm {
      * How the `Member`s list below is handled is an example of this.
      * Moral of the story: avoid reflection and other runtime trickery.
      */
-    Try(ss.read.orc(path)) match {
-      case Failure(e) => Left(e.toString)
-      case Success(data) => {
-        val nodes: RDD[Node] =
-          data
-            .select("lat", "lon", "id", "user", "uid", "changeset", "version", "timestamp", "tags")
-            .where("type = 'node'")
-            .map { row =>
-              val lat: Double = row.getAs[java.math.BigDecimal]("lat").doubleValue()
-              val lon: Double = row.getAs[java.math.BigDecimal]("lon").doubleValue()
-              val tags: scala.collection.immutable.Map[String, String] =
-                row.getAs[scala.collection.immutable.Map[String, String]]("tags")
+    val nodes: RDD[(Long, Node)] =
+      data
+        .select("lat", "lon", "id", "user", "uid", "changeset", "version", "timestamp", "visible", "tags")
+        .where("type = 'node'")
+        .map { row =>
+          val lat: Double = row.getAs[java.math.BigDecimal]("lat").doubleValue()
+          val lon: Double = row.getAs[java.math.BigDecimal]("lon").doubleValue()
+          val tags: scala.collection.immutable.Map[String, String] =
+            row.getAs[scala.collection.immutable.Map[String, String]]("tags")
 
-              (lat, lon, metaFromRow(row), tags)
-            }
-            .rdd
-            .map({ case (lat, lon, meta, tags) => Node(lat, lon, ElementData(meta, tags)) })
+          (lat, lon, metaFromRow(row), tags)
+        }
+        .rdd
+        .map { case (lat, lon, rawMeta, tags) =>
+          val meta: ElementMeta = makeMeta(rawMeta)
 
-        val ways: RDD[Way] =
-          data
-            .select($"nds.ref".alias("nds"), $"id", $"user", $"uid", $"changeset", $"version", $"timestamp", $"tags")
-            .where("type = 'way'")
-            .map { row =>
-              val nodes: Vector[Long] = row.getAs[Seq[Long]]("nds").toVector
-              val tags: scala.collection.immutable.Map[String, String] =
-                row.getAs[scala.collection.immutable.Map[String, String]]("tags")
+          (meta.id, Node(lat, lon, ElementData(meta, tags)))
+        }
 
-              (nodes, metaFromRow(row), tags)
-            }
-            .rdd
-            .map({ case (nodes, meta, tags) => Way(nodes, ElementData(meta, tags)) })
+    val ways: RDD[(Long, Way)] =
+      data
+        .select($"nds.ref".alias("nds"), $"id", $"user", $"uid", $"changeset", $"version", $"timestamp", $"visible", $"tags")
+        .where("type = 'way'")
+        .map { row =>
+          val nodes: Vector[Long] = row.getAs[Seq[Long]]("nds").toVector
+          val tags: scala.collection.immutable.Map[String, String] =
+            row.getAs[scala.collection.immutable.Map[String, String]]("tags")
 
-        val relations: RDD[Relation] =
-          data
-            .select($"members.type".alias("types"), $"members.ref".alias("refs"), $"members.role".alias("roles"), $"id", $"user", $"uid", $"changeset", $"version", $"timestamp", $"tags")
-            .where("type = 'relation'")
-            .map { row =>
+          (nodes, metaFromRow(row), tags)
+        }
+        .rdd
+        .map { case (nodes, rawMeta, tags) =>
+          val meta: ElementMeta = makeMeta(rawMeta)
 
-              /* ASSUMPTION: These three lists respect their original ordering as they
-               * were stored in Orc STRUCTs. i.e. the first element of each list were
-               * from the same STRUCT, as were those from the second, and third, etc.
-               */
-              val types: Seq[String] = row.getAs[Seq[String]]("types")
-              val refs: Seq[Long] = row.getAs[Seq[Long]]("refs")
-              val roles: Seq[String] = row.getAs[Seq[String]]("roles")
+          (meta.id, Way(nodes, ElementData(meta, tags)))
+        }
 
-              val tags: scala.collection.immutable.Map[String, String] =
-                row.getAs[scala.collection.immutable.Map[String, String]]("tags")
+    val relations: RDD[(Long, Relation)] =
+      data
+        .select($"members.type".alias("types"), $"members.ref".alias("refs"), $"members.role".alias("roles"), $"id", $"user", $"uid", $"changeset", $"version", $"timestamp", $"visible", $"tags")
+        .where("type = 'relation'")
+        .map { row =>
 
-              (types, refs, roles, metaFromRow(row), tags)
-            }
-            .rdd
-            .map { case (types, refs, roles, meta, tags) =>
-              /* Scala has no `zip3` or `zipWith`, so we have to combine these three Seqs
-               * somewhat inefficiently. This line really needs improvement.
-               *
-               * The issue here is that reflection can't figure out how to read a `Seq[Member]`
-               * from a `Row`, but _only when vectorpipe is used in another project_. Demo code
-               * local to this project will work just fine. The exception thrown is:
-               *
-               * java.lang.ClassCastException: org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema
-               * cannot be cast to vectorpipe.osm.Member
-               *
-               * This was supposed to have been fixed in an earlier version of Spark,
-               * and there is little mention of the issue in general on the internet.
-               */
-              val members: Seq[Member] =
-                types.zip(refs).zip(roles).map { case ((ty, rf), ro) => Member(ty, rf, ro) }
+          /* ASSUMPTION: These three lists respect their original ordering as they
+           * were stored in Orc STRUCTs. i.e. the first element of each list were
+           * from the same STRUCT, as were those from the second, and third, etc.
+           */
+          val types: Seq[String] = row.getAs[Seq[String]]("types")
+          val refs: Seq[Long] = row.getAs[Seq[Long]]("refs")
+          val roles: Seq[String] = row.getAs[Seq[String]]("roles")
 
-              Relation(members, ElementData(meta, tags))
-            }
+          val tags: scala.collection.immutable.Map[String, String] =
+            row.getAs[scala.collection.immutable.Map[String, String]]("tags")
 
-        Right((nodes, ways, relations))
-      }
-    }
+          (types, refs, roles, metaFromRow(row), tags)
+        }
+        .rdd
+        .map { case (types, refs, roles, rawMeta, tags) =>
+          /* Scala has no `zip3` or `zipWith`, so we have to combine these three Seqs
+           * somewhat inefficiently. This line really needs improvement.
+           *
+           * The issue here is that reflection can't figure out how to read a `Seq[Member]`
+           * from a `Row`, but _only when vectorpipe is used in another project_. Demo code
+           * local to this project will work just fine. The exception thrown is:
+           *
+           * java.lang.ClassCastException: org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema
+           * cannot be cast to vectorpipe.osm.Member
+           *
+           * This was supposed to have been fixed in an earlier version of Spark,
+           * and there is little mention of the issue in general on the internet.
+           */
+          val members: Seq[Member] =
+            types.zip(refs).zip(roles).map { case ((ty, rf), ro) => Member(ty, rf, ro) }
+
+          val meta: ElementMeta = makeMeta(rawMeta)
+
+          (meta.id, Relation(members, ElementData(meta, tags)))
+        }
+
+    (nodes, ways, relations)
   }
 
-  private def metaFromRow(row: Row): ElementMeta = {
-    ElementMeta(
+  /** An unfortunate necessity to avoid reflection errors involving `java.time.Instant` */
+  private def makeMeta(m: (Long, String, Long, Long, Long, Long, Boolean)): ElementMeta =
+    ElementMeta(m._1, m._2, m._3, m._4, m._5, java.time.Instant.ofEpochMilli(m._6), m._7)
+
+  private def metaFromRow(row: Row): (Long, String, Long, Long, Long, Long, Boolean) = {
+    (
       row.getAs[Long]("id"),
       row.getAs[String]("user"),
-      row.getAs[Long]("uid").toString, // TODO Use a `Long` in the datatype instead?
+      row.getAs[Long]("uid"),
       row.getAs[Long]("changeset"),
       row.getAs[Long]("version"),
-      row.getAs[java.sql.Timestamp]("timestamp").toString,
-      true)
+      row.getAs[java.sql.Timestamp]("timestamp").toInstant.toEpochMilli,
+      row.getAs[Boolean]("visible")
+    )
   }
 
   /**
@@ -215,7 +241,10 @@ package object osm {
     val pls: RDD[OSMFeature] = polys.map(identity)
     val mps: RDD[OSMFeature] = multiPolys.map(identity)
 
-    pnt ++ lns ++ pls ++ mps
+    nodes.sparkContext.union(pnt, lns, pls, mps)
   }
 
+  /** All Lines that could be reconstructed from OSM Elements. */
+  def toLines(nodes: RDD[(Long, Node)], ways: RDD[(Long, Way)]): RDD[Feature[Line, ElementData]] =
+    PlanetHistory.lines(nodes, ways)
 }

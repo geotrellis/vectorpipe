@@ -1,6 +1,6 @@
 package vectorpipe.osm
 
-import java.time.ZonedDateTime
+import java.time._
 
 import geotrellis.vector.{ Extent, Point }
 import io.dylemma.spac._
@@ -16,10 +16,10 @@ private[vectorpipe] object Element {
   implicit val elementMeta: Parser[ElementMeta] = (
     Parser.forMandatoryAttribute("id").map(_.toLong) ~
     Parser.forOptionalAttribute("user").map(_.getOrElse("anonymous")) ~
-    Parser.forOptionalAttribute("uid").map(_.getOrElse("anonymous")) ~
+    Parser.forOptionalAttribute("uid").map(_.map(_.toLong).getOrElse(0L)) ~
     Parser.forMandatoryAttribute("changeset").map(_.toLong) ~
     Parser.forMandatoryAttribute("version").map(_.toLong) ~
-    Parser.forMandatoryAttribute("timestamp") ~
+    Parser.forMandatoryAttribute("timestamp").map(Instant.parse(_)) ~
     Parser.forOptionalAttribute("visible").map(_.map(_.toBoolean).getOrElse(false))).as(ElementMeta)
 
   /* <tag k='access' v='permissive' /> */
@@ -31,10 +31,10 @@ private[vectorpipe] object Element {
     Splitter(* \ "tag").asListOf[(String, String)].map(_.toMap)).as((meta, tags) => ElementData(meta, tags))
 
   /* <node lat='49.5135613' lon='6.0095049' ... > */
-  implicit val node: Parser[Node] = (
+  implicit val node: Parser[(Long, Node)] = (
     Parser.forMandatoryAttribute("lat").map(_.toDouble) ~
     Parser.forMandatoryAttribute("lon").map(_.toDouble) ~
-    elementData).as((lat, lon, d) => Node(lat, lon, d))
+    elementData).as((lat, lon, d) => (d.meta.id, Node(lat, lon, d)))
 
   /*
    <way ... >
@@ -42,12 +42,12 @@ private[vectorpipe] object Element {
     ...
    </way>
    */
-  implicit val way: Parser[Way] = (
+  implicit val way: Parser[(Long, Way)] = (
     Splitter(* \ "nd")
     .through(Parser.forMandatoryAttribute("ref").map(_.toLong))
     .parseToList
     .map(_.toVector) ~
-    elementData).as(Way)
+    elementData).as((ms, d) => (d.meta.id, Way(ms, d)))
 
   /* <member type='way' ref='22902411' role='outer' /> */
   implicit val member: Parser[Member] = (
@@ -55,8 +55,8 @@ private[vectorpipe] object Element {
     Parser.forMandatoryAttribute("ref").map(_.toLong) ~
     Parser.forMandatoryAttribute("role")).as(Member)
 
-  implicit val relation: Parser[Relation] = (
-    Splitter(* \ "member").asListOf[Member] ~ elementData).as(Relation)
+  implicit val relation: Parser[(Long, Relation)] = (
+    Splitter(* \ "member").asListOf[Member] ~ elementData).as((ms, d) => (d.meta.id, Relation(ms, d)))
 
   /**
    * The master parser.
@@ -68,10 +68,10 @@ private[vectorpipe] object Element {
    * val res: Try[(List[Node], List[Way], List[Relation])] = Element.elements.parse(xml)
    * }}}
    */
-  val elements: Parser[(List[Node], List[Way], List[Relation])] = (
-    Splitter("osm" \ "node").asListOf[Node] ~
-    Splitter("osm" \ "way").asListOf[Way] ~
-    Splitter("osm" \ "relation").asListOf[Relation]).as({
+  val elements: Parser[(List[(Long, Node)], List[(Long, Way)], List[(Long, Relation)])] = (
+    Splitter("osm" \ "node").asListOf[(Long, Node)] ~
+    Splitter("osm" \ "way").asListOf[(Long, Way)] ~
+    Splitter("osm" \ "relation").asListOf[(Long, Relation)]).as({
       case (ns, ws, rs) =>
         (ns, ws, rs)
     })
@@ -128,8 +128,8 @@ case class ElementData(meta: ElementMeta, tagMap: Map[String, String])
 case class ElementMeta(
   id: Long,
   user: String,
-  userId: String,
+  userId: Long,
   changeSet: Long,
   version: Long,
-  timestamp: String,
+  timestamp: Instant,
   visible: Boolean)

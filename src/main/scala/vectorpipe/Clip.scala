@@ -18,8 +18,8 @@ object Clip {
     *
     * @see [[https://github.com/geotrellis/vectorpipe/issues/11]]
     */
-  def toNearestPoint(extent: Extent, line: Line): MultiLine = {
-    val origPoints: Array[Point] = line.points
+  def toNearestPoint[D](extent: Extent, line: Feature[Line, D]): Feature[MultiLine, D] = {
+    val origPoints: Array[Point] = line.geom.points
     val points: Array[Point] = origPoints.tail
 
     /* Setting these here makes calls to `Clip.intersects` faster */
@@ -64,7 +64,7 @@ object Clip {
       lines.append(Line(acc))
     }
 
-    MultiLine(lines)
+    Feature(MultiLine(lines), line.data)
   }
 
   /** A faster way to test Line-Extent intersection, when it's known that:

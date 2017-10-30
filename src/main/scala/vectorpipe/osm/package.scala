@@ -145,7 +145,7 @@ package object osm {
 
           val meta: ElementMeta = makeMeta(rawMeta)
 
-          (meta.id, Relation(members, ElementData(meta, tags)))
+          (meta.id, Relation(members.toList, ElementData(meta, tags)))
         }
 
     (nodes, ways, relations)

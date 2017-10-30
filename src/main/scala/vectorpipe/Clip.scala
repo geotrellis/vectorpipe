@@ -50,7 +50,7 @@ object Clip {
     *   - The Line only has two points
     *   - The two points lie outside the Extent
     */
-  private def intersects(centre: Point, radius: Double, p1: Point, p2: Point): Boolean =
+  private[this] def intersects(centre: Point, radius: Double, p1: Point, p2: Point): Boolean =
     centre.distanceToSegment(p1, p2) <= radius
 
   /** Naively clips Features to fit the given Extent. */
@@ -79,6 +79,7 @@ object Clip {
     case line: Line => Some(Feature(toNearestPoint(extent, line), f.data))
     case poly: Polygon => byBufferedExtent(extent, f)
     case mply: MultiPolygon => byBufferedExtent(extent, f)
+    case _ => None
   }
 
   /** Yield an [[Feature]] as-is. */

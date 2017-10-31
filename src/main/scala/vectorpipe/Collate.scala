@@ -1,6 +1,6 @@
 package vectorpipe
 
-import scala.collection.mutable.{ListBuffer, Map => MMap}
+import scala.annotation.tailrec
 
 import geotrellis.vector._
 import geotrellis.vectortile._
@@ -88,8 +88,7 @@ object Collate {
     case g: MultiPoint   => "points"
     case g: Line         => "lines"
     case g: MultiLine    => "lines"
-    case g: Polygon      => "polygons"
-    case g: MultiPolygon => "polygons"
+    case _               => "polygons"
   }
 
   /** Partition all Features into a single Layer. */
@@ -104,11 +103,10 @@ object Collate {
   def withoutMetadata[G <: Geometry, D](tileExtent: Extent, geoms: Iterable[Feature[G, D]]): VectorTile =
     generically(tileExtent, geoms, byGeomType, { _: D => Map.empty })
 
-  // TODO What about the tag metadata?
   /** Give each Geometry type its own VectorTile layer, and store the [[ElementData]] as-is. */
   def byOSM(tileExtent: Extent, geoms: Iterable[OSMFeature]): VectorTile = {
-    def metadata(d: ElementData): Map[String, Value] = {
 
+    def metadata(d: ElementData): Map[String, Value] = {
       Map(
         "id"            -> VInt64(d.meta.id),
         "user"          -> VString(d.meta.user),
@@ -117,7 +115,7 @@ object Collate {
         "version"       -> VInt64(d.meta.version.toLong),
         "timestamp"     -> VString(d.meta.timestamp.toString),
         "visible"       -> VBool(d.meta.visible)
-      )
+      ) ++ d.tagMap.map { case (k, v) => (k, VString(v)) }
     }
 
     generically(tileExtent, geoms, byGeomType, metadata)
@@ -145,49 +143,51 @@ object Collate {
     partition: Feature[G, D] => String,
     metadata: D => Map[String, Value]
   ): VectorTile = {
-    def work(name: String, lb: ListBuffer[Feature[G, D]]): StrictLayer = {
-      val points  = new ListBuffer[Feature[Point, Map[String, Value]]]
-      val mpoints = new ListBuffer[Feature[MultiPoint, Map[String, Value]]]
-      val lines   = new ListBuffer[Feature[Line, Map[String, Value]]]
-      val mlines  = new ListBuffer[Feature[MultiLine, Map[String, Value]]]
-      val polys   = new ListBuffer[Feature[Polygon, Map[String, Value]]]
-      val mpolys  = new ListBuffer[Feature[MultiPolygon, Map[String, Value]]]
 
-      /* Partition the Geometries by subtype. Polygon winding order is corrected. */
-      lb.foreach({ f => f.geom match {
-        case g: Point        => points.append(Feature(g, metadata(f.data)))
-        case g: MultiPoint   => mpoints.append(Feature(g, metadata(f.data)))
-        case g: Line         => lines.append(Feature(g, metadata(f.data)))
-        case g: MultiLine    => mlines.append(Feature(g, metadata(f.data)))
-        case g: Polygon      => polys.append(Feature(winding(g), metadata(f.data)))
-        case g: MultiPolygon => mpolys.append(Feature(MultiPolygon(g.polygons.map(winding)), metadata(f.data)))
-      }})
+    def work(name: String, fs: Iterable[Feature[G, D]]): StrictLayer = {
 
-      /* The values 4096 and 2 here are expected defaults. The `ListBuffer`s
-       * are converted to `Vector` to ensure that their contents are immutable.
-       */
-      StrictLayer(
-        name, 4096, 2, tileExtent, points.toVector, mpoints.toVector,
-        lines.toVector, mlines.toVector, polys.toVector, mpolys.toVector
-      )
+      /* The expected defaults for Vector Tiles. */
+      val vtExtent: Int = 4096
+      val vtVersion: Int = 2
+
+      /* Polygon winding order is corrected for here. */
+      @tailrec def collate(
+        poi: List[Feature[Point, Map[String, Value]]],
+        mpo: List[Feature[MultiPoint, Map[String, Value]]],
+        lin: List[Feature[Line, Map[String, Value]]],
+        mli: List[Feature[MultiLine, Map[String, Value]]],
+        pol: List[Feature[Polygon, Map[String, Value]]],
+        mpl: List[Feature[MultiPolygon, Map[String, Value]]],
+        fts: List[Feature[G, D]]
+      ): StrictLayer = fts match {
+        case Nil =>
+          StrictLayer(name, vtExtent, vtVersion, tileExtent, poi, mpo, lin, mli, pol, mpl)
+        case Feature(g: Point, d) :: rest =>
+          collate(Feature(g, metadata(d)) :: poi, mpo, lin, mli, pol, mpl, rest)
+        case Feature(g: MultiPoint, d) :: rest =>
+          collate(poi, Feature(g, metadata(d)) :: mpo, lin, mli, pol, mpl, rest)
+        case Feature(g: Line, d) :: rest =>
+          collate(poi, mpo, Feature(g, metadata(d)) :: lin, mli, pol, mpl, rest)
+        case Feature(g: MultiLine, d) :: rest =>
+          collate(poi, mpo, lin, Feature(g, metadata(d)) :: mli, pol, mpl, rest)
+        case Feature(g: Polygon, d) :: rest =>
+          collate(poi, mpo, lin, mli, Feature(winding(g), metadata(d)) :: pol, mpl, rest)
+        case Feature(g: MultiPolygon, d) :: rest =>
+          collate(poi, mpo, lin, mli, pol, Feature(MultiPolygon(g.polygons.map(winding)), metadata(d)) :: mpl, rest)
+        case _ :: rest =>
+          collate(poi, mpo, lin, mli, pol, mpl, rest)
+      }
+
+      collate(Nil, Nil, Nil, Nil, Nil, Nil, fs.toList)
     }
 
-    /* Both `MMap` and `ListBuffer` are mutable */
-    val collated: MMap[String, ListBuffer[Feature[G, D]]] = MMap.empty
-
-    geoms.foreach({ f =>
-      val layer: String = partition(f)
-
-      collated.get(layer) match {
-        case None => collated.update(layer, ListBuffer(f))
-        case Some(lb) => lb.append(f)
-      }
-    })
+    val collated: Map[String, Iterable[Feature[G, D]]] = geoms.groupBy(partition)
 
     /* Collate each collection of Features into a [[Layer]] */
     val layers: Map[String, StrictLayer] =
-      collated.map({ case (k,v) => (k, work(k,v)) }).toMap
+      collated.map { case (k, fs) => (k, work(k, fs)) }
 
     VectorTile(layers, tileExtent)
   }
+
 }

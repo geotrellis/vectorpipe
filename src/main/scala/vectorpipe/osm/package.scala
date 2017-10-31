@@ -4,6 +4,7 @@ import java.io.{ FileInputStream, InputStream }
 
 import scala.util.{ Failure, Success, Try }
 
+import cats.implicits._
 import geotrellis.proj4._
 import geotrellis.vector._
 import geotrellis.vector.io._
@@ -55,11 +56,8 @@ package object osm {
   def fromDataFrame(
     data: DataFrame
   )(implicit ss: SparkSession): (RDD[(Long, Node)], RDD[(Long, Way)], RDD[(Long, Relation)]) = {
-    /* Necessary for the `map` transformation below to work */
-    import ss.implicits._
-
     /* WARNING: Here be Reflection Dragons!
-     * You may be look at this code and think: gee, that seems a bit verbose. You'd be right,
+     * You may be look at the methods below and think: gee, that seems a bit verbose. You'd be right,
      * but that doesn't change what's necessary. The workings here are fairly brittle - things
      * might compile but fail mysteriously at runtime if anything is changed here (specifically regarding
      * the explicit type hand-holding).
@@ -69,93 +67,102 @@ package object osm {
      * How the `Member`s list below is handled is an example of this.
      * Moral of the story: avoid reflection and other runtime trickery.
      */
-    val nodes: RDD[(Long, Node)] =
-      data
-        .select("lat", "lon", "id", "user", "uid", "changeset", "version", "timestamp", "visible", "tags")
-        .where("type = 'node'")
-        .map { row =>
-          val lat: Double = row.getAs[java.math.BigDecimal]("lat").doubleValue()
-          val lon: Double = row.getAs[java.math.BigDecimal]("lon").doubleValue()
-          val tags: scala.collection.immutable.Map[String, String] =
-            row.getAs[scala.collection.immutable.Map[String, String]]("tags")
+    (allNodes(data), allWays(data), allRelations(data))
+  }
 
-          (lat, lon, metaFromRow(row), tags)
-        }
-        .rdd
-        .map { case (lat, lon, rawMeta, tags) =>
-          val meta: ElementMeta = makeMeta(rawMeta)
+  private[this] def allNodes(data: DataFrame)(implicit ss: SparkSession): RDD[(Long, Node)] = {
+    import ss.implicits._
 
-          (meta.id, Node(lat, lon, ElementData(meta, tags)))
-        }
+    data
+      .select("lat", "lon", "id", "user", "uid", "changeset", "version", "timestamp", "visible", "tags")
+      .where("type = 'node'")
+      .map { row =>
+        val lat: Double = row.getAs[java.math.BigDecimal]("lat").doubleValue()
+        val lon: Double = row.getAs[java.math.BigDecimal]("lon").doubleValue()
+        val tags: scala.collection.immutable.Map[String, String] =
+          row.getAs[scala.collection.immutable.Map[String, String]]("tags")
 
-    val ways: RDD[(Long, Way)] =
-      data
-        .select($"nds.ref".alias("nds"), $"id", $"user", $"uid", $"changeset", $"version", $"timestamp", $"visible", $"tags")
-        .where("type = 'way'")
-        .map { row =>
-          val nodes: Vector[Long] = row.getAs[Seq[Long]]("nds").toVector
-          val tags: scala.collection.immutable.Map[String, String] =
-            row.getAs[scala.collection.immutable.Map[String, String]]("tags")
+        (lat, lon, metaFromRow(row), tags)
+      }
+      .rdd
+      .map { case (lat, lon, rawMeta, tags) =>
+        val meta: ElementMeta = makeMeta(rawMeta)
 
-          (nodes, metaFromRow(row), tags)
-        }
-        .rdd
-        .map { case (nodes, rawMeta, tags) =>
-          val meta: ElementMeta = makeMeta(rawMeta)
+        (meta.id, Node(lat, lon, ElementData(meta, tags)))
+      }
+  }
 
-          (meta.id, Way(nodes, ElementData(meta, tags)))
-        }
+  private[this] def allWays(data: DataFrame)(implicit ss: SparkSession): RDD[(Long, Way)] = {
+    import ss.implicits._
 
-    val relations: RDD[(Long, Relation)] =
-      data
-        .select($"members.type".alias("types"), $"members.ref".alias("refs"), $"members.role".alias("roles"), $"id", $"user", $"uid", $"changeset", $"version", $"timestamp", $"visible", $"tags")
-        .where("type = 'relation'")
-        .map { row =>
+    data
+      .select($"nds.ref".alias("nds"), $"id", $"user", $"uid", $"changeset", $"version", $"timestamp", $"visible", $"tags")
+      .where("type = 'way'")
+      .map { row =>
+        val nodes: Vector[Long] = row.getAs[Seq[Long]]("nds").toVector
+        val tags: scala.collection.immutable.Map[String, String] =
+          row.getAs[scala.collection.immutable.Map[String, String]]("tags")
 
-          /* ASSUMPTION: These three lists respect their original ordering as they
-           * were stored in Orc STRUCTs. i.e. the first element of each list were
-           * from the same STRUCT, as were those from the second, and third, etc.
-           */
-          val types: Seq[String] = row.getAs[Seq[String]]("types")
-          val refs: Seq[Long] = row.getAs[Seq[Long]]("refs")
-          val roles: Seq[String] = row.getAs[Seq[String]]("roles")
+        (nodes, metaFromRow(row), tags)
+      }
+      .rdd
+      .map { case (nodes, rawMeta, tags) =>
+        val meta: ElementMeta = makeMeta(rawMeta)
 
-          val tags: scala.collection.immutable.Map[String, String] =
-            row.getAs[scala.collection.immutable.Map[String, String]]("tags")
+        (meta.id, Way(nodes, ElementData(meta, tags)))
+      }
+  }
 
-          (types, refs, roles, metaFromRow(row), tags)
-        }
-        .rdd
-        .map { case (types, refs, roles, rawMeta, tags) =>
-          /* Scala has no `zip3` or `zipWith`, so we have to combine these three Seqs
-           * somewhat inefficiently. This line really needs improvement.
-           *
-           * The issue here is that reflection can't figure out how to read a `Seq[Member]`
-           * from a `Row`, but _only when vectorpipe is used in another project_. Demo code
-           * local to this project will work just fine. The exception thrown is:
-           *
-           * java.lang.ClassCastException: org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema
-           * cannot be cast to vectorpipe.osm.Member
-           *
-           * This was supposed to have been fixed in an earlier version of Spark,
-           * and there is little mention of the issue in general on the internet.
-           */
-          val members: Seq[Member] =
-            types.zip(refs).zip(roles).map { case ((ty, rf), ro) => Member(ty, rf, ro) }
+  private[this] def allRelations(data: DataFrame)(implicit ss: SparkSession): RDD[(Long, Relation)] = {
+    import ss.implicits._
 
-          val meta: ElementMeta = makeMeta(rawMeta)
+    data
+      .select($"members.type".alias("types"), $"members.ref".alias("refs"), $"members.role".alias("roles"), $"id", $"user", $"uid", $"changeset", $"version", $"timestamp", $"visible", $"tags")
+      .where("type = 'relation'")
+      .map { row =>
 
-          (meta.id, Relation(members, ElementData(meta, tags)))
-        }
+        /* ASSUMPTION: These three lists respect their original ordering as they
+         * were stored in Orc STRUCTs. i.e. the first element of each list were
+         * from the same STRUCT, as were those from the second, and third, etc.
+         */
+        val types: Seq[String] = row.getAs[Seq[String]]("types")
+        val refs: Seq[Long] = row.getAs[Seq[Long]]("refs")
+        val roles: Seq[String] = row.getAs[Seq[String]]("roles")
 
-    (nodes, ways, relations)
+        val tags: scala.collection.immutable.Map[String, String] =
+          row.getAs[scala.collection.immutable.Map[String, String]]("tags")
+
+        (types, refs, roles, metaFromRow(row), tags)
+      }
+      .rdd
+      .map { case (types, refs, roles, rawMeta, tags) =>
+        /* Scala has no `zip3` or `zipWith`, so we have to combine these three Seqs
+         * somewhat inefficiently. This line really needs improvement.
+         *
+         * The issue here is that reflection can't figure out how to read a `Seq[Member]`
+         * from a `Row`, but _only when vectorpipe is used in another project_. Demo code
+         * local to this project will work just fine. The exception thrown is:
+         *
+         * java.lang.ClassCastException: org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema
+         * cannot be cast to vectorpipe.osm.Member
+         *
+         * This was supposed to have been fixed in an earlier version of Spark,
+         * and there is little mention of the issue in general on the internet.
+         */
+        val members: Seq[Member] =
+          types.zip(refs).zip(roles).map { case ((ty, rf), ro) => Member(ty, rf, ro) }
+
+        val meta: ElementMeta = makeMeta(rawMeta)
+
+        (meta.id, Relation(members.toList, ElementData(meta, tags)))
+      }
   }
 
   /** An unfortunate necessity to avoid reflection errors involving `java.time.Instant` */
-  private def makeMeta(m: (Long, String, Long, Long, Long, Long, Boolean)): ElementMeta =
+  private[this] def makeMeta(m: (Long, String, Long, Long, Long, Long, Boolean)): ElementMeta =
     ElementMeta(m._1, m._2, m._3, m._4, m._5, java.time.Instant.ofEpochMilli(m._6), m._7)
 
-  private def metaFromRow(row: Row): (Long, String, Long, Long, Long, Long, Boolean) = {
+  private[this] def metaFromRow(row: Row): (Long, String, Long, Long, Long, Long, Boolean) = {
     (
       row.getAs[Long]("id"),
       row.getAs[String]("user"),
@@ -216,7 +223,7 @@ package object osm {
      * naively grab them all here.
      */
     val geomRelations: RDD[Relation] = relations.filter({ r =>
-      r.data.tagMap.get("type") == Some("multipolygon")
+      r.data.tagMap.get("type") === Some("multipolygon")
     })
 
     val (points, rawLines, rawPolys) = E2F.geometries(nodes, ways)

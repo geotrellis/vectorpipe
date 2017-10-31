@@ -2,6 +2,7 @@ package vectorpipe.osm
 
 import java.time._
 
+import cats.implicits._
 import geotrellis.vector.{ Extent, Point }
 import io.dylemma.spac._
 
@@ -98,9 +99,9 @@ case class Way(
   /** Is it a Polyline, but not an "Area" even if closed? */
   def isLine: Boolean = !isClosed || (!isArea && isHighwayOrBarrier)
 
-  def isClosed: Boolean = if (nodes.isEmpty) false else nodes(0) == nodes.last
+  def isClosed: Boolean = if (nodes.isEmpty) false else nodes(0) === nodes.last
 
-  def isArea: Boolean = data.tagMap.get("area").map(_ == "yes").getOrElse(false)
+  def isArea: Boolean = data.tagMap.get("area").map(_ === "yes").getOrElse(false)
 
   def isHighwayOrBarrier: Boolean = {
     val tags: Set[String] = data.tagMap.keySet
@@ -110,15 +111,15 @@ case class Way(
 }
 
 case class Relation(
-  members: Seq[Member],
+  members: List[Member],
   data: ElementData
 ) extends Element {
   /** The IDs of sub-relations that this Relation points to. */
-  def subrelations: Seq[Long] = members.filter(_.`type` == "relation").map(_.ref)
+  def subrelations: Seq[Long] = members.filter(_.typeOf === "relation").map(_.ref)
 }
 
 case class Member(
-  `type`: String,
+  typeOf: String,
   ref: Long,
   role: String)
 

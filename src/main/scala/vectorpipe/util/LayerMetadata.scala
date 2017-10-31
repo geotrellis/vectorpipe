@@ -19,5 +19,6 @@ object LayerMetadata {
     GetComponent(_.bounds)
 
   /** Json Conversion. */
-  implicit def metaFormat[K: JsonFormat] = jsonFormat2(LayerMetadata[K])
+  implicit def metaFormat[K: JsonFormat]: RootJsonFormat[LayerMetadata[K]] =
+    jsonFormat2(LayerMetadata[K])
 }

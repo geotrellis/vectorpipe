@@ -138,27 +138,6 @@ object VectorPipe {
     rdd.clipToGrid(ld, work _).groupByKey
   }
 
-  /* Takes advantage of the fact that most Geoms are small, and only occur in one Tile */
-  private def byIntersect[G <: Geometry, D](
-    mt: MapKeyTransform,
-    f: Feature[G, D]
-  ): Iterator[(SpatialKey, Feature[G, D])] = {
-
-    val b: GridBounds = mt(f.geom.envelope)
-
-    /* For most Geoms, this will only produce one [[SpatialKey]]. */
-    val keys: Iterator[SpatialKey] = for {
-      x <- Iterator.range(b.colMin, b.colMax+1)
-      y <- Iterator.range(b.rowMin, b.rowMax+1)
-    } yield SpatialKey(x, y)
-
-    /* Yes, this filter is necessary, since the Geom's _envelope_ could intersect
-     * grid cells that the Geom itself does not. Not excluding these false positives
-     * could lead to undefined behaviour later in the clipping step.
-     */
-    keys.filter(k => mt(k).toPolygon.intersects(f.geom)).map(k => (k, f))
-  }
-
   /** Given a collection of GeoTrellis `Feature`s which have been associated
     * with some `SpatialKey` and a "collation" function, form those `Feature`s
     * into a `VectorTile`.

@@ -1,9 +1,9 @@
 package vectorpipe
 
 import scala.annotation.tailrec
-import scala.util.Try
 
-import geotrellis.proj4.{LatLng, WebMercator}
+import geotrellis.spark.clip.ClipToGrid
+import geotrellis.spark.clip.ClipToGrid.Predicates
 import geotrellis.vector._
 
 // --- //
@@ -54,34 +54,26 @@ object Clip {
     centre.distanceToSegment(p1, p2) <= radius
 
   /** Naively clips Features to fit the given Extent. */
-  def byExtent[G <: Geometry, D](extent: Extent, f: Feature[G, D]): Option[Feature[Geometry, D]] = {
-    val exPoly: Polygon = extent.toPolygon
-
-    val clipped: Try[Geometry] = f.geom match {
-      case mp: MultiPolygon => Try(MultiPolygon(mp.polygons.flatMap(_.intersection(exPoly).as[Polygon])))
-      case _ => Try(f.geom.intersection(exPoly).toGeometry.get)
-    }
-
-    clipped.toOption.map(g => Feature(g, f.data))
-  }
+  def byExtent[G <: Geometry, D](extent: Extent, f: Feature[G, D], p: Predicates): Option[Feature[Geometry, D]] =
+    ClipToGrid.clipFeatureToExtent(extent, f, p)
 
   /** Clips Features to a 3x3 grid surrounding the current Tile.
     * This has been found to capture ''most'' Features which stretch
     * outside their original Tile, and helps avoid the pain of
     * restitching later.
     */
-  def byBufferedExtent[G <: Geometry, D](extent: Extent, f: Feature[G, D]): Option[Feature[Geometry, D]] =
-    byExtent(extent.expandBy(extent.width, extent.height), f)
+  def byBufferedExtent[G <: Geometry, D](extent: Extent, f: Feature[G, D], p: Predicates): Option[Feature[Geometry, D]] =
+    byExtent(extent.expandBy(extent.width, extent.height), f, p)
 
   /** Bias the clipping strategy based on the incoming [[Geometry]]. */
-  def byHybrid[G <: Geometry, D](extent: Extent, f: Feature[G, D]): Option[Feature[Geometry, D]] = f.geom match {
-    case pnt: Point => Some(f)  /* A `Point` will always fall within the Extent */
-    case line: Line => Some(Feature(toNearestPoint(extent, line), f.data))
-    case poly: Polygon => byBufferedExtent(extent, f)
-    case mply: MultiPolygon => byBufferedExtent(extent, f)
-    case _ => None
+  def byHybrid[G <: Geometry, D](extent: Extent, f: Feature[G, D], p: Predicates): Option[Feature[Geometry, D]] = f.geom match {
+    case pnt: Point         => Some(f)  /* A `Point` will always fall within the Extent */
+    case line: Line         => Some(Feature(toNearestPoint(extent, line), f.data))
+    case poly: Polygon      => byBufferedExtent(extent, f, p)
+    case mply: MultiPolygon => byBufferedExtent(extent, f, p)
+    case _                  => None
   }
 
   /** Yield an [[Feature]] as-is. */
-  def asIs[G <: Geometry, D](extent: Extent, f: Feature[G, D]): Option[Feature[G, D]] = Some(f)
+  def asIs[G <: Geometry, D](extent: Extent, f: Feature[G, D], p: Predicates): Option[Feature[G, D]] = Some(f)
 }

@@ -33,8 +33,8 @@ private[vectorpipe] object Element {
 
   /* <node lat='49.5135613' lon='6.0095049' ... > */
   implicit val node: Parser[(Long, Node)] = (
-    Parser.forMandatoryAttribute("lat").map(_.toDouble) ~
-    Parser.forMandatoryAttribute("lon").map(_.toDouble) ~
+    Parser.forOptionalAttribute("lat").map(_.map(_.toDouble).getOrElse(0.0)) ~
+    Parser.forOptionalAttribute("lon").map(_.map(_.toDouble).getOrElse(0.0)) ~
     elementData).as((lat, lon, d) => (d.meta.id, Node(lat, lon, d)))
 
   /*

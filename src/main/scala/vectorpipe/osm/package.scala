@@ -70,6 +70,7 @@ package object osm {
     (allNodes(data), allWays(data), allRelations(data))
   }
 
+  /** Collect all the Nodes that exist in the given DataFrame. */
   private[this] def allNodes(data: DataFrame)(implicit ss: SparkSession): RDD[(Long, Node)] = {
     import ss.implicits._
 
@@ -77,8 +78,9 @@ package object osm {
       .select("lat", "lon", "id", "user", "uid", "changeset", "version", "timestamp", "visible", "tags")
       .where("type = 'node'")
       .map { row =>
-        val lat: Double = row.getAs[java.math.BigDecimal]("lat").doubleValue()
-        val lon: Double = row.getAs[java.math.BigDecimal]("lon").doubleValue()
+        /* ASSUMPTION: 0 and 1 here assume the order of the `select` terms won't change! */
+        val lat: Double = if (row.isNullAt(0)) 0 else row.getAs[java.math.BigDecimal]("lat").doubleValue()
+        val lon: Double = if (row.isNullAt(1)) 0 else row.getAs[java.math.BigDecimal]("lon").doubleValue()
         val tags: scala.collection.immutable.Map[String, String] =
           row.getAs[scala.collection.immutable.Map[String, String]]("tags")
 
@@ -92,6 +94,7 @@ package object osm {
       }
   }
 
+  /** Collect all the Ways that exist in the given DataFrame. */
   private[this] def allWays(data: DataFrame)(implicit ss: SparkSession): RDD[(Long, Way)] = {
     import ss.implicits._
 
@@ -113,6 +116,7 @@ package object osm {
       }
   }
 
+  /** Collect all the Relations that exist in the given DataFrame. */
   private[this] def allRelations(data: DataFrame)(implicit ss: SparkSession): RDD[(Long, Relation)] = {
     import ss.implicits._
 

@@ -28,9 +28,8 @@ private[vectorpipe] object PlanetHistory {
       nodes
         .cogroup(ways.flatMap { case (wayId, way) => way.nodes.map { nodeId => (nodeId, wayId) } })
         .flatMap {
-          case (_, (nodes, _)) if (nodes.isEmpty) => None
           /* ASSUMPTION: `nodes` contains distinct elements */
-          case (_, (nodes, wayIds)) => Some((nodes.head, wayIds))
+          case (_, (nodes, wayIds)) => nodes.headOption.map(n => (n, wayIds))
         }
 
     val wayIdToNodes: RDD[(Long, Node)] =
@@ -56,7 +55,7 @@ private[vectorpipe] object PlanetHistory {
       case w :: rest => {
 
         /* Y2K bug here, except it won't manifest until the end of the year 1 billion AD */
-        val nextTime: Instant = if (rest.isEmpty) Instant.MAX else rest.head.data.meta.timestamp
+        val nextTime: Instant = rest.headOption.map(_.data.meta.timestamp).getOrElse(Instant.MAX)
 
         /* Each full set of Nodes that would have existed for each time slice. */
         val allSlices: List[(Instant, Map[Long, Node])] =

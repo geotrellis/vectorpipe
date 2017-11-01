@@ -3,7 +3,6 @@ package vectorpipe
 import geotrellis.proj4._
 import geotrellis.raster.GridBounds
 import geotrellis.spark._
-import geotrellis.spark.clip.ClipToGrid
 import geotrellis.spark.clip.ClipToGrid.Predicates
 import geotrellis.spark.tiling._
 import geotrellis.vector._
@@ -136,7 +135,7 @@ object VectorPipe {
       }
     }
 
-    ClipToGrid(rdd, ld, work _).groupByKey
+    rdd.clipToGrid(ld, work _).groupByKey
   }
 
   /* Takes advantage of the fact that most Geoms are small, and only occur in one Tile */

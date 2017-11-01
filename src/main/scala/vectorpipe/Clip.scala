@@ -1,9 +1,7 @@
 package vectorpipe
 
 import scala.annotation.tailrec
-import scala.util.Try
 
-import geotrellis.proj4.{LatLng, WebMercator}
 import geotrellis.spark.clip.ClipToGrid
 import geotrellis.spark.clip.ClipToGrid.Predicates
 import geotrellis.vector._

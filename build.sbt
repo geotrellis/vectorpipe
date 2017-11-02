@@ -20,10 +20,7 @@ val common = Seq(
 
   libraryDependencies ++= Seq(
     "io.dylemma"                  %% "xml-spac"              % "0.3",
-    "org.apache.hadoop"           %  "hadoop-aws"            % "2.8.1"
-      exclude("javax.servlet",     "servlet-api")
-      exclude("javax.servlet.jsp", "jsp-api")
-      exclude("org.mortbay.jetty", "servlet-api"),
+    "org.apache.hadoop"           %  "hadoop-aws"            % "2.8.1" % "provided",
     "org.apache.spark"            %% "spark-hive"            % "2.2.0" % "provided",
     "org.locationtech.geotrellis" %% "geotrellis-spark"      % "1.2.0-SNAPSHOT",
     "org.locationtech.geotrellis" %% "geotrellis-util"       % "1.2.0-SNAPSHOT",

@@ -28,7 +28,7 @@ val common = Seq(
     "org.locationtech.geotrellis" %% "geotrellis-vectortile" % "1.2.0-SNAPSHOT",
     "org.scalatest"               %% "scalatest"             % "3.0.1" % "test",
     "org.spire-math"              %% "spire"                 % "0.13.0",
-    "org.typelevel"               %% "cats-core"             % "1.0.0-MF"
+    "org.typelevel"               %% "cats-core"             % "1.0.0-RC1"
   ),
 
   parallelExecution in Test := false

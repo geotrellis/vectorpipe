@@ -116,19 +116,19 @@ object VectorPipe {
     * @param clip A function which represents a "clipping strategy".
     * @param logError An IO function that will log any clipping failures.
     */
-  def toGrid[G <: Geometry, D](
-    clip: (Extent, Feature[G, D], Predicates) => Option[Feature[Geometry, D]],
-    logError: (((Extent, Feature[G, D])) => String) => ((Extent, Feature[G, D])) => Unit,
+  def toGrid[D](
+    clip: (Extent, Feature[Geometry, D], Predicates) => Option[Feature[Geometry, D]],
+    logError: (((Extent, Feature[Geometry, D])) => String) => ((Extent, Feature[Geometry, D])) => Unit,
     ld: LayoutDefinition,
-    rdd: RDD[Feature[G, D]]
+    rdd: RDD[Feature[Geometry, D]]
   ): RDD[(SpatialKey, Iterable[Feature[Geometry, D]])] = {
 
     /** A way to render some Geometry that failed to clip. */
-    val errorClipping: ((Extent, Feature[G, D])) => String = { case (e, f) =>
+    val errorClipping: ((Extent, Feature[Geometry, D])) => String = { case (e, f) =>
       s"CLIP FAILURE W/ EXTENT: ${e}\nELEMENT METADATA: ${f.data}\nGEOM: ${f.geom.reproject(WebMercator, LatLng).toGeoJson}"
     }
 
-    def work(e: Extent, f: Feature[G, D], p: Predicates): Option[Feature[Geometry, D]] = {
+    def work(e: Extent, f: Feature[Geometry, D], p: Predicates): Option[Feature[Geometry, D]] = {
       Try(clip(e, f, p)) match {
         case Failure(_) => logError(errorClipping)((e, f)); None
         case Success(g) => g

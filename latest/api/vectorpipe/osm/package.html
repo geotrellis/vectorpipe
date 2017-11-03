@@ -131,7 +131,7 @@
         <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a href="ElementMeta.html"><span class="name">ElementMeta</span></a><span class="params">(<span name="id">id: <span class="extype" name="scala.Long">Long</span></span>, <span name="user">user: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="userId">userId: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="changeSet">changeSet: <span class="extype" name="scala.Long">Long</span></span>, <span name="version">version: <span class="extype" name="scala.Long">Long</span></span>, <span name="timestamp">timestamp: <span class="extype" name="java.time.Instant">Instant</span></span>, <span name="visible">visible: <span class="extype" name="scala.Boolean">Boolean</span></span>)</span><span class="result"> extends <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+        <a href="ElementMeta.html"><span class="name">ElementMeta</span></a><span class="params">(<span name="id">id: <span class="extype" name="scala.Long">Long</span></span>, <span name="user">user: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="userId">userId: <span class="extype" name="scala.Long">Long</span></span>, <span name="changeSet">changeSet: <span class="extype" name="scala.Long">Long</span></span>, <span name="version">version: <span class="extype" name="scala.Long">Long</span></span>, <span name="timestamp">timestamp: <span class="extype" name="java.time.Instant">Instant</span></span>, <span name="visible">visible: <span class="extype" name="scala.Boolean">Boolean</span></span>)</span><span class="result"> extends <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       </h4><span class="permalink">
       <a href="../../index.html#vectorpipe.osm.package@ElementMetaextendsProductwithSerializable" title="Permalink" target="_top">
@@ -148,7 +148,7 @@
         <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a href="Member.html"><span class="name">Member</span></a><span class="params">(<span name="type">type: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="ref">ref: <span class="extype" name="scala.Long">Long</span></span>, <span name="role">role: <span class="extype" name="scala.Predef.String">String</span></span>)</span><span class="result"> extends <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+        <a href="Member.html"><span class="name">Member</span></a><span class="params">(<span name="typeOf">typeOf: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="ref">ref: <span class="extype" name="scala.Long">Long</span></span>, <span name="role">role: <span class="extype" name="scala.Predef.String">String</span></span>)</span><span class="result"> extends <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       </h4><span class="permalink">
       <a href="../../index.html#vectorpipe.osm.package@MemberextendsProductwithSerializable" title="Permalink" target="_top">
@@ -200,7 +200,7 @@
         <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <a href="Relation.html"><span class="name">Relation</span></a><span class="params">(<span name="members">members: <span class="extype" name="scala.Seq">Seq</span>[<a href="Member.html" class="extype" name="vectorpipe.osm.Member">Member</a>]</span>, <span name="data">data: <a href="ElementData.html" class="extype" name="vectorpipe.osm.ElementData">ElementData</a></span>)</span><span class="result"> extends <a href="Element.html" class="extype" name="vectorpipe.osm.Element">Element</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+        <a href="Relation.html"><span class="name">Relation</span></a><span class="params">(<span name="members">members: <span class="extype" name="scala.List">List</span>[<a href="Member.html" class="extype" name="vectorpipe.osm.Member">Member</a>]</span>, <span name="data">data: <a href="ElementData.html" class="extype" name="vectorpipe.osm.ElementData">ElementData</a></span>)</span><span class="result"> extends <a href="Element.html" class="extype" name="vectorpipe.osm.Element">Element</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       </h4><span class="permalink">
       <a href="../../index.html#vectorpipe.osm.package@RelationextendsElementwithProductwithSerializable" title="Permalink" target="_top">

@@ -99,7 +99,7 @@ case class Way(
   /** Is it a Polyline, but not an "Area" even if closed? */
   def isLine: Boolean = !isClosed || (!isArea && isHighwayOrBarrier)
 
-  def isClosed: Boolean = if (nodes.isEmpty) false else nodes(0) === nodes.last
+  def isClosed: Boolean = (nodes.headOption, nodes.lastOption).mapN(_ === _).getOrElse(false)
 
   def isArea: Boolean = data.tagMap.get("area").map(_ === "yes").getOrElse(false)
 

@@ -4,6 +4,7 @@ import java.time.Instant
 
 import scala.annotation.tailrec
 
+import cats.implicits._
 import geotrellis.vector._
 import org.apache.spark.rdd.RDD
 import vectorpipe.osm._
@@ -76,21 +77,11 @@ private[vectorpipe] object PlanetHistory {
             }
 
         if (w.isClosed) {
-          val everyPoly: List[OSMPolygon] = allSlices.map { case (i, ns) =>
-            Feature(
-              Polygon(Line(ns.values.map(n => Point(n.lon, n.lat)))),
-              w.data.copy(meta = w.data.meta.copy(timestamp = i)) // TODO Overwrite more values?
-            )
-          }
+          val everyPoly: List[OSMPolygon] = feature({ ps => Polygon(Line(ps)) }, w, allSlices)
 
           work(rest, ls, ps ++ everyPoly)
         } else {
-          val everyLine: List[OSMLine] = allSlices.map { case (i, ns) =>
-            Feature(
-              Line(ns.values.map(n => Point(n.lon, n.lat))),
-              w.data.copy(meta = w.data.meta.copy(timestamp = i)) // TODO Overwrite more values?
-            )
-          }
+          val everyLine: List[OSMLine] = feature({ ps => Line(ps) }, w, allSlices)
 
           work(rest, ls ++ everyLine, ps)
         }
@@ -100,6 +91,28 @@ private[vectorpipe] object PlanetHistory {
 
     /* Ensure the Ways are sorted before proceeding */
     work(ways.sortBy(_.data.meta.timestamp), Nil, Nil)
+  }
+
+  /** Construct GeoTrellis Features from the given time slices. */
+  private[this] def feature[G <: Geometry](
+    f: Vector[Point] => G,
+    w: Way,
+    slices: List[(Instant, Map[Long, Node])]
+  ): List[Feature[G, ElementData]] = {
+    slices.foldLeft(Nil: List[Feature[G, ElementData]]) { case (acc, (i, ns)) =>
+      /* If a Node were deleted that the Way still expected, then no Line
+       * should be formed.
+       */
+      val points: Option[Vector[Point]] =
+        w.nodes.map(id => ns.get(id).map(n => Point(n.lon, n.lat))).sequence
+
+      points.map { ps =>
+        // TODO Overwrite more values?
+        // TODO Lenses!
+        val feature = Feature(f(ps), w.data.copy(meta = w.data.meta.copy(timestamp = i)))
+        feature :: acc
+      }.getOrElse(acc)
+    }
   }
 
   /** Given a collection of all Nodes ever associated with a [[Way]], which subset

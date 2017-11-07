@@ -108,9 +108,7 @@ private[vectorpipe] object PlanetHistory {
 
       points.map { ps =>
         // TODO Overwrite more values?
-        // TODO Lenses!
-        val feature = Feature(f(ps), w.data.copy(meta = w.data.meta.copy(timestamp = i)))
-        feature :: acc
+        Feature(f(ps), (ElementData.meta ^|-> ElementMeta.timestamp).set(i)(w.data)) :: acc
       }.getOrElse(acc)
     }
   }

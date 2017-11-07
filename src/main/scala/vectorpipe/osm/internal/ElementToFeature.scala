@@ -283,7 +283,7 @@ private[vectorpipe] object ElementToFeature {
     case Vector()  => Vector.empty.pure[LineState]
     case Vector(h) => State.modify[List[OSMLine]](h :: _).map(_ => Vector.empty)
     case v => fuseOne(v) match {
-      case None => State.modify[List[OSMLine]](v.head :: _) >> fuseLines(v.tail)
+      case None => State.modify[List[OSMLine]](v.head :: _) *> fuseLines(v.tail)
       case Some((f, d, i, rest)) => {
         if (f.isClosed)
           fuseLines(rest).map(c => Feature(Polygon(f), d) +: c)

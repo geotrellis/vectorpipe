@@ -53,6 +53,9 @@ private[vectorpipe] object PlanetHistory {
       ps: List[OSMPolygon]
     ): (List[OSMLine], List[OSMPolygon]) = ws match {
       case Nil => (ls, ps)
+      /* OSM Extracts can produce degenerate Ways. These two checks guard against those. */
+      case w :: _ if w.nodes.length < 4 && w.isClosed => (ls, ps)
+      case w :: _ if w.nodes.length < 2 => (ls, ps)
       case w :: rest => {
 
         /* Y2K bug here, except it won't manifest until the end of the year 1 billion AD */

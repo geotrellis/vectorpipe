@@ -5,6 +5,7 @@ import java.time._
 import cats.implicits._
 import geotrellis.vector.{ Extent, Point }
 import io.dylemma.spac._
+import monocle.macros.Lenses
 
 // --- //
 
@@ -21,7 +22,7 @@ private[vectorpipe] object Element {
     Parser.forMandatoryAttribute("changeset").map(_.toLong) ~
     Parser.forMandatoryAttribute("version").map(_.toLong) ~
     Parser.forMandatoryAttribute("timestamp").map(Instant.parse(_)) ~
-    Parser.forOptionalAttribute("visible").map(_.map(_.toBoolean).getOrElse(false))).as(ElementMeta)
+    Parser.forOptionalAttribute("visible").map(_.map(_.toBoolean).getOrElse(false))).as(ElementMeta.apply)
 
   /* <tag k='access' v='permissive' /> */
   implicit val tag: Parser[(String, String)] = (
@@ -99,7 +100,7 @@ case class Way(
   /** Is it a Polyline, but not an "Area" even if closed? */
   def isLine: Boolean = !isClosed || (!isArea && isHighwayOrBarrier)
 
-  def isClosed: Boolean = if (nodes.isEmpty) false else nodes(0) === nodes.last
+  def isClosed: Boolean = (nodes.headOption, nodes.lastOption).mapN(_ === _).getOrElse(false)
 
   def isArea: Boolean = data.tagMap.get("area").map(_ === "yes").getOrElse(false)
 
@@ -123,10 +124,11 @@ case class Member(
   ref: Long,
   role: String)
 
-case class ElementData(meta: ElementMeta, tagMap: Map[String, String])
+/** All Elements have common attributes, and may also have additional "tags". */
+@Lenses case class ElementData(meta: ElementMeta, tagMap: Map[String, String])
 
 /** All Element types have these attributes in common. */
-case class ElementMeta(
+@Lenses case class ElementMeta(
   id: Long,
   user: String,
   userId: Long,

@@ -15,10 +15,16 @@ val common = Seq(
   ),
 
   scalacOptions := Seq(
+    "-deprecation",
     "-Ypartial-unification"
   ),
 
+  /* For Monocle's Lens auto-generation */
+  addCompilerPlugin("org.scalamacros" %% "paradise" % "2.1.0" cross CrossVersion.full),
+
   libraryDependencies ++= Seq(
+    "com.github.julien-truffaut"  %% "monocle-core"          % "1.5.0-cats-M2",
+    "com.github.julien-truffaut"  %% "monocle-macro"         % "1.5.0-cats-M2",
     "io.dylemma"                  %% "xml-spac"              % "0.3",
     "org.apache.hadoop"           %  "hadoop-aws"            % "2.8.1" % "provided",
     "org.apache.spark"            %% "spark-hive"            % "2.2.0" % "provided",

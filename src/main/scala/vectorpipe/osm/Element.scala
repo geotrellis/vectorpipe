@@ -100,11 +100,8 @@ private[vectorpipe] object Element {
 
   def isArea: Boolean = meta.tags.get("area").map(_ === "yes").getOrElse(false)
 
-  def isHighwayOrBarrier: Boolean = {
-    val tags: Set[String] = meta.tags.keySet
-
-    tags.contains("highway") || tags.contains("barrier")
-  }
+  private[this] def isHighwayOrBarrier: Boolean =
+    meta.tags.contains("highway") || meta.tags.contains("barrier")
 }
 
 @Lenses case class Relation(

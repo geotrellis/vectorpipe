@@ -79,16 +79,15 @@ private[vectorpipe] object PlanetHistory {
               (i, replaced)
             }
 
-        if (w.isClosed) {
-          val everyPoly: List[OSMPolygon] = feature({ ps => Polygon(Line(ps)) }, w, allSlices)
-
-          work(rest, ls, ps ++ everyPoly)
-        } else {
+        if (w.isLine) {
           val everyLine: List[OSMLine] = feature({ ps => Line(ps) }, w, allSlices)
 
           work(rest, ls ++ everyLine, ps)
-        }
+        } else {
+          val everyPoly: List[OSMPolygon] = feature({ ps => Polygon(Line(ps)) }, w, allSlices)
 
+          work(rest, ls, ps ++ everyPoly)
+        }
       }
     }
 

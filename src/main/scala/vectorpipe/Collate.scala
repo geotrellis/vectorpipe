@@ -110,9 +110,9 @@ object Collate {
       Map(
         "id"            -> VInt64(m.id),
         "user"          -> VString(m.user),
-        "userId"        -> VInt64(m.userId),
-        "changeSet"     -> VInt64(m.changeSet.toLong),
-        "version"       -> VInt64(m.version.toLong),
+        "userId"        -> VInt64(m.uid),
+        "changeSet"     -> VInt64(m.changeset),
+        "version"       -> VInt64(m.version),
         "timestamp"     -> VString(m.timestamp.toString),
         "visible"       -> VBool(m.visible)
       ) ++ m.tags.map { case (k, v) => (k, VString(v)) }

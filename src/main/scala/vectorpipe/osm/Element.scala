@@ -124,8 +124,8 @@ case class Member(
 @Lenses case class ElementMeta(
   id: Long,
   user: String,
-  userId: Long,
-  changeSet: Long,
+  uid: Long,
+  changeset: Long,
   version: Long,
   timestamp: Instant,
   visible: Boolean,

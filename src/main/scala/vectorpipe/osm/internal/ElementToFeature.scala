@@ -36,7 +36,7 @@ private[vectorpipe] object ElementToFeature {
      * as well, but with an empty Iterable of Ways.
      */
     val grouped: RDD[(Iterable[Node], Iterable[Way])] =
-      nodes.map(n => (n.data.meta.id, n)).cogroup(links).map(_._2)
+      nodes.map(n => (n.meta.id, n)).cogroup(links).map(_._2)
 
     val linesPolys: RDD[Either[OSMLine, OSMPolygon]] =
       grouped
@@ -49,7 +49,7 @@ private[vectorpipe] object ElementToFeature {
         .groupByKey
         .flatMap({ case (w, ns) =>
           /* De facto maximum of 2000 Nodes */
-          val sorted: Vector[Node] = ns.toVector.sortBy(n => n.data.meta.id)
+          val sorted: Vector[Node] = ns.toVector.sortBy(n => n.meta.id)
 
           /* `get` is safe, the BTree is guaranteed to be populated,
            * since `ns` is guaranteed to be non-empty.
@@ -58,9 +58,9 @@ private[vectorpipe] object ElementToFeature {
 
           /* A binary search branch predicate */
           val pred: (Long, BTree[Node]) => Either[Option[BTree[Node]], Node] = { (n, tree) =>
-            if (n == tree.value.data.meta.id) {
+            if (n == tree.value.meta.id) {
               Right(tree.value)
-            } else if (n < tree.value.data.meta.id) {
+            } else if (n < tree.value.meta.id) {
               Left(tree.left)
             } else {
               Left(tree.right)
@@ -68,10 +68,10 @@ private[vectorpipe] object ElementToFeature {
           }
 
           /* The actual node coordinates in the correct order */
-          val (points, data): (Vector[(Double, Double)], Vector[ElementData]) =
+          val (points, data): (Vector[(Double, Double)], Vector[ElementMeta]) =
             w.nodes
               .flatMap(n => tree.searchWith(n, pred))
-              .map(n => ((n.lon, n.lat), n.data))
+              .map(n => ((n.lon, n.lat), n.meta))
               .unzip
 
           // TODO: 2017 May  9 @ 08:31 - Why are we `try`ing here?
@@ -82,10 +82,10 @@ private[vectorpipe] object ElementToFeature {
             if (w.isLine) {
               // TODO: Report somehow that the Line was dropped for being degenerate.
               if (isDegenerateLine(points)) None else {
-                Some(Left(Feature(Line(points), w.data)))
+                Some(Left(Feature(Line(points), w.meta)))
               }
             } else {
-              Some(Right(Feature(Polygon(points), w.data)))
+              Some(Right(Feature(Polygon(points), w.meta)))
             }
           } catch {
             case e: Throwable => None // TODO Be more elegant about this?
@@ -108,7 +108,7 @@ private[vectorpipe] object ElementToFeature {
       if (ws.isEmpty) {
         val n = ns.head
 
-        Some(Feature(Point(n.lon, n.lat), n.data))
+        Some(Feature(Point(n.lon, n.lat), n.meta))
       } else {
         None
       }
@@ -133,11 +133,11 @@ private[vectorpipe] object ElementToFeature {
       relations.flatMap(r => r.members.map(m => (m.ref, r)))
 
     val lineLinks: RDD[(Long, OSMLine)] =
-      lines.map(f => (f.data.meta.id, f))
+      lines.map(f => (f.data.id, f))
 
     /* All Polygons, Lines and Relations bound by their IDs */
     val grouped =
-      polys.map(f => (f.data.meta.id, f)).cogroup(lineLinks, relLinks).map(_._2)
+      polys.map(f => (f.data.id, f)).cogroup(lineLinks, relLinks).map(_._2)
 
     val multipolys = grouped
       /* Assumption: Polygons and Lines exist in at most one "multipolygon" Relation */
@@ -155,7 +155,7 @@ private[vectorpipe] object ElementToFeature {
         }).toVector
 
         /* All line segments, rougly in order of connecting to others. */
-        val sorted: Vector[Feature[Line, ElementData]] =
+        val sorted: Vector[Feature[Line, ElementMeta]] =
           spatialSort(ls.map(f => (f.geom.centroid.as[Point].get, f))).map(_._2)
 
         /* All line segments which could fuse into Polygons */
@@ -180,7 +180,7 @@ private[vectorpipe] object ElementToFeature {
          * Geometries which were already Polygons (and thus didn't need extra fusing)
          * will naturally do the right thing here.
          */
-        val (outers, inners) = ps.partition(f => outerIds.contains(f.data.meta.id))
+        val (outers, inners) = ps.partition(f => outerIds.contains(f.data.id))
 
         /* Match outer and inner Polygons - O(n^2) */
         val fused: Vector[Polygon] = outers.map({ o =>
@@ -201,7 +201,7 @@ private[vectorpipe] object ElementToFeature {
            * Furthermore, winding order doesn't matter in OSM, but it does
            * in VectorTiles.
            */
-          Some(Feature(MultiPolygon(fused), r.data))
+          Some(Feature(MultiPolygon(fused), r.meta))
         }
       }
 
@@ -310,7 +310,7 @@ private[vectorpipe] object ElementToFeature {
    * Fuse the head Line in the Vector with the first other Line possible.
    * This borrows [[fuseLines]]'s assumptions.
    */
-  private def fuseOne(v: Vector[OSMLine]): Option[(Line, ElementData, Int, Vector[OSMLine])] = {
+  private def fuseOne(v: Vector[OSMLine]): Option[(Line, ElementMeta, Int, Vector[OSMLine])] = {
     val h = v.head
     val t = v.tail
 

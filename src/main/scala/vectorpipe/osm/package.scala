@@ -19,11 +19,11 @@ import vectorpipe.osm.internal.{ ElementToFeature => E2F, PlanetHistory }
 /** Types and functions unique to working with OpenStreetMap data. */
 package object osm {
 
-  type OSMFeature = Feature[Geometry, ElementData]
-  private[vectorpipe] type OSMPoint = Feature[Point, ElementData]
-  private[vectorpipe] type OSMLine = Feature[Line, ElementData]
-  private[vectorpipe] type OSMPolygon = Feature[Polygon, ElementData]
-  private[vectorpipe] type OSMMultiPoly = Feature[MultiPolygon, ElementData]
+  type OSMFeature = Feature[Geometry, ElementMeta]
+  private[vectorpipe] type OSMPoint = Feature[Point, ElementMeta]
+  private[vectorpipe] type OSMLine = Feature[Line, ElementMeta]
+  private[vectorpipe] type OSMPolygon = Feature[Polygon, ElementMeta]
+  private[vectorpipe] type OSMMultiPoly = Feature[MultiPolygon, ElementMeta]
 
   /** Given a path to an OSM XML file, parse it into usable types. */
   def fromLocalXML(
@@ -88,9 +88,9 @@ package object osm {
       }
       .rdd
       .map { case (lat, lon, rawMeta, tags) =>
-        val meta: ElementMeta = makeMeta(rawMeta)
+        val meta: ElementMeta = makeMeta(rawMeta, tags)
 
-        (meta.id, Node(lat, lon, ElementData(meta, tags)))
+        (meta.id, Node(lat, lon, meta))
       }
   }
 
@@ -110,9 +110,9 @@ package object osm {
       }
       .rdd
       .map { case (nodes, rawMeta, tags) =>
-        val meta: ElementMeta = makeMeta(rawMeta)
+        val meta: ElementMeta = makeMeta(rawMeta, tags)
 
-        (meta.id, Way(nodes, ElementData(meta, tags)))
+        (meta.id, Way(nodes, meta))
       }
   }
 
@@ -156,15 +156,15 @@ package object osm {
         val members: Seq[Member] =
           types.zip(refs).zip(roles).map { case ((ty, rf), ro) => Member(ty, rf, ro) }
 
-        val meta: ElementMeta = makeMeta(rawMeta)
+        val meta: ElementMeta = makeMeta(rawMeta, tags)
 
-        (meta.id, Relation(members.toList, ElementData(meta, tags)))
+        (meta.id, Relation(members.toList, meta))
       }
   }
 
   /** An unfortunate necessity to avoid reflection errors involving `java.time.Instant` */
-  private[this] def makeMeta(m: (Long, String, Long, Long, Long, Long, Boolean)): ElementMeta =
-    ElementMeta(m._1, m._2, m._3, m._4, m._5, java.time.Instant.ofEpochMilli(m._6), m._7)
+  private[this] def makeMeta(m: (Long, String, Long, Long, Long, Long, Boolean), tags: Map[String, String]): ElementMeta =
+    ElementMeta(m._1, m._2, m._3, m._4, m._5, java.time.Instant.ofEpochMilli(m._6), m._7, tags)
 
   private[this] def metaFromRow(row: Row): (Long, String, Long, Long, Long, Long, Boolean) = {
     (
@@ -183,7 +183,7 @@ package object osm {
    * [[Feature]]s. In order to mix the various subtypes together, they've
    * been upcasted internally to [[Geometry]]. Note:
    * {{{
-   * type OSMFeature = Feature[Geometry, ElementData]
+   * type OSMFeature = Feature[Geometry, ElementMeta]
    * }}}
    *
    * ===Behaviour===
@@ -215,7 +215,7 @@ package object osm {
    *     from the output.
    */
   def toFeatures(
-    logError: (Feature[Line, ElementData] => String) => Feature[Line, ElementData] => Unit,
+    logError: (Feature[Line, ElementMeta] => String) => Feature[Line, ElementMeta] => Unit,
     nodes: RDD[Node],
     ways: RDD[Way],
     relations: RDD[Relation]
@@ -227,7 +227,7 @@ package object osm {
      * naively grab them all here.
      */
     val geomRelations: RDD[Relation] = relations.filter({ r =>
-      r.data.tagMap.get("type") === Some("multipolygon")
+      r.meta.tags.get("type") === Some("multipolygon")
     })
 
     val (points, rawLines, rawPolys) = E2F.geometries(nodes, ways)
@@ -256,6 +256,6 @@ package object osm {
   }
 
   /** All Lines that could be reconstructed from OSM Elements. */
-  def toLines(nodes: RDD[(Long, Node)], ways: RDD[(Long, Way)]): RDD[Feature[Line, ElementData]] =
+  def toLines(nodes: RDD[(Long, Node)], ways: RDD[(Long, Way)]): RDD[Feature[Line, ElementMeta]] =
     PlanetHistory.lines(nodes, ways)
 }

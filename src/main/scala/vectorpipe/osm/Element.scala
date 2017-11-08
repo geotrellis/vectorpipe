@@ -17,7 +17,7 @@ sealed trait Element {
 private[vectorpipe] object Element {
   implicit val tag: Parser[(String, String)] = (
     Parser.forMandatoryAttribute("k") ~
-      Parser.forMandatoryAttribute("v")
+    Parser.forMandatoryAttribute("v")
   ).as({ case (k, v) => (k, v) }) // Hand-holding the typesystem.
 
   implicit val elementMeta: Parser[ElementMeta] = (
@@ -55,7 +55,7 @@ private[vectorpipe] object Element {
     Parser.forMandatoryAttribute("type") ~
     Parser.forMandatoryAttribute("ref").map(_.toLong) ~
     Parser.forMandatoryAttribute("role")
-  ).as(Member)
+  ).as(Member.apply)
 
   implicit val relation: Parser[(Long, Relation)] = (
     Splitter(* \ "member").asListOf[Member] ~
@@ -83,7 +83,7 @@ private[vectorpipe] object Element {
  * Some point in the world, which could represent a location or small object
  *  like a park bench or flagpole.
  */
-case class Node(lat: Double, lon: Double, meta: ElementMeta) extends Element
+@Lenses case class Node(lat: Double, lon: Double, meta: ElementMeta) extends Element
 
 /**
  * A string of [[Node]]s which could represent a road, or if connected back around
@@ -91,7 +91,7 @@ case class Node(lat: Double, lon: Double, meta: ElementMeta) extends Element
  *
  *  Assumption: A Way has at least two distinct nodes.
  */
-case class Way(nodes: Vector[Long], meta: ElementMeta) extends Element {
+@Lenses case class Way(nodes: Vector[Long], meta: ElementMeta) extends Element {
   /** Is it a Polyline, but not an "Area" even if closed? */
   def isLine: Boolean = !isClosed || (!isArea && isHighwayOrBarrier)
 
@@ -107,7 +107,7 @@ case class Way(nodes: Vector[Long], meta: ElementMeta) extends Element {
   }
 }
 
-case class Relation(
+@Lenses case class Relation(
   members: List[Member],
   meta: ElementMeta
 ) extends Element {
@@ -115,10 +115,11 @@ case class Relation(
   def subrelations: Seq[Long] = members.filter(_.typeOf === "relation").map(_.ref)
 }
 
-case class Member(
+@Lenses case class Member(
   typeOf: String,
   ref: Long,
-  role: String)
+  role: String
+)
 
 /** All Element types have these attributes in common. */
 @Lenses case class ElementMeta(

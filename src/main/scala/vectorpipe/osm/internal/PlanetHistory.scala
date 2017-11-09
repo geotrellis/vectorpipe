@@ -62,12 +62,30 @@ private[vectorpipe] object PlanetHistory {
         val nextTime: Instant = rest.headOption.map(_.meta.timestamp).getOrElse(Instant.MAX)
 
         /* Each full set of Nodes that would have existed for each time slice. */
-        val allSlices: List[(Instant, Map[Long, Node])] =
+        val allSlices: List[(ElementMeta, Map[Long, Node])] =
           changedNodes(w.meta.timestamp, nextTime, nodes)
             .groupBy(_.meta.timestamp)
             .toList
             .sortBy { case (i, _) => i }
-            .scanLeft((w.meta.timestamp, recentNodes(w, nodes))) { case ((_, p), (i, changes)) =>
+            .scanLeft((w.meta, recentNodes(w, nodes))) { case ((_, p), (_, changes)) =>
+
+              /* All Nodes changed during this timeslice are assumed to have been
+               * changed by the same user. Anything else would be highly unlikely.
+               * Therefore, we can ask for the metadata of the first changed Node
+               * we find (the `.head`).
+               */
+              val meta: ElementMeta = changes.head.meta
+
+              /* The user who changed the Nodes in this timeslice is credited
+               * with the creation of the `Line`, even if they weren't the one
+               * who created the Way to begin with.
+               */
+              val credited: ElementMeta = w.meta.copy(
+                user      = meta.user,
+                uid       = meta.uid,
+                changeset = meta.changeset,
+                timestamp = meta.timestamp
+              )
 
               val replaced: Map[Long, Node] = changes.foldLeft(p) {
                 /* The Node was deleted from this Way */
@@ -76,7 +94,7 @@ private[vectorpipe] object PlanetHistory {
                 case (acc, node) => acc.updated(node.meta.id, node)
               }
 
-              (i, replaced)
+              (credited, replaced)
             }
 
         w match {
@@ -94,19 +112,16 @@ private[vectorpipe] object PlanetHistory {
   private[this] def feature[G <: Geometry](
     f: Vector[Point] => G,
     w: Way,
-    slices: List[(Instant, Map[Long, Node])]
+    slices: List[(ElementMeta, Map[Long, Node])]
   ): List[Feature[G, ElementMeta]] = {
-    slices.foldLeft(Nil: List[Feature[G, ElementMeta]]) { case (acc, (i, ns)) =>
+    slices.foldLeft(Nil: List[Feature[G, ElementMeta]]) { case (acc, (m, ns)) =>
       /* If a Node were deleted that the Way still expected, then no Line
        * should be formed.
        */
       val points: Option[Vector[Point]] =
         w.nodes.map(id => ns.get(id).map(n => Point(n.lon, n.lat))).sequence
 
-      points.map { ps =>
-        // TODO Overwrite more values?
-        Feature(f(ps), ElementMeta.timestamp.set(i)(w.meta)) :: acc
-      }.getOrElse(acc)
+      points.map { ps => Feature(f(ps), m) :: acc }.getOrElse(acc)
     }
   }
 

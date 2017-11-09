@@ -106,16 +106,16 @@ object Collate {
   /** Give each Geometry type its own VectorTile layer, and store the [[ElementData]] as-is. */
   def byOSM(tileExtent: Extent, geoms: Iterable[OSMFeature]): VectorTile = {
 
-    def metadata(d: ElementData): Map[String, Value] = {
+    def metadata(m: ElementMeta): Map[String, Value] = {
       Map(
-        "id"            -> VInt64(d.meta.id),
-        "user"          -> VString(d.meta.user),
-        "userId"        -> VInt64(d.meta.userId),
-        "changeSet"     -> VInt64(d.meta.changeSet.toLong),
-        "version"       -> VInt64(d.meta.version.toLong),
-        "timestamp"     -> VString(d.meta.timestamp.toString),
-        "visible"       -> VBool(d.meta.visible)
-      ) ++ d.tagMap.map { case (k, v) => (k, VString(v)) }
+        "id"            -> VInt64(m.id),
+        "user"          -> VString(m.user),
+        "userId"        -> VInt64(m.uid),
+        "changeSet"     -> VInt64(m.changeset),
+        "version"       -> VInt64(m.version),
+        "timestamp"     -> VString(m.timestamp.toString),
+        "visible"       -> VBool(m.visible)
+      ) ++ m.tags.map { case (k, v) => (k, VString(v)) }
     }
 
     generically(tileExtent, geoms, byGeomType, metadata)

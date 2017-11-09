@@ -59,41 +59,35 @@ private[vectorpipe] object PlanetHistory {
       case w :: rest => {
 
         /* Y2K bug here, except it won't manifest until the end of the year 1 billion AD */
-        val nextTime: Instant = rest.headOption.map(_.data.meta.timestamp).getOrElse(Instant.MAX)
+        val nextTime: Instant = rest.headOption.map(_.meta.timestamp).getOrElse(Instant.MAX)
 
         /* Each full set of Nodes that would have existed for each time slice. */
         val allSlices: List[(Instant, Map[Long, Node])] =
-          changedNodes(w.data.meta.timestamp, nextTime, nodes)
-            .groupBy(_.data.meta.timestamp)
+          changedNodes(w.meta.timestamp, nextTime, nodes)
+            .groupBy(_.meta.timestamp)
             .toList
             .sortBy { case (i, _) => i }
-            .scanLeft((w.data.meta.timestamp, recentNodes(w, nodes))) { case ((_, p), (i, changes)) =>
+            .scanLeft((w.meta.timestamp, recentNodes(w, nodes))) { case ((_, p), (i, changes)) =>
 
               val replaced: Map[Long, Node] = changes.foldLeft(p) {
                 /* The Node was deleted from this Way */
-                case (acc, node) if !node.data.meta.visible => acc - node.data.meta.id
+                case (acc, node) if !node.meta.visible => acc - node.meta.id
                 /* The Node was moved or had its metadata updated */
-                case (acc, node) => acc.updated(node.data.meta.id, node)
+                case (acc, node) => acc.updated(node.meta.id, node)
               }
 
               (i, replaced)
             }
 
-        if (w.isClosed) {
-          val everyPoly: List[OSMPolygon] = feature({ ps => Polygon(Line(ps)) }, w, allSlices)
-
-          work(rest, ls, ps ++ everyPoly)
-        } else {
-          val everyLine: List[OSMLine] = feature({ ps => Line(ps) }, w, allSlices)
-
-          work(rest, ls ++ everyLine, ps)
+        w match {
+          case _ if w.isLine => work(rest, ls ++ feature({ ps => Line(ps) }, w, allSlices), ps)
+          case _ => work(rest, ls, ps ++ feature({ ps => Polygon(Line(ps)) }, w, allSlices))
         }
-
       }
     }
 
     /* Ensure the Ways are sorted before proceeding */
-    work(ways.sortBy(_.data.meta.timestamp), Nil, Nil)
+    work(ways.sortBy(_.meta.timestamp), Nil, Nil)
   }
 
   /** Construct GeoTrellis Features from the given time slices. */
@@ -101,8 +95,8 @@ private[vectorpipe] object PlanetHistory {
     f: Vector[Point] => G,
     w: Way,
     slices: List[(Instant, Map[Long, Node])]
-  ): List[Feature[G, ElementData]] = {
-    slices.foldLeft(Nil: List[Feature[G, ElementData]]) { case (acc, (i, ns)) =>
+  ): List[Feature[G, ElementMeta]] = {
+    slices.foldLeft(Nil: List[Feature[G, ElementMeta]]) { case (acc, (i, ns)) =>
       /* If a Node were deleted that the Way still expected, then no Line
        * should be formed.
        */
@@ -111,7 +105,7 @@ private[vectorpipe] object PlanetHistory {
 
       points.map { ps =>
         // TODO Overwrite more values?
-        Feature(f(ps), (ElementData.meta ^|-> ElementMeta.timestamp).set(i)(w.data)) :: acc
+        Feature(f(ps), ElementMeta.timestamp.set(i)(w.meta)) :: acc
       }.getOrElse(acc)
     }
   }
@@ -121,13 +115,13 @@ private[vectorpipe] object PlanetHistory {
     */
   private[this] def recentNodes(way: Way, nodes: List[Node]): Map[Long, Node] = {
     nodes
-      .filter(!_.data.meta.timestamp.isAfter(way.data.meta.timestamp))
-      .groupBy(_.data.meta.id)
-      .map { case (k, ns) => (k, ns.maxBy(_.data.meta.timestamp)) }
+      .filter(!_.meta.timestamp.isAfter(way.meta.timestamp))
+      .groupBy(_.meta.id)
+      .map { case (k, ns) => (k, ns.maxBy(_.meta.timestamp)) }
   }
 
   /** Find all the Nodes that were created/changed between two timestamps. */
   private[this] def changedNodes(t0: Instant, t1: Instant, nodes: List[Node]): List[Node] =
-    nodes.filter(n => n.data.meta.timestamp.isAfter(t0) && n.data.meta.timestamp.isBefore(t1))
+    nodes.filter(n => n.meta.timestamp.isAfter(t0) && n.meta.timestamp.isBefore(t1))
 
 }

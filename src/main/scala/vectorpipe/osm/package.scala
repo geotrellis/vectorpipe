@@ -214,7 +214,7 @@ package object osm {
    *     across its child members. Otherwise, Relations are "dropped"
    *     from the output.
    */
-  def toFeatures(
+  def toSnapshot(
     logError: (Feature[Line, ElementMeta] => String) => Feature[Line, ElementMeta] => Unit,
     nodes: RDD[Node],
     ways: RDD[Way],
@@ -255,7 +255,20 @@ package object osm {
     nodes.sparkContext.union(pnt, lns, pls, mps)
   }
 
-  /** All Lines that could be reconstructed from OSM Elements. */
-  def toLines(nodes: RDD[(Long, Node)], ways: RDD[(Long, Way)]): RDD[Feature[Line, ElementMeta]] =
-    PlanetHistory.lines(nodes, ways)
+  @deprecated("Use toSnapshot instead.", "2017-11-14")
+  def toFeatures(
+    logError: (Feature[Line, ElementMeta] => String) => Feature[Line, ElementMeta] => Unit,
+    nodes: RDD[Node],
+    ways: RDD[Way],
+    relations: RDD[Relation]
+  ): RDD[OSMFeature] = toSnapshot(logError, nodes, ways, relations)
+
+  /** All Lines and Polygons that could be reconstructed from a set of all
+    * historical OSM Elements.
+    */
+  def toHistory(
+    nodes: RDD[(Long, Node)],
+    ways: RDD[(Long, Way)]
+  ): (RDD[Feature[Line, ElementMeta]], RDD[Feature[Polygon, ElementMeta]]) =
+    PlanetHistory.features(nodes, ways)
 }

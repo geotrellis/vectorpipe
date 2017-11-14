@@ -13,9 +13,16 @@ import vectorpipe.osm._
 
 private[vectorpipe] object PlanetHistory {
 
-  // TODO Temporary?
-  def lines(nodes: RDD[(Long, Node)], ways: RDD[(Long, Way)]): RDD[OSMLine] =
-    joinedWays(nodes, ways).flatMap { case (id, (ws, ns)) => linesAndPolys(ws.toList, ns.toList)._1 }
+  /** For all given Ways, associate with their Nodes to produce GeoTrellis Lines and Polygons. */
+  def features(nodes: RDD[(Long, Node)], ways: RDD[(Long, Way)]): (RDD[OSMLine], RDD[OSMPolygon]) = {
+
+    val lap: RDD[(List[OSMLine], List[OSMPolygon])] = joinedWays(nodes, ways).map { case (_, (ws, ns)) =>
+      linesAndPolys(ws.toList, ns.toList)
+    }
+
+    /* Unfortunate but necessary, since there is no `RDD.unzip` and no `RDD.flatten`. */
+    (lap.keys.flatMap(identity), lap.values.flatMap(identity))
+  }
 
   /** Given one RDD of nodes and one of ways, produce an RDD of all nodes/ways keyed by the WayID
     * to which they are all related.

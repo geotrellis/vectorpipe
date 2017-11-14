@@ -53,10 +53,9 @@ private[vectorpipe] object PlanetHistory {
     val nodesToWayIds: RDD[(Node, Iterable[Long])] =
       nodes
         .cogroup(nodeIdsToWayIds)
-        .flatMap {
-          /* The `.distinct` above ensures that `wayIds` here will contain unique values. */
-          case (_, (ns, wayIds)) => ns.map(n => (n, wayIds))
-        }
+        /* The `.distinct` above ensures that `wayIds` here will contain unique values. */
+        .flatMap { case (_, (ns, wayIds)) => ns.map(n => (n, wayIds)) }
+        .cache
 
     /* Not /that/ much duplication, as most Nodes are only needed by one Way (if any).
      * Any standalone Node whose `wayIds` is empty will be crushed away by the flatMap,

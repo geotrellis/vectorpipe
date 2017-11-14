@@ -32,14 +32,23 @@ private[vectorpipe] object PlanetHistory {
     ways: RDD[(Long, Way)]
   ): RDD[(Long, (Iterable[Way], Iterable[Node]))] = {
 
+    /* Forgive the `.distinct` here. If we don't do that, there will be Way ID duplication
+     * in the first cogroup below.
+     */
+    val nodeIdsToWayIds: RDD[(Long, Long)] =
+      ways.flatMap { case (wayId, way) => way.nodes.map { nodeId => (nodeId, wayId) }}
+        .distinct
+
+    /* Every version of every Node, paired with the IDs of Ways that need them AT ANY TIME. */
     val nodesToWayIds: RDD[(Node, Iterable[Long])] =
       nodes
-        .cogroup(ways.flatMap { case (wayId, way) => way.nodes.map { nodeId => (nodeId, wayId) } })
+        .cogroup(nodeIdsToWayIds)
         .flatMap {
-          /* ASSUMPTION: `nodes` contains distinct elements */
-          case (_, (nodes, wayIds)) => nodes.headOption.map(n => (n, wayIds))
+          /* The `.distinct` above ensures that `wayIds` here will contain unique values. */
+          case (_, (ns, wayIds)) => ns.map(n => (n, wayIds))
         }
 
+    /* Not /that/ much duplication, as most Nodes are only needed by one Way (if any). */
     val wayIdToNodes: RDD[(Long, Node)] =
       nodesToWayIds.flatMap { case (node, wayIds) => wayIds.map(wayId => (wayId, node)) }
 

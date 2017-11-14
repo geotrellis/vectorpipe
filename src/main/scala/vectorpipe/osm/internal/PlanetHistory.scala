@@ -13,30 +13,63 @@ import vectorpipe.osm._
 
 private[vectorpipe] object PlanetHistory {
 
-  // TODO Temporary?
-  def lines(nodes: RDD[(Long, Node)], ways: RDD[(Long, Way)]): RDD[OSMLine] =
-    joinedWays(nodes, ways).flatMap { case (id, (ws, ns)) => linesAndPolys(ws.toList, ns.toList)._1 }
+  /** For all given Ways, associate with their Nodes to produce GeoTrellis Lines and Polygons. */
+  def features(
+    nodes: RDD[(Long, Node)],
+    ways: RDD[(Long, Way)]
+  ): (RDD[OSMPoint], RDD[OSMLine], RDD[OSMPolygon]) = {
 
-  /** Given one RDD of nodes and one of ways, produce an RDD of all nodes/ways keyed by the WayID
-    * to which they are all related.
+    val (loneNodes, edges) = joinedWays(nodes, ways)
+
+    val lap: RDD[(List[OSMLine], List[OSMPolygon])] = edges.map { case (_, (ws, ns)) =>
+      linesAndPolys(ws.toList, ns.toList)
+    }
+
+    val points: RDD[OSMPoint]   = loneNodes.map { case (_, n) => Feature(Point(n.lat, n.lon), n.meta) }
+    /* Unfortunate but necessary, since there is no `RDD.unzip` and no `RDD.flatten`. */
+    val lines:  RDD[OSMLine]    = lap.keys.flatMap(identity)
+    val polys:  RDD[OSMPolygon] = lap.values.flatMap(identity)
+
+    (points, lines, polys)
+  }
+
+  /** Given one RDD of nodes and one of ways, produce:
+    *   - an RDD of all nodes/ways keyed by the WayID to which they are all related
+    *   - an RDD of all nodes keys of their NodeID which were never associated with any Way
     */
   private[this] def joinedWays(
     nodes: RDD[(Long, Node)],
     ways: RDD[(Long, Way)]
-  ): RDD[(Long, (Iterable[Way], Iterable[Node]))] = {
+  ): (RDD[(Long, Node)], RDD[(Long, (Iterable[Way], Iterable[Node]))]) = {
 
+    /* Forgive the `.distinct` here. If we don't do that, there will be Way ID duplication
+     * in the first cogroup below.
+     */
+    val nodeIdsToWayIds: RDD[(Long, Long)] =
+      ways.flatMap { case (wayId, way) => way.nodes.map { nodeId => (nodeId, wayId) }}
+        .distinct
+
+    /* Every version of every Node, paired with the IDs of Ways that need them AT ANY TIME. */
     val nodesToWayIds: RDD[(Node, Iterable[Long])] =
       nodes
-        .cogroup(ways.flatMap { case (wayId, way) => way.nodes.map { nodeId => (nodeId, wayId) } })
-        .flatMap {
-          /* ASSUMPTION: `nodes` contains distinct elements */
-          case (_, (nodes, wayIds)) => nodes.headOption.map(n => (n, wayIds))
-        }
+        .cogroup(nodeIdsToWayIds)
+        /* The `.distinct` above ensures that `wayIds` here will contain unique values. */
+        .flatMap { case (_, (ns, wayIds)) => ns.map(n => (n, wayIds)) }
+        .cache
 
+    /* Not /that/ much duplication, as most Nodes are only needed by one Way (if any).
+     * Any standalone Node whose `wayIds` is empty will be crushed away by the flatMap,
+     * leaving this RDD as only those Nodes who were ever referenced by something.
+     */
     val wayIdToNodes: RDD[(Long, Node)] =
       nodesToWayIds.flatMap { case (node, wayIds) => wayIds.map(wayId => (wayId, node)) }
 
-    ways.cogroup(wayIdToNodes)
+    val edges: RDD[(Long, (Iterable[Way], Iterable[Node]))] = ways.cogroup(wayIdToNodes)
+
+    val points: RDD[(Long, Node)] =
+      nodesToWayIds.filter { case (_, wayIds) => wayIds.isEmpty }.map { case (n, _) => (n.meta.id, n) }
+
+    (points, edges)
   }
 
   /** Given likely unordered collections of Ways and their associated Nodes,

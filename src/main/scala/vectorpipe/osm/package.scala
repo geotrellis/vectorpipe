@@ -269,6 +269,6 @@ package object osm {
   def toHistory(
     nodes: RDD[(Long, Node)],
     ways: RDD[(Long, Way)]
-  ): (RDD[Feature[Line, ElementMeta]], RDD[Feature[Polygon, ElementMeta]]) =
+  ): (RDD[Feature[Point, ElementMeta]], RDD[Feature[Line, ElementMeta]], RDD[Feature[Polygon, ElementMeta]]) =
     PlanetHistory.features(nodes, ways)
 }

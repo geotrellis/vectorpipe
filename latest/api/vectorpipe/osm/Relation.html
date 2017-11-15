@@ -28,10 +28,12 @@
         </head>
         <body class="type">
       <div id="definition">
-        <img alt="Class" src="../../lib/class_big.png" />
+        <a href="Relation$.html" title="See companion object"><img alt="Class/Object" src="../../lib/class_to_object_big.png" /></a>
         <p id="owner"><a href="../package.html" class="extype" name="vectorpipe">vectorpipe</a>.<a href="package.html" class="extype" name="vectorpipe.osm">osm</a></p>
-        <h1>Relation</h1><h3><span class="morelinks"><div>Related Doc:
-            <a href="package.html" class="extype" name="vectorpipe.osm">package osm</a>
+        <h1><a href="Relation$.html" title="See companion object">Relation</a></h1><h3><span class="morelinks"><div>
+            Related Docs:
+            <a href="Relation$.html" title="See companion object">object Relation</a>
+            | <a href="package.html" class="extype" name="vectorpipe.osm">package osm</a>
           </div></span></h3><span class="permalink">
       <a href="../../index.html#vectorpipe.osm.Relation" title="Permalink" target="_top">
         <img src="../../lib/permalink.png" alt="Permalink" />
@@ -45,7 +47,7 @@
         <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <span class="name">Relation</span><span class="params">(<span name="members">members: <span class="extype" name="scala.List">List</span>[<a href="Member.html" class="extype" name="vectorpipe.osm.Member">Member</a>]</span>, <span name="data">data: <a href="ElementData.html" class="extype" name="vectorpipe.osm.ElementData">ElementData</a></span>)</span><span class="result"> extends <a href="Element.html" class="extype" name="vectorpipe.osm.Element">Element</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+        <span class="name">Relation</span><span class="params">(<span name="members">members: <span class="extype" name="scala.List">List</span>[<a href="Member.html" class="extype" name="vectorpipe.osm.Member">Member</a>]</span>, <span name="meta">meta: <a href="ElementMeta.html" class="extype" name="vectorpipe.osm.ElementMeta">ElementMeta</a></span>)</span><span class="result"> extends <a href="Element.html" class="extype" name="vectorpipe.osm.Element">Element</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       </h4>
       
@@ -89,7 +91,7 @@
         <div id="constructors" class="members">
               <h3>Instance Constructors</h3>
               <ol><li name="vectorpipe.osm.Relation#&lt;init&gt;" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="&lt;init&gt;(members:List[vectorpipe.osm.Member],data:vectorpipe.osm.ElementData):vectorpipe.osm.Relation"></a>
+      <a id="&lt;init&gt;(members:List[vectorpipe.osm.Member],meta:vectorpipe.osm.ElementMeta):vectorpipe.osm.Relation"></a>
       <a id="&lt;init&gt;:Relation"></a>
       <h4 class="signature">
       <span class="modifier_kind">
@@ -97,10 +99,10 @@
         <span class="kind">new</span>
       </span>
       <span class="symbol">
-        <span class="name">Relation</span><span class="params">(<span name="members">members: <span class="extype" name="scala.List">List</span>[<a href="Member.html" class="extype" name="vectorpipe.osm.Member">Member</a>]</span>, <span name="data">data: <a href="ElementData.html" class="extype" name="vectorpipe.osm.ElementData">ElementData</a></span>)</span>
+        <span class="name">Relation</span><span class="params">(<span name="members">members: <span class="extype" name="scala.List">List</span>[<a href="Member.html" class="extype" name="vectorpipe.osm.Member">Member</a>]</span>, <span name="meta">meta: <a href="ElementMeta.html" class="extype" name="vectorpipe.osm.ElementMeta">ElementMeta</a></span>)</span>
       </span>
       </h4><span class="permalink">
-      <a href="../../index.html#vectorpipe.osm.Relation@&lt;init&gt;(members:List[vectorpipe.osm.Member],data:vectorpipe.osm.ElementData):vectorpipe.osm.Relation" title="Permalink" target="_top">
+      <a href="../../index.html#vectorpipe.osm.Relation@&lt;init&gt;(members:List[vectorpipe.osm.Member],meta:vectorpipe.osm.ElementMeta):vectorpipe.osm.Relation" title="Permalink" target="_top">
         <img src="../../lib/permalink.png" alt="Permalink" />
       </a>
     </span>
@@ -205,23 +207,6 @@
     </span>)</span>
               
         </dd></dl></div>
-    </li><li name="vectorpipe.osm.Relation#data" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="data:vectorpipe.osm.ElementData"></a>
-      <a id="data:ElementData"></a>
-      <h4 class="signature">
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">val</span>
-      </span>
-      <span class="symbol">
-        <span class="name">data</span><span class="result">: <a href="ElementData.html" class="extype" name="vectorpipe.osm.ElementData">ElementData</a></span>
-      </span>
-      </h4><span class="permalink">
-      <a href="../../index.html#vectorpipe.osm.Relation@data:vectorpipe.osm.ElementData" title="Permalink" target="_top">
-        <img src="../../lib/permalink.png" alt="Permalink" />
-      </a>
-    </span>
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="vectorpipe.osm.Relation">Relation</a> → <a href="Element.html" class="extype" name="vectorpipe.osm.Element">Element</a></dd></dl></div>
     </li><li name="scala.AnyRef#eq" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="eq(x$1:AnyRef):Boolean"></a>
       <a id="eq(AnyRef):Boolean"></a>
@@ -313,6 +298,23 @@
       </a>
     </span>
       
+    </li><li name="vectorpipe.osm.Relation#meta" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="meta:vectorpipe.osm.ElementMeta"></a>
+      <a id="meta:ElementMeta"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">val</span>
+      </span>
+      <span class="symbol">
+        <span class="name">meta</span><span class="result">: <a href="ElementMeta.html" class="extype" name="vectorpipe.osm.ElementMeta">ElementMeta</a></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../index.html#vectorpipe.osm.Relation@meta:vectorpipe.osm.ElementMeta" title="Permalink" target="_top">
+        <img src="../../lib/permalink.png" alt="Permalink" />
+      </a>
+    </span>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="vectorpipe.osm.Relation">Relation</a> → <a href="Element.html" class="extype" name="vectorpipe.osm.Element">Element</a></dd></dl></div>
     </li><li name="scala.AnyRef#ne" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="ne(x$1:AnyRef):Boolean"></a>
       <a id="ne(AnyRef):Boolean"></a>

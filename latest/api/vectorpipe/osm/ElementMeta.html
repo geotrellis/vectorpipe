@@ -28,10 +28,12 @@
         </head>
         <body class="type">
       <div id="definition">
-        <img alt="Class" src="../../lib/class_big.png" />
+        <a href="ElementMeta$.html" title="See companion object"><img alt="Class/Object" src="../../lib/class_to_object_big.png" /></a>
         <p id="owner"><a href="../package.html" class="extype" name="vectorpipe">vectorpipe</a>.<a href="package.html" class="extype" name="vectorpipe.osm">osm</a></p>
-        <h1>ElementMeta</h1><h3><span class="morelinks"><div>Related Doc:
-            <a href="package.html" class="extype" name="vectorpipe.osm">package osm</a>
+        <h1><a href="ElementMeta$.html" title="See companion object">ElementMeta</a></h1><h3><span class="morelinks"><div>
+            Related Docs:
+            <a href="ElementMeta$.html" title="See companion object">object ElementMeta</a>
+            | <a href="package.html" class="extype" name="vectorpipe.osm">package osm</a>
           </div></span></h3><span class="permalink">
       <a href="../../index.html#vectorpipe.osm.ElementMeta" title="Permalink" target="_top">
         <img src="../../lib/permalink.png" alt="Permalink" />
@@ -45,7 +47,7 @@
         <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <span class="name">ElementMeta</span><span class="params">(<span name="id">id: <span class="extype" name="scala.Long">Long</span></span>, <span name="user">user: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="userId">userId: <span class="extype" name="scala.Long">Long</span></span>, <span name="changeSet">changeSet: <span class="extype" name="scala.Long">Long</span></span>, <span name="version">version: <span class="extype" name="scala.Long">Long</span></span>, <span name="timestamp">timestamp: <span class="extype" name="java.time.Instant">Instant</span></span>, <span name="visible">visible: <span class="extype" name="scala.Boolean">Boolean</span></span>)</span><span class="result"> extends <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+        <span class="name">ElementMeta</span><span class="params">(<span name="id">id: <span class="extype" name="scala.Long">Long</span></span>, <span name="user">user: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="uid">uid: <span class="extype" name="scala.Long">Long</span></span>, <span name="changeset">changeset: <span class="extype" name="scala.Long">Long</span></span>, <span name="version">version: <span class="extype" name="scala.Long">Long</span></span>, <span name="timestamp">timestamp: <span class="extype" name="java.time.Instant">Instant</span></span>, <span name="visible">visible: <span class="extype" name="scala.Boolean">Boolean</span></span>, <span name="tags">tags: <span class="extype" name="scala.Predef.Map">Map</span>[<span class="extype" name="scala.Predef.String">String</span>, <span class="extype" name="scala.Predef.String">String</span>]</span>)</span><span class="result"> extends <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       </h4>
       
@@ -89,7 +91,7 @@
         <div id="constructors" class="members">
               <h3>Instance Constructors</h3>
               <ol><li name="vectorpipe.osm.ElementMeta#&lt;init&gt;" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="&lt;init&gt;(id:Long,user:String,userId:Long,changeSet:Long,version:Long,timestamp:java.time.Instant,visible:Boolean):vectorpipe.osm.ElementMeta"></a>
+      <a id="&lt;init&gt;(id:Long,user:String,uid:Long,changeset:Long,version:Long,timestamp:java.time.Instant,visible:Boolean,tags:Map[String,String]):vectorpipe.osm.ElementMeta"></a>
       <a id="&lt;init&gt;:ElementMeta"></a>
       <h4 class="signature">
       <span class="modifier_kind">
@@ -97,10 +99,10 @@
         <span class="kind">new</span>
       </span>
       <span class="symbol">
-        <span class="name">ElementMeta</span><span class="params">(<span name="id">id: <span class="extype" name="scala.Long">Long</span></span>, <span name="user">user: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="userId">userId: <span class="extype" name="scala.Long">Long</span></span>, <span name="changeSet">changeSet: <span class="extype" name="scala.Long">Long</span></span>, <span name="version">version: <span class="extype" name="scala.Long">Long</span></span>, <span name="timestamp">timestamp: <span class="extype" name="java.time.Instant">Instant</span></span>, <span name="visible">visible: <span class="extype" name="scala.Boolean">Boolean</span></span>)</span>
+        <span class="name">ElementMeta</span><span class="params">(<span name="id">id: <span class="extype" name="scala.Long">Long</span></span>, <span name="user">user: <span class="extype" name="scala.Predef.String">String</span></span>, <span name="uid">uid: <span class="extype" name="scala.Long">Long</span></span>, <span name="changeset">changeset: <span class="extype" name="scala.Long">Long</span></span>, <span name="version">version: <span class="extype" name="scala.Long">Long</span></span>, <span name="timestamp">timestamp: <span class="extype" name="java.time.Instant">Instant</span></span>, <span name="visible">visible: <span class="extype" name="scala.Boolean">Boolean</span></span>, <span name="tags">tags: <span class="extype" name="scala.Predef.Map">Map</span>[<span class="extype" name="scala.Predef.String">String</span>, <span class="extype" name="scala.Predef.String">String</span>]</span>)</span>
       </span>
       </h4><span class="permalink">
-      <a href="../../index.html#vectorpipe.osm.ElementMeta@&lt;init&gt;(id:Long,user:String,userId:Long,changeSet:Long,version:Long,timestamp:java.time.Instant,visible:Boolean):vectorpipe.osm.ElementMeta" title="Permalink" target="_top">
+      <a href="../../index.html#vectorpipe.osm.ElementMeta@&lt;init&gt;(id:Long,user:String,uid:Long,changeset:Long,version:Long,timestamp:java.time.Instant,visible:Boolean,tags:Map[String,String]):vectorpipe.osm.ElementMeta" title="Permalink" target="_top">
         <img src="../../lib/permalink.png" alt="Permalink" />
       </a>
     </span>
@@ -182,19 +184,19 @@
       </a>
     </span>
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>Any</dd></dl></div>
-    </li><li name="vectorpipe.osm.ElementMeta#changeSet" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="changeSet:Long"></a>
-      <a id="changeSet:Long"></a>
+    </li><li name="vectorpipe.osm.ElementMeta#changeset" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="changeset:Long"></a>
+      <a id="changeset:Long"></a>
       <h4 class="signature">
       <span class="modifier_kind">
         <span class="modifier"></span>
         <span class="kind">val</span>
       </span>
       <span class="symbol">
-        <span class="name">changeSet</span><span class="result">: <span class="extype" name="scala.Long">Long</span></span>
+        <span class="name">changeset</span><span class="result">: <span class="extype" name="scala.Long">Long</span></span>
       </span>
       </h4><span class="permalink">
-      <a href="../../index.html#vectorpipe.osm.ElementMeta@changeSet:Long" title="Permalink" target="_top">
+      <a href="../../index.html#vectorpipe.osm.ElementMeta@changeset:Long" title="Permalink" target="_top">
         <img src="../../lib/permalink.png" alt="Permalink" />
       </a>
     </span>
@@ -381,6 +383,23 @@
       </a>
     </span>
       <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd>AnyRef</dd></dl></div>
+    </li><li name="vectorpipe.osm.ElementMeta#tags" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="tags:Map[String,String]"></a>
+      <a id="tags:Map[String,String]"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">val</span>
+      </span>
+      <span class="symbol">
+        <span class="name">tags</span><span class="result">: <span class="extype" name="scala.Predef.Map">Map</span>[<span class="extype" name="scala.Predef.String">String</span>, <span class="extype" name="scala.Predef.String">String</span>]</span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../index.html#vectorpipe.osm.ElementMeta@tags:Map[String,String]" title="Permalink" target="_top">
+        <img src="../../lib/permalink.png" alt="Permalink" />
+      </a>
+    </span>
+      
     </li><li name="vectorpipe.osm.ElementMeta#timestamp" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="timestamp:java.time.Instant"></a>
       <a id="timestamp:Instant"></a>
@@ -398,6 +417,23 @@
       </a>
     </span>
       
+    </li><li name="vectorpipe.osm.ElementMeta#uid" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="uid:Long"></a>
+      <a id="uid:Long"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">val</span>
+      </span>
+      <span class="symbol">
+        <span class="name">uid</span><span class="result">: <span class="extype" name="scala.Long">Long</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../index.html#vectorpipe.osm.ElementMeta@uid:Long" title="Permalink" target="_top">
+        <img src="../../lib/permalink.png" alt="Permalink" />
+      </a>
+    </span>
+      
     </li><li name="vectorpipe.osm.ElementMeta#user" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="user:String"></a>
       <a id="user:String"></a>
@@ -411,23 +447,6 @@
       </span>
       </h4><span class="permalink">
       <a href="../../index.html#vectorpipe.osm.ElementMeta@user:String" title="Permalink" target="_top">
-        <img src="../../lib/permalink.png" alt="Permalink" />
-      </a>
-    </span>
-      
-    </li><li name="vectorpipe.osm.ElementMeta#userId" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="userId:Long"></a>
-      <a id="userId:Long"></a>
-      <h4 class="signature">
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">val</span>
-      </span>
-      <span class="symbol">
-        <span class="name">userId</span><span class="result">: <span class="extype" name="scala.Long">Long</span></span>
-      </span>
-      </h4><span class="permalink">
-      <a href="../../index.html#vectorpipe.osm.ElementMeta@userId:Long" title="Permalink" target="_top">
         <img src="../../lib/permalink.png" alt="Permalink" />
       </a>
     </span>

@@ -28,10 +28,12 @@
         </head>
         <body class="type">
       <div id="definition">
-        <img alt="Class" src="../../lib/class_big.png" />
+        <a href="Way$.html" title="See companion object"><img alt="Class/Object" src="../../lib/class_to_object_big.png" /></a>
         <p id="owner"><a href="../package.html" class="extype" name="vectorpipe">vectorpipe</a>.<a href="package.html" class="extype" name="vectorpipe.osm">osm</a></p>
-        <h1>Way</h1><h3><span class="morelinks"><div>Related Doc:
-            <a href="package.html" class="extype" name="vectorpipe.osm">package osm</a>
+        <h1><a href="Way$.html" title="See companion object">Way</a></h1><h3><span class="morelinks"><div>
+            Related Docs:
+            <a href="Way$.html" title="See companion object">object Way</a>
+            | <a href="package.html" class="extype" name="vectorpipe.osm">package osm</a>
           </div></span></h3><span class="permalink">
       <a href="../../index.html#vectorpipe.osm.Way" title="Permalink" target="_top">
         <img src="../../lib/permalink.png" alt="Permalink" />
@@ -45,12 +47,12 @@
         <span class="kind">case class</span>
       </span>
       <span class="symbol">
-        <span class="name">Way</span><span class="params">(<span name="nodes">nodes: <span class="extype" name="scala.Vector">Vector</span>[<span class="extype" name="scala.Long">Long</span>]</span>, <span name="data">data: <a href="ElementData.html" class="extype" name="vectorpipe.osm.ElementData">ElementData</a></span>)</span><span class="result"> extends <a href="Element.html" class="extype" name="vectorpipe.osm.Element">Element</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+        <span class="name">Way</span><span class="params">(<span name="nodes">nodes: <span class="extype" name="scala.Vector">Vector</span>[<span class="extype" name="scala.Long">Long</span>]</span>, <span name="meta">meta: <a href="ElementMeta.html" class="extype" name="vectorpipe.osm.ElementMeta">ElementMeta</a></span>)</span><span class="result"> extends <a href="Element.html" class="extype" name="vectorpipe.osm.Element">Element</a> with <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       </h4>
       
           <div id="comment" class="fullcommenttop"><div class="comment cmt"><p>A string of <a href="Node.html" class="extype" name="vectorpipe.osm.Node">Node</a>s which could represent a road, or if connected back around
- to itself, a building, water body, landmass, etc.</p><p> Assumption: A Way has at least two nodes.
+ to itself, a building, water body, landmass, etc.</p><p> Assumption: A Way has at least two distinct nodes.
 </p></div><div class="toggleContainer block">
           <span class="toggle">Linear Supertypes</span>
           <div class="superTypes hiddenContent"><span class="extype" name="scala.Serializable">Serializable</span>, <span class="extype" name="java.io.Serializable">Serializable</span>, <span class="extype" name="scala.Product">Product</span>, <span class="extype" name="scala.Equals">Equals</span>, <a href="Element.html" class="extype" name="vectorpipe.osm.Element">Element</a>, <span class="extype" name="scala.AnyRef">AnyRef</span>, <span class="extype" name="scala.Any">Any</span></div>
@@ -91,7 +93,7 @@
         <div id="constructors" class="members">
               <h3>Instance Constructors</h3>
               <ol><li name="vectorpipe.osm.Way#&lt;init&gt;" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="&lt;init&gt;(nodes:Vector[Long],data:vectorpipe.osm.ElementData):vectorpipe.osm.Way"></a>
+      <a id="&lt;init&gt;(nodes:Vector[Long],meta:vectorpipe.osm.ElementMeta):vectorpipe.osm.Way"></a>
       <a id="&lt;init&gt;:Way"></a>
       <h4 class="signature">
       <span class="modifier_kind">
@@ -99,10 +101,10 @@
         <span class="kind">new</span>
       </span>
       <span class="symbol">
-        <span class="name">Way</span><span class="params">(<span name="nodes">nodes: <span class="extype" name="scala.Vector">Vector</span>[<span class="extype" name="scala.Long">Long</span>]</span>, <span name="data">data: <a href="ElementData.html" class="extype" name="vectorpipe.osm.ElementData">ElementData</a></span>)</span>
+        <span class="name">Way</span><span class="params">(<span name="nodes">nodes: <span class="extype" name="scala.Vector">Vector</span>[<span class="extype" name="scala.Long">Long</span>]</span>, <span name="meta">meta: <a href="ElementMeta.html" class="extype" name="vectorpipe.osm.ElementMeta">ElementMeta</a></span>)</span>
       </span>
       </h4><span class="permalink">
-      <a href="../../index.html#vectorpipe.osm.Way@&lt;init&gt;(nodes:Vector[Long],data:vectorpipe.osm.ElementData):vectorpipe.osm.Way" title="Permalink" target="_top">
+      <a href="../../index.html#vectorpipe.osm.Way@&lt;init&gt;(nodes:Vector[Long],meta:vectorpipe.osm.ElementMeta):vectorpipe.osm.Way" title="Permalink" target="_top">
         <img src="../../lib/permalink.png" alt="Permalink" />
       </a>
     </span>
@@ -207,23 +209,6 @@
     </span>)</span>
               
         </dd></dl></div>
-    </li><li name="vectorpipe.osm.Way#data" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="data:vectorpipe.osm.ElementData"></a>
-      <a id="data:ElementData"></a>
-      <h4 class="signature">
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">val</span>
-      </span>
-      <span class="symbol">
-        <span class="name">data</span><span class="result">: <a href="ElementData.html" class="extype" name="vectorpipe.osm.ElementData">ElementData</a></span>
-      </span>
-      </h4><span class="permalink">
-      <a href="../../index.html#vectorpipe.osm.Way@data:vectorpipe.osm.ElementData" title="Permalink" target="_top">
-        <img src="../../lib/permalink.png" alt="Permalink" />
-      </a>
-    </span>
-      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="vectorpipe.osm.Way">Way</a> → <a href="Element.html" class="extype" name="vectorpipe.osm.Element">Element</a></dd></dl></div>
     </li><li name="scala.AnyRef#eq" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="eq(x$1:AnyRef):Boolean"></a>
       <a id="eq(AnyRef):Boolean"></a>
@@ -315,23 +300,6 @@
       </a>
     </span>
       
-    </li><li name="vectorpipe.osm.Way#isHighwayOrBarrier" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="isHighwayOrBarrier:Boolean"></a>
-      <a id="isHighwayOrBarrier:Boolean"></a>
-      <h4 class="signature">
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">def</span>
-      </span>
-      <span class="symbol">
-        <span class="name">isHighwayOrBarrier</span><span class="result">: <span class="extype" name="scala.Boolean">Boolean</span></span>
-      </span>
-      </h4><span class="permalink">
-      <a href="../../index.html#vectorpipe.osm.Way@isHighwayOrBarrier:Boolean" title="Permalink" target="_top">
-        <img src="../../lib/permalink.png" alt="Permalink" />
-      </a>
-    </span>
-      
     </li><li name="scala.Any#isInstanceOf" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="isInstanceOf[T0]:Boolean"></a>
       <a id="isInstanceOf[T0]:Boolean"></a>
@@ -366,6 +334,23 @@
       </a>
     </span>
       <p class="shortcomment cmt">Is it a Polyline, but not an &quot;Area&quot; even if closed?</p>
+    </li><li name="vectorpipe.osm.Way#meta" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="meta:vectorpipe.osm.ElementMeta"></a>
+      <a id="meta:ElementMeta"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">val</span>
+      </span>
+      <span class="symbol">
+        <span class="name">meta</span><span class="result">: <a href="ElementMeta.html" class="extype" name="vectorpipe.osm.ElementMeta">ElementMeta</a></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../index.html#vectorpipe.osm.Way@meta:vectorpipe.osm.ElementMeta" title="Permalink" target="_top">
+        <img src="../../lib/permalink.png" alt="Permalink" />
+      </a>
+    </span>
+      <div class="fullcomment"><dl class="attributes block"> <dt>Definition Classes</dt><dd><a href="" class="extype" name="vectorpipe.osm.Way">Way</a> → <a href="Element.html" class="extype" name="vectorpipe.osm.Element">Element</a></dd></dl></div>
     </li><li name="scala.AnyRef#ne" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="ne(x$1:AnyRef):Boolean"></a>
       <a id="ne(AnyRef):Boolean"></a>

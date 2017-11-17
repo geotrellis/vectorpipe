@@ -5,10 +5,7 @@ import java.io.{ FileInputStream, InputStream }
 import scala.util.{ Failure, Success, Try }
 
 import cats.implicits._
-import geotrellis.proj4._
 import geotrellis.vector._
-import geotrellis.vector.io._
-import org.apache.log4j.Logger
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql._
@@ -269,6 +266,19 @@ package object osm {
   def toHistory(
     nodes: RDD[(Long, Node)],
     ways: RDD[(Long, Way)]
-  ): (RDD[Feature[Point, ElementMeta]], RDD[Feature[Line, ElementMeta]], RDD[Feature[Polygon, ElementMeta]]) =
-    PlanetHistory.features(nodes, ways)
+  ): (RDD[Feature[Point, ElementMeta]], RDD[Feature[Line, ElementMeta]], RDD[Feature[Polygon, ElementMeta]]) = {
+    val (points, lines, polygons) = PlanetHistory.features(nodes, ways)
+
+    /* Depending on the dataset used, `Way` data may be incomplete. That is,
+     * the local version of a Way may have fewer Node references that the original
+     * as found on OpenStreetMap. These usually occur along "dataset bounding
+     * boxes" found in OSM subregion extracts, where a Polygon is cut in half by
+     * the BBOX. The resulting Polygons, with only a subset of the original Nodes,
+     * are often self-intersecting. This causes Topology Exceptions during the
+     * clipping stage of the pipeline. Our only recourse is to remove them here.
+     *
+     * See: https://github.com/geotrellis/vectorpipe/pull/16#issuecomment-290144694
+     */
+    (points, lines, polygons.filter(_.geom.isValid))
+  }
 }

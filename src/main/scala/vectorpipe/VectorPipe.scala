@@ -1,7 +1,6 @@
 package vectorpipe
 
 import geotrellis.proj4._
-import geotrellis.raster.GridBounds
 import geotrellis.spark._
 import geotrellis.spark.clip.ClipToGrid.Predicates
 import geotrellis.spark.tiling._
@@ -161,6 +160,6 @@ object VectorPipe {
   def logToLog4j[A](f: A => String): A => Unit = { a => Logger.getRootLogger().error(f(a)) }
 
   /** Skip over some failure. */
-  def logNothing[A](f: A => String): A => Unit = { _ => Unit }
+  def logNothing[A](f: A => String): A => Unit = { _ => () }
 
 }

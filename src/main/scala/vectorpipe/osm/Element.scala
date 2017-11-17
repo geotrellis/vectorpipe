@@ -3,7 +3,6 @@ package vectorpipe.osm
 import java.time._
 
 import cats.implicits._
-import geotrellis.vector.{ Extent, Point }
 import io.dylemma.spac._
 import monocle.macros.Lenses
 

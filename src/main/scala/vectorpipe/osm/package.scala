@@ -5,10 +5,7 @@ import java.io.{ FileInputStream, InputStream }
 import scala.util.{ Failure, Success, Try }
 
 import cats.implicits._
-import geotrellis.proj4._
 import geotrellis.vector._
-import geotrellis.vector.io._
-import org.apache.log4j.Logger
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql._

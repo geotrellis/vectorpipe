@@ -16,7 +16,11 @@ val common = Seq(
 
   scalacOptions := Seq(
     "-deprecation",
-    "-Ypartial-unification"
+    "-Ypartial-unification",
+    "-Ywarn-value-discard",
+    "-Ywarn-unused-import",
+    "-Ywarn-dead-code",
+    "-Ywarn-numeric-widen"
   ),
 
   /* For Monocle's Lens auto-generation */

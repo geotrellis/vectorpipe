@@ -34,7 +34,7 @@ class FeatureConstruction extends FunSpec with Matchers {
   ).map { case (id, v, time) =>
       val (lat, lon) = locations(id.toLong)
 
-      Node(lat, lon, ElementMeta(id, "colin", 123, 1, v, Instant.ofEpochMilli(time), true, Map.empty))
+      Node(lat, lon, ElementMeta(id.toLong, "colin", 123, 1, v.toLong, Instant.ofEpochMilli(time.toLong), true, Map.empty))
   }
 
   describe("linesAndPolys") {

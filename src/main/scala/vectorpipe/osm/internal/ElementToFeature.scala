@@ -1,7 +1,5 @@
 package vectorpipe.osm.internal
 
-import scala.collection.parallel.ParSeq
-
 import cats.data.State
 import cats.implicits._
 import com.vividsolutions.jts.geom.LineString
@@ -11,9 +9,7 @@ import geotrellis.util._
 import geotrellis.vector._
 import geotrellis.vector.io._
 import org.apache.spark.rdd._
-import spire.std.any._
 import vectorpipe.osm._
-import vectorpipe.util._
 
 // --- //
 

@@ -6,7 +6,7 @@ section: "usage"
 
 ## From XML
 
-OSM XML files usually appear with the extention `.osm`. Since the data is all string-based,
+OSM XML files usually appear with the extension `.osm`. Since the data is all string-based,
 these files can be quite large compared to their PBF or ORC equivalents.
 
 ```tut:silent
@@ -31,7 +31,7 @@ sc.stop()
 
 For the time being, `.osm.pbf` files can be used by first converting them to `.orc`
 files using the [osm2orc](https://github.com/mojodna/osm2orc) tool, and then following
-VectorPipe's ORC intructions given below.
+VectorPipe's ORC instructions given below.
 
 ## From ORC
 
@@ -65,5 +65,5 @@ osm.fromORC(path) match {
 ss.stop()
 ```
 
-This approach will be particularly efficient when ran on an EMR cluster, since
+This approach will be particularly efficient when run on an EMR cluster, since
 EMR clusters have privileged access to S3.

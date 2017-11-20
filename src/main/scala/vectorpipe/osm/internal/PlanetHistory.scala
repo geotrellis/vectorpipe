@@ -119,7 +119,8 @@ private[vectorpipe] object PlanetHistory {
                   user      = meta.user,
                   uid       = meta.uid,
                   changeset = meta.changeset,
-                  timestamp = meta.timestamp
+                  timestamp = meta.timestamp,
+                  minorVersion = prevMeta.minorVersion + 1
                 )
               } else {
                 prevMeta

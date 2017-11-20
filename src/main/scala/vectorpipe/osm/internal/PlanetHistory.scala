@@ -94,13 +94,16 @@ private[vectorpipe] object PlanetHistory {
         /* Y2K bug here, except it won't manifest until the end of the year 1 billion AD */
         val nextTime: Instant = rest.headOption.map(_.meta.timestamp).getOrElse(Instant.MAX)
 
+        /* Nodes associated with this way */
+        val ns = nodes.filter(n => w.nodes.contains(n.meta.id))
+
         /* Each full set of Nodes that would have existed for each time slice. */
         val allSlices: List[(ElementMeta, Map[Long, Node])] =
-          changedNodes(w.meta.timestamp, nextTime, nodes)
+          changedNodes(w.meta.timestamp, nextTime, ns)
             .groupBy(_.meta.timestamp)
             .toList
             .sortBy { case (i, _) => i }
-            .scanLeft((w.meta, recentNodes(w, nodes))) { case ((_, p), (_, changes)) =>
+            .scanLeft((w.meta, recentNodes(w, ns))) { case ((prevMeta, p), (_, changes)) =>
 
               /* All Nodes changed during this timeslice are assumed to have been
                * changed by the same user. Anything else would be highly unlikely.
@@ -111,14 +114,19 @@ private[vectorpipe] object PlanetHistory {
 
               /* The user who changed the Nodes in this timeslice is credited
                * with the creation of the `Line`, even if they weren't the one
-               * who created the Way to begin with.
+               * who created the Way to begin with (unless the Node previously
+               * existed, in which case the Way's author should be credited).
                */
-              val credited: ElementMeta = w.meta.copy(
-                user      = meta.user,
-                uid       = meta.uid,
-                changeset = meta.changeset,
-                timestamp = meta.timestamp
-              )
+              val credited : ElementMeta = if (meta.timestamp.isAfter(prevMeta.timestamp)) {
+                prevMeta.copy(
+                  user      = meta.user,
+                  uid       = meta.uid,
+                  changeset = meta.changeset,
+                  timestamp = meta.timestamp
+                )
+              } else {
+                prevMeta
+              }
 
               val replaced: Map[Long, Node] = changes.foldLeft(p) {
                 /* The Node was deleted from this Way */

@@ -148,7 +148,7 @@ private[vectorpipe] object PlanetHistory {
     slices: List[(ElementMeta, Map[Long, Node])]
   ): List[Feature[G, ElementMeta]] = {
     slices.foldLeft(Nil: List[Feature[G, ElementMeta]]) { case (acc, (m, ns)) =>
-      /* If a Node was deleted that the Way still expected, then no Line
+      /* If a Node were deleted that the Way still expected, then no Line
        * should be formed.
        */
       val points: Option[Vector[Point]] =

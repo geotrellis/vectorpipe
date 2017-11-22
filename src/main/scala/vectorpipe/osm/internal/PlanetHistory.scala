@@ -72,9 +72,9 @@ private[vectorpipe] object PlanetHistory {
     (points, edges)
   }
 
-  /** Given likely unordered collections of Ways and their associated Nodes,
+  /** Given a likely unordered collection of Way versions and its associated Nodes,
     * construct GeoTrellis Lines and Polygons such that:
-    *   - there is a Line present for every updated Way
+    *   - there is a Line present for every Way update
     *   - there is a Line present for every set of updated Nodes (i.e. those with matching timestamps)
     *   - there is a Polygon present instead of a Line from the above two conditions when the Way is "closed"
     */

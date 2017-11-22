@@ -140,5 +140,5 @@ object ElementMeta {
     timestamp: Instant,
     visible: Boolean,
     tags: Map[String, String]
-  ) = new ElementMeta(id, user, uid, changeset, version, 0, timestamp, visible, tags)
+  ) : ElementMeta = new ElementMeta(id, user, uid, changeset, version, 0, timestamp, visible, tags)
 }

@@ -96,11 +96,11 @@ private[vectorpipe] object PlanetHistory {
 
         /* Each full set of Nodes that would have existed for each time slice. */
         val allSlices: List[(ElementMeta, Map[Long, Node])] =
-          changedNodes(w.meta.timestamp, nextTime, w.nodes)
+          changedNodes(w.meta.timestamp, nextTime, nodes)
             .groupBy(_.meta.timestamp)
             .toList
             .sortBy { case (i, _) => i }
-            .scanLeft((w.meta, recentNodes(w, w.nodes))) { case ((prevMeta, p), (_, changes)) =>
+            .scanLeft((w.meta, recentNodes(w, nodes))) { case ((prevMeta, p), (_, changes)) =>
 
               /* All Nodes changed during this timeslice are assumed to have been
                * changed by the same user. Anything else would be highly unlikely.

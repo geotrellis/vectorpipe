@@ -100,7 +100,7 @@ private[vectorpipe] object PlanetHistory {
             .groupBy(_.meta.timestamp)
             .toList
             .sortBy { case (i, _) => i }
-            .scanLeft((w.meta, recentNodes(w, nodes))) { case ((_, p), (_, changes)) =>
+            .scanLeft((w.meta, recentNodes(w, nodes))) { case ((prevMeta, p), (_, changes)) =>
 
               /* All Nodes changed during this timeslice are assumed to have been
                * changed by the same user. Anything else would be highly unlikely.
@@ -111,14 +111,19 @@ private[vectorpipe] object PlanetHistory {
 
               /* The user who changed the Nodes in this timeslice is credited
                * with the creation of the `Line`, even if they weren't the one
-               * who created the Way to begin with.
+               * who created the Way to begin with (unless the Node previously
+               * existed, in which case the Way's author should be credited).
                */
-              val credited: ElementMeta = w.meta.copy(
-                user      = meta.user,
-                uid       = meta.uid,
-                changeset = meta.changeset,
-                timestamp = meta.timestamp
-              )
+              val credited : ElementMeta = if (meta.timestamp.isAfter(prevMeta.timestamp)) {
+                prevMeta.copy(
+                  user      = meta.user,
+                  uid       = meta.uid,
+                  changeset = meta.changeset,
+                  timestamp = meta.timestamp
+                )
+              } else {
+                prevMeta
+              }
 
               val replaced: Map[Long, Node] = changes.foldLeft(p) {
                 /* The Node was deleted from this Way */

@@ -94,16 +94,13 @@ private[vectorpipe] object PlanetHistory {
         /* Y2K bug here, except it won't manifest until the end of the year 1 billion AD */
         val nextTime: Instant = rest.headOption.map(_.meta.timestamp).getOrElse(Instant.MAX)
 
-        /* Nodes associated with this way */
-        val ns = nodes.filter(n => w.nodes.contains(n.meta.id))
-
         /* Each full set of Nodes that would have existed for each time slice. */
         val allSlices: List[(ElementMeta, Map[Long, Node])] =
-          changedNodes(w.meta.timestamp, nextTime, ns)
+          changedNodes(w.meta.timestamp, nextTime, w.nodes)
             .groupBy(_.meta.timestamp)
             .toList
             .sortBy { case (i, _) => i }
-            .scanLeft((w.meta, recentNodes(w, ns))) { case ((prevMeta, p), (_, changes)) =>
+            .scanLeft((w.meta, recentNodes(w, w.nodes))) { case ((prevMeta, p), (_, changes)) =>
 
               /* All Nodes changed during this timeslice are assumed to have been
                * changed by the same user. Anything else would be highly unlikely.

@@ -2,7 +2,7 @@ package vectorpipe
 
 import java.io.{ FileInputStream, InputStream }
 
-import scala.util.{ Failure, Success, Try }
+import scala.util.Try
 
 import cats.implicits._
 import geotrellis.vector._
@@ -25,13 +25,11 @@ package object osm {
   /** Given a path to an OSM XML file, parse it into usable types. */
   def fromLocalXML(
     path: String
-  )(implicit sc: SparkContext): Either[String, (RDD[(Long, Node)], RDD[(Long, Way)], RDD[(Long, Relation)])] = {
+  )(implicit sc: SparkContext): Try[(RDD[(Long, Node)], RDD[(Long, Way)], RDD[(Long, Relation)])] = {
     /* A byte stream, so as to not tax the heap */
-    Try(new FileInputStream(path): InputStream).flatMap(xml => Element.elements.parse(xml)) match {
-      case Failure(e) => Left(e.toString)
-      case Success((ns, ws, rs)) =>
-        Right((sc.parallelize(ns), sc.parallelize(ws), sc.parallelize(rs)))
-    }
+    Try(new FileInputStream(path): InputStream)
+      .flatMap(xml => Element.elements.parse(xml))
+      .map { case (ns, ws, rs) => (sc.parallelize(ns), sc.parallelize(ws), sc.parallelize(rs)) }
   }
 
   /** Given a path to an Apache ORC file containing OSM data, read out RDDs of each Element type.
@@ -40,11 +38,8 @@ package object osm {
     */
   def fromORC(
     path: String
-  )(implicit ss: SparkSession): Either[String, (RDD[(Long, Node)], RDD[(Long, Way)], RDD[(Long, Relation)])] = {
-    Try(ss.read.orc(path)) match {
-      case Failure(e) => Left(e.toString)
-      case Success(data) => Right(fromDataFrame(data))
-    }
+  )(implicit ss: SparkSession): Try[(RDD[(Long, Node)], RDD[(Long, Way)], RDD[(Long, Relation)])] = {
+    Try(ss.read.orc(path)).map(fromDataFrame(_))
   }
 
   /** Given a [[DataFrame]] that follows [[https://github.com/mojodna/osm2orc#schema this table schema]],

@@ -11,6 +11,7 @@ these files can be quite large compared to their PBF or ORC equivalents.
 
 ```tut:silent
 import org.apache.spark._
+import scala.util.{Success, Failure}
 import vectorpipe._
 
 implicit val sc: SparkContext = new SparkContext(
@@ -20,8 +21,8 @@ implicit val sc: SparkContext = new SparkContext(
 val path: String = "/some/path/on/your/machine/foo.osm"
 
 osm.fromLocalXML(path) match {
-  case Left(e) => { }  /* Parsing failed somehow... is the filepath correct? */
-  case Right((ns,ws,rs)) => { }  /* (RDD[Node], RDD[Way], RDD[Relation]) */
+  case Failure(e) => { }  /* Parsing failed somehow... is the filepath correct? */
+  case Success((ns,ws,rs)) => { }  /* (RDD[Node], RDD[Way], RDD[Relation]) */
 }
 
 sc.stop()
@@ -46,20 +47,21 @@ instead of `SparkContext` here:
 
 ```tut:silent
 import org.apache.spark.sql._
+import scala.util.{Success, Failure}
 import vectorpipe._
 
 implicit val ss: SparkSession =
   SparkSession.builder.master("local[*]").appName("orc-example").enableHiveSupport.getOrCreate
 
 /* If you want to read an ORC file from S3, you must call this first */
-useS3(ss)
+// useS3(ss)
 
 val path: String = "s3://bucket/key/foo.orc"
 // val path: String = "/some/path/on/your/machine/foo.orc" /* If not using S3 */
 
 osm.fromORC(path) match {
-  case Left(err) => { } /* Does the file exist? Do you have the right AWS credentials? */
-  case Right((ns,ws,rs)) => { } /* (RDD[Node], RDD[Way], RDD[Relation]) */
+  case Failure(err) => { } /* Does the file exist? Do you have the right AWS credentials? */
+  case Success((ns,ws,rs)) => { } /* (RDD[Node], RDD[Way], RDD[Relation]) */
 }
 
 ss.stop()

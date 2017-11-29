@@ -124,7 +124,21 @@ private[vectorpipe] object Element {
   uid: Long,
   changeset: Long,
   version: Long,
+  minorVersion: Long,
   timestamp: Instant,
   visible: Boolean,
   tags: Map[String, String]
 )
+
+object ElementMeta {
+  def apply(
+    id: Long,
+    user: String,
+    uid: Long,
+    changeset: Long,
+    version: Long,
+    timestamp: Instant,
+    visible: Boolean,
+    tags: Map[String, String]
+  ) : ElementMeta = new ElementMeta(id, user, uid, changeset, version, 0, timestamp, visible, tags)
+}

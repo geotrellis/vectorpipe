@@ -6,7 +6,7 @@ organization := "com.azavea"
 
 organizationName := "Azavea"
 
-scalaVersion in ThisBuild := "2.11.11"
+scalaVersion in ThisBuild := "2.11.12"
 
 val common = Seq(
   resolvers ++= Seq(

@@ -25,6 +25,7 @@ private[vectorpipe] object Element {
     Parser.forOptionalAttribute("uid").map(_.map(_.toLong).getOrElse(0L)) ~
     Parser.forMandatoryAttribute("changeset").map(_.toLong) ~
     Parser.forMandatoryAttribute("version").map(_.toLong) ~
+    Parser.forOptionalAttribute("minor").map(_ => 0L) ~
     Parser.forMandatoryAttribute("timestamp").map(Instant.parse(_)) ~
     Parser.forOptionalAttribute("visible").map(_.map(_.toBoolean).getOrElse(false)) ~
     /* <tag k='access' v='permissive' /> */
@@ -129,16 +130,3 @@ private[vectorpipe] object Element {
   visible: Boolean,
   tags: Map[String, String]
 )
-
-object ElementMeta {
-  def apply(
-    id: Long,
-    user: String,
-    uid: Long,
-    changeset: Long,
-    version: Long,
-    timestamp: Instant,
-    visible: Boolean,
-    tags: Map[String, String]
-  ) : ElementMeta = new ElementMeta(id, user, uid, changeset, version, 0, timestamp, visible, tags)
-}

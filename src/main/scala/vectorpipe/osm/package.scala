@@ -156,7 +156,7 @@ package object osm {
 
   /** An unfortunate necessity to avoid reflection errors involving `java.time.Instant` */
   private[this] def makeMeta(m: (Long, String, Long, Long, Long, Long, Boolean), tags: Map[String, String]): ElementMeta =
-    ElementMeta(m._1, m._2, m._3, m._4, m._5, java.time.Instant.ofEpochMilli(m._6), m._7, tags)
+    ElementMeta(m._1, m._2, m._3, m._4, m._5, 0, java.time.Instant.ofEpochMilli(m._6), m._7, tags)
 
   private[this] def metaFromRow(row: Row): (Long, String, Long, Long, Long, Long, Boolean) = {
     (

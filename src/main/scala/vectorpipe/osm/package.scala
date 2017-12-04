@@ -208,9 +208,9 @@ package object osm {
    */
   def snapshotFeatures(
     logError: (Feature[Line, ElementMeta] => String) => Feature[Line, ElementMeta] => Unit,
-    nodes: RDD[Node],
-    ways: RDD[Way],
-    relations: RDD[Relation]
+    nodes: RDD[(Long, Node)],
+    ways: RDD[(Long, Way)],
+    relations: RDD[(Long, Relation)]
   ): Features = {
 
     /* All Geometric OSM Relations.
@@ -218,9 +218,9 @@ package object osm {
      * Geometric Relations never appear in Relation Graphs. Therefore we can
      * naively grab them all here.
      */
-    val geomRelations: RDD[Relation] = relations.filter({ r =>
+    val geomRelations: RDD[(Long, Relation)] = relations.filter { case (_, r) =>
       r.meta.tags.get("type") === Some("multipolygon")
-    })
+    }
 
     val (points, rawLines, rawPolys) = E2F.geometries(nodes, ways)
 

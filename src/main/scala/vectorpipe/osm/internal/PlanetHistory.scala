@@ -28,7 +28,7 @@ private[vectorpipe] object PlanetHistory {
     val polys:  RDD[OSMPolygon] = lap.values.flatMap(identity)
 
     /* Depending on the dataset used, `Way` data may be incomplete. That is,
-     * the local version of a Way may have fewer Node references that the original
+     * the local version of a Way may have fewer Node references than the original
      * as found on OpenStreetMap. These usually occur along "dataset bounding
      * boxes" found in OSM subregion extracts, where a Polygon is cut in half by
      * the BBOX. The resulting Polygons, with only a subset of the original Nodes,

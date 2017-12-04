@@ -16,7 +16,7 @@ case class Features(
   multiPolys: RDD[Feature[MultiPolygon, ElementMeta]]
 ) {
   /** Flatten the separated features into a single `RDD` of their supertype, `Geometry`. */
-  def geometries: RDD[Feature[Geometry, ElementMeta]] = points.sparkContext.union(
+  def geometries: RDD[OSMFeature] = points.sparkContext.union(
     points.map(identity), lines.map(identity), polygons.map(identity), multiPolys.map(identity)
   )
 }

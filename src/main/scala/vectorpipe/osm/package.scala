@@ -206,12 +206,12 @@ package object osm {
    *     across its child members. Otherwise, Relations are "dropped"
    *     from the output.
    */
-  def toSnapshot(
+  def snapshotFeatures(
     logError: (Feature[Line, ElementMeta] => String) => Feature[Line, ElementMeta] => Unit,
     nodes: RDD[Node],
     ways: RDD[Way],
     relations: RDD[Relation]
-  ): RDD[OSMFeature] = {
+  ): Features = {
 
     /* All Geometric OSM Relations.
      * A (likely false) assumption made in the `flatTree` function is that
@@ -238,42 +238,13 @@ package object osm {
 
     val (multiPolys, lines, polys) = E2F.multipolygons(logError, rawLines, simplePolys, geomRelations)
 
-    /* A trick to allow us to fuse the RDDs of various Geom types */
-    val pnt: RDD[OSMFeature] = points.map(identity)
-    val lns: RDD[OSMFeature] = lines.map(identity)
-    val pls: RDD[OSMFeature] = polys.map(identity)
-    val mps: RDD[OSMFeature] = multiPolys.map(identity)
-
-    nodes.sparkContext.union(pnt, lns, pls, mps)
+    Features(points, lines, polys, multiPolys)
   }
-
-  @deprecated("Use toSnapshot instead.", "2017-11-14")
-  def toFeatures(
-    logError: (Feature[Line, ElementMeta] => String) => Feature[Line, ElementMeta] => Unit,
-    nodes: RDD[Node],
-    ways: RDD[Way],
-    relations: RDD[Relation]
-  ): RDD[OSMFeature] = toSnapshot(logError, nodes, ways, relations)
 
   /** All Lines and Polygons that could be reconstructed from a set of all
     * historical OSM Elements.
     */
-  def toHistory(
-    nodes: RDD[(Long, Node)],
-    ways: RDD[(Long, Way)]
-  ): (RDD[Feature[Point, ElementMeta]], RDD[Feature[Line, ElementMeta]], RDD[Feature[Polygon, ElementMeta]]) = {
-    val (points, lines, polygons) = PlanetHistory.features(nodes, ways)
-
-    /* Depending on the dataset used, `Way` data may be incomplete. That is,
-     * the local version of a Way may have fewer Node references that the original
-     * as found on OpenStreetMap. These usually occur along "dataset bounding
-     * boxes" found in OSM subregion extracts, where a Polygon is cut in half by
-     * the BBOX. The resulting Polygons, with only a subset of the original Nodes,
-     * are often self-intersecting. This causes Topology Exceptions during the
-     * clipping stage of the pipeline. Our only recourse is to remove them here.
-     *
-     * See: https://github.com/geotrellis/vectorpipe/pull/16#issuecomment-290144694
-     */
-    (points, lines, polygons.filter(_.geom.isValid))
+  def historicalFeatures(nodes: RDD[(Long, Node)], ways: RDD[(Long, Way)]): Features = {
+    PlanetHistory.features(nodes, ways)
   }
 }

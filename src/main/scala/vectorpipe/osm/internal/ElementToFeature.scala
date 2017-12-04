@@ -22,17 +22,17 @@ private[vectorpipe] object ElementToFeature {
    *  by OSM Relations.
    */
   def geometries(
-    nodes: RDD[Node],
-    ways: RDD[Way]
+    nodes: RDD[(Long, Node)],
+    ways: RDD[(Long, Way)]
   ): (RDD[OSMPoint], RDD[OSMLine], RDD[OSMPolygon]) = {
     /* You're a long way from finishing this operation. */
-    val links: RDD[(Long, Way)] = ways.flatMap(w => w.nodes.map(n => (n, w)))
+    val links: RDD[(Long, Way)] = ways.flatMap { case (_, w) => w.nodes.map(n => (n, w)) }
 
     /* Nodes and Ways bound by the Node ID. Independent Nodes appear here
      * as well, but with an empty Iterable of Ways.
      */
     val grouped: RDD[(Iterable[Node], Iterable[Way])] =
-      nodes.map(n => (n.meta.id, n)).cogroup(links).map(_._2)
+      nodes.cogroup(links).map(_._2)
 
     val linesPolys: RDD[Either[OSMLine, OSMPolygon]] =
       grouped
@@ -121,12 +121,12 @@ private[vectorpipe] object ElementToFeature {
     logError: (OSMLine => String) => OSMLine => Unit,
     lines: RDD[OSMLine],
     polys: RDD[OSMPolygon],
-    relations: RDD[Relation]
+    relations: RDD[(Long, Relation)]
   ): (RDD[OSMMultiPoly], RDD[OSMLine], RDD[OSMPolygon]) = {
     // filter out polys that are used in relations
     // merge RDDs back together
     val relLinks: RDD[(Long, Relation)] =
-      relations.flatMap(r => r.members.map(m => (m.ref, r)))
+      relations.flatMap { case (_, r) => r.members.map(m => (m.ref, r)) }
 
     val lineLinks: RDD[(Long, OSMLine)] =
       lines.map(f => (f.data.id, f))

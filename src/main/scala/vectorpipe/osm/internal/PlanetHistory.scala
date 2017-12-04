@@ -14,10 +14,7 @@ import vectorpipe.osm._
 private[vectorpipe] object PlanetHistory {
 
   /** For all given Ways, associate with their Nodes to produce GeoTrellis Lines and Polygons. */
-  def features(
-    nodes: RDD[(Long, Node)],
-    ways: RDD[(Long, Way)]
-  ): (RDD[OSMPoint], RDD[OSMLine], RDD[OSMPolygon]) = {
+  def features(nodes: RDD[(Long, Node)], ways: RDD[(Long, Way)]): Features = {
 
     val (loneNodes, edges) = joinedWays(nodes, ways)
 
@@ -30,7 +27,17 @@ private[vectorpipe] object PlanetHistory {
     val lines:  RDD[OSMLine]    = lap.keys.flatMap(identity)
     val polys:  RDD[OSMPolygon] = lap.values.flatMap(identity)
 
-    (points, lines, polys)
+    /* Depending on the dataset used, `Way` data may be incomplete. That is,
+     * the local version of a Way may have fewer Node references than the original
+     * as found on OpenStreetMap. These usually occur along "dataset bounding
+     * boxes" found in OSM subregion extracts, where a Polygon is cut in half by
+     * the BBOX. The resulting Polygons, with only a subset of the original Nodes,
+     * are often self-intersecting. This causes Topology Exceptions during the
+     * clipping stage of the pipeline. Our only recourse is to remove them here.
+     *
+     * See: https://github.com/geotrellis/vectorpipe/pull/16#issuecomment-290144694
+     */
+    Features(points, lines, polys.filter(_.geom.isValid), points.sparkContext.emptyRDD)
   }
 
   /** Given one RDD of nodes and one of ways, produce:

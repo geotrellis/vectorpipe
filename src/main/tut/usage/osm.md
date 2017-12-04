@@ -22,7 +22,7 @@ val path: String = "/some/path/on/your/machine/foo.osm"
 
 osm.fromLocalXML(path) match {
   case Failure(e) => { }  /* Parsing failed somehow... is the filepath correct? */
-  case Success((ns,ws,rs)) => { }  /* (RDD[Node], RDD[Way], RDD[Relation]) */
+  case Success((ns,ws,rs)) => { }  /* (RDD[(Long, Node)], RDD[(Long, Way)], RDD[(Long, Relation)]) */
 }
 
 sc.stop()
@@ -61,7 +61,7 @@ val path: String = "s3://bucket/key/foo.orc"
 
 osm.fromORC(path) match {
   case Failure(err) => { } /* Does the file exist? Do you have the right AWS credentials? */
-  case Success((ns,ws,rs)) => { } /* (RDD[Node], RDD[Way], RDD[Relation]) */
+  case Success((ns,ws,rs)) => { }  /* (RDD[(Long, Node)], RDD[(Long, Way)], RDD[(Long, Relation)]) */
 }
 
 ss.stop()

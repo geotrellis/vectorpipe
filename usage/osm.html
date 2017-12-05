@@ -1,9 +1,10 @@
 <html><head><title>VectorPipe</title><meta charset="utf-8" /><meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="author" content="GeoTrellis Team at Azavea" /><meta name="description" content="Convert Vector data into VectorTiles" /><meta name="og:image" content="/vectorpipe/img/poster.png" /><meta name="og:title" content="VectorPipe" /><meta name="og:site_name" content="VectorPipe" /><meta name="og:url" content="" /><meta name="og:type" content="website" /><meta name="og:description" content="Convert Vector data into VectorTiles" /><link rel="icon" type="image/png" href="/vectorpipe/img/favicon.png" /><meta name="twitter:title" content="VectorPipe" /><meta name="twitter:image" content="img/poster.png" /><meta name="twitter:description" content="Convert Vector data into VectorTiles" /><meta name="twitter:card" content="summary_large_image" /><link rel="icon" type="image/png" sizes="16x16" href="/vectorpipe/img/favicon16x16.png" /><link rel="icon" type="image/png" sizes="24x24" href="/vectorpipe/img/favicon24x24.png" /><link rel="icon" type="image/png" sizes="32x32" href="/vectorpipe/img/favicon32x32.png" /><link rel="icon" type="image/png" sizes="48x48" href="/vectorpipe/img/favicon48x48.png" /><link rel="icon" type="image/png" sizes="57x57" href="/vectorpipe/img/favicon57x57.png" /><link rel="icon" type="image/png" sizes="60x60" href="/vectorpipe/img/favicon60x60.png" /><link rel="icon" type="image/png" sizes="64x64" href="/vectorpipe/img/favicon64x64.png" /><link rel="icon" type="image/png" sizes="70x70" href="/vectorpipe/img/favicon70x70.png" /><link rel="icon" type="image/png" sizes="72x72" href="/vectorpipe/img/favicon72x72.png" /><link rel="icon" type="image/png" sizes="76x76" href="/vectorpipe/img/favicon76x76.png" /><link rel="icon" type="image/png" sizes="96x96" href="/vectorpipe/img/favicon96x96.png" /><link rel="icon" type="image/png" sizes="114x114" href="/vectorpipe/img/favicon114x114.png" /><link rel="icon" type="image/png" sizes="120x120" href="/vectorpipe/img/favicon120x120.png" /><link rel="icon" type="image/png" sizes="128x128" href="/vectorpipe/img/favicon128x128.png" /><link rel="icon" type="image/png" sizes="144x144" href="/vectorpipe/img/favicon144x144.png" /><link rel="icon" type="image/png" sizes="150x150" href="/vectorpipe/img/favicon150x150.png" /><link rel="icon" type="image/png" sizes="152x152" href="/vectorpipe/img/favicon152x152.png" /><link rel="icon" type="image/png" sizes="196x196" href="/vectorpipe/img/favicon196x196.png" /><link rel="icon" type="image/png" sizes="310x310" href="/vectorpipe/img/favicon310x310.png" /><link rel="icon" type="image/png" sizes="310x150" href="/vectorpipe/img/favicon310x150.png" /><link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" /><link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" /><link rel="stylesheet" href="/vectorpipe/highlight/styles/default.css" /><link rel="stylesheet" href="/vectorpipe/css/style.css" /><link rel="stylesheet" href="/vectorpipe/css/palette.css" /><link rel="stylesheet" href="/vectorpipe/css/codemirror.css" /><link rel="stylesheet" href="/vectorpipe/css/kazari-style.css" /><link rel="stylesheet" href="/vectorpipe/css/monokai.css" /></head><body class="docs"><div id="wrapper"><div id="sidebar-wrapper"><ul id="sidebar" class="sidebar-nav"><li class="sidebar-brand"><a href="/vectorpipe/" class="brand"><div class="brand-wrapper"><span>VectorPipe</span></div></a></li> <li><a href="/vectorpipe/usage.html" class="">Usage</a></li> <li><a href="/vectorpipe/usage/concepts.html" class="">Concepts</a></li> <li><a href="/vectorpipe/usage/osm.html" class=" active ">Reading OpenStreetMap Data</a></li></ul></div><div id="page-content-wrapper"><div class="nav"><div class="container-fluid"><div class="row"><div class="col-lg-12"><div class="action-menu pull-left clearfix"><a href="#menu-toggle" id="menu-toggle"><i class="fa fa-bars" aria-hidden="true"></i></a></div><ul class="pull-right"><li id="gh-eyes-item" class="hidden-xs"><a href="https://github.com/geotrellis/vectorpipe"><i class="fa fa-eye"></i><span>WATCH<span id="eyes" class="label label-default">--</span></span></a></li><li id="gh-stars-item" class="hidden-xs"><a href="https://github.com/geotrellis/vectorpipe"><i class="fa fa-star-o"></i><span>STARS<span id="stars" class="label label-default">--</span></span></a></li><li><a href="#" onclick="shareSiteTwitter('VectorPipe Convert Vector data into VectorTiles');"><i class="fa fa-twitter"></i></a></li><li><a href="#" onclick="shareSiteFacebook('VectorPipe Convert Vector data into VectorTiles');"><i class="fa fa-facebook"></i></a></li><li><a href="#" onclick="shareSiteGoogle();"><i class="fa fa-google-plus"></i></a></li></ul></div></div></div></div><div id="content" data-github-owner="geotrellis" data-github-repo="vectorpipe"><div class="content-wrapper"><section><h2 id="from-xml">From XML</h2>
 
-<p>OSM XML files usually appear with the extention <code class="highlighter-rouge">.osm</code>. Since the data is all string-based,
+<p>OSM XML files usually appear with the extension <code class="highlighter-rouge">.osm</code>. Since the data is all string-based,
 these files can be quite large compared to their PBF or ORC equivalents.</p>
 
 <div class="language-scala highlighter-rouge"><pre class="highlight"><code><span class="k">import</span> <span class="nn">org.apache.spark._</span>
+<span class="k">import</span> <span class="nn">scala.util.</span><span class="o">{</span><span class="nc">Success</span><span class="o">,</span> <span class="nc">Failure</span><span class="o">}</span>
 <span class="k">import</span> <span class="nn">vectorpipe._</span>
 
 <span class="k">implicit</span> <span class="k">val</span> <span class="n">sc</span><span class="k">:</span> <span class="kt">SparkContext</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">SparkContext</span><span class="o">(</span>
@@ -13,8 +14,8 @@ these files can be quite large compared to their PBF or ORC equivalents.</p>
 <span class="k">val</span> <span class="n">path</span><span class="k">:</span> <span class="kt">String</span> <span class="o">=</span> <span class="s">"/some/path/on/your/machine/foo.osm"</span>
 
 <span class="n">osm</span><span class="o">.</span><span class="n">fromLocalXML</span><span class="o">(</span><span class="n">path</span><span class="o">)</span> <span class="k">match</span> <span class="o">{</span>
-  <span class="k">case</span> <span class="nc">Left</span><span class="o">(</span><span class="n">e</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="o">{</span> <span class="o">}</span>  <span class="cm">/* Parsing failed somehow... is the filepath correct? */</span>
-  <span class="k">case</span> <span class="nc">Right</span><span class="o">((</span><span class="n">ns</span><span class="o">,</span><span class="n">ws</span><span class="o">,</span><span class="n">rs</span><span class="o">))</span> <span class="k">=&gt;</span> <span class="o">{</span> <span class="o">}</span>  <span class="cm">/* (RDD[Node], RDD[Way], RDD[Relation]) */</span>
+  <span class="k">case</span> <span class="nc">Failure</span><span class="o">(</span><span class="n">e</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="o">{</span> <span class="o">}</span>  <span class="cm">/* Parsing failed somehow... is the filepath correct? */</span>
+  <span class="k">case</span> <span class="nc">Success</span><span class="o">((</span><span class="n">ns</span><span class="o">,</span><span class="n">ws</span><span class="o">,</span><span class="n">rs</span><span class="o">))</span> <span class="k">=&gt;</span> <span class="o">{</span> <span class="o">}</span>  <span class="cm">/* (RDD[(Long, Node)], RDD[(Long, Way)], RDD[(Long, Relation)]) */</span>
 <span class="o">}</span>
 
 <span class="n">sc</span><span class="o">.</span><span class="n">stop</span><span class="o">()</span>
@@ -25,7 +26,7 @@ these files can be quite large compared to their PBF or ORC equivalents.</p>
 
 <p>For the time being, <code class="highlighter-rouge">.osm.pbf</code> files can be used by first converting them to <code class="highlighter-rouge">.orc</code>
 files using the <a href="https://github.com/mojodna/osm2orc">osm2orc</a> tool, and then following
-VectorPipe’s ORC intructions given below.</p>
+VectorPipe’s ORC instructions given below.</p>
 
 <h2 id="from-orc">From ORC</h2>
 
@@ -39,27 +40,28 @@ VectorPipe’s ORC intructions given below.</p>
 instead of <code class="highlighter-rouge">SparkContext</code> here:</p>
 
 <div class="language-scala highlighter-rouge"><pre class="highlight"><code><span class="k">import</span> <span class="nn">org.apache.spark.sql._</span>
+<span class="k">import</span> <span class="nn">scala.util.</span><span class="o">{</span><span class="nc">Success</span><span class="o">,</span> <span class="nc">Failure</span><span class="o">}</span>
 <span class="k">import</span> <span class="nn">vectorpipe._</span>
 
 <span class="k">implicit</span> <span class="k">val</span> <span class="n">ss</span><span class="k">:</span> <span class="kt">SparkSession</span> <span class="o">=</span>
   <span class="nc">SparkSession</span><span class="o">.</span><span class="n">builder</span><span class="o">.</span><span class="n">master</span><span class="o">(</span><span class="s">"local[*]"</span><span class="o">).</span><span class="n">appName</span><span class="o">(</span><span class="s">"orc-example"</span><span class="o">).</span><span class="n">enableHiveSupport</span><span class="o">.</span><span class="n">getOrCreate</span>
 
 <span class="cm">/* If you want to read an ORC file from S3, you must call this first */</span>
-<span class="n">useS3</span><span class="o">(</span><span class="n">ss</span><span class="o">)</span>
-
+<span class="c1">// useS3(ss)
+</span>
 <span class="k">val</span> <span class="n">path</span><span class="k">:</span> <span class="kt">String</span> <span class="o">=</span> <span class="s">"s3://bucket/key/foo.orc"</span>
 <span class="c1">// val path: String = "/some/path/on/your/machine/foo.orc" /* If not using S3 */
 </span>
 <span class="n">osm</span><span class="o">.</span><span class="n">fromORC</span><span class="o">(</span><span class="n">path</span><span class="o">)</span> <span class="k">match</span> <span class="o">{</span>
-  <span class="k">case</span> <span class="nc">Left</span><span class="o">(</span><span class="n">err</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="o">{</span> <span class="o">}</span> <span class="cm">/* Does the file exist? Do you have the right AWS credentials? */</span>
-  <span class="k">case</span> <span class="nc">Right</span><span class="o">((</span><span class="n">ns</span><span class="o">,</span><span class="n">ws</span><span class="o">,</span><span class="n">rs</span><span class="o">))</span> <span class="k">=&gt;</span> <span class="o">{</span> <span class="o">}</span> <span class="cm">/* (RDD[Node], RDD[Way], RDD[Relation]) */</span>
+  <span class="k">case</span> <span class="nc">Failure</span><span class="o">(</span><span class="n">err</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="o">{</span> <span class="o">}</span> <span class="cm">/* Does the file exist? Do you have the right AWS credentials? */</span>
+  <span class="k">case</span> <span class="nc">Success</span><span class="o">((</span><span class="n">ns</span><span class="o">,</span><span class="n">ws</span><span class="o">,</span><span class="n">rs</span><span class="o">))</span> <span class="k">=&gt;</span> <span class="o">{</span> <span class="o">}</span>  <span class="cm">/* (RDD[(Long, Node)], RDD[(Long, Way)], RDD[(Long, Relation)]) */</span>
 <span class="o">}</span>
 
 <span class="n">ss</span><span class="o">.</span><span class="n">stop</span><span class="o">()</span>
 </code></pre>
 </div>
 
-<p>This approach will be particularly efficient when ran on an EMR cluster, since
+<p>This approach will be particularly efficient when run on an EMR cluster, since
 EMR clusters have privileged access to S3.</p>
 </section></div></div></div></div><script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.min.js"></script><script src="/vectorpipe/highlight/highlight.pack.js"></script><script>hljs.configure({
 languages:['scala','java','bash']

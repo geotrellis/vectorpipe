@@ -22,14 +22,14 @@ val layout: LayoutDefinition =
   ZoomedLayoutScheme.layoutForZoom(15, WebMercator.worldExtent, 512)
 
 /* From an OSM data source, mocked as "empty" for this example */
-val (nodes, ways, relations): (RDD[osm.Node], RDD[osm.Way], RDD[osm.Relation]) =
+val (nodes, ways, relations): (RDD[(Long, osm.Node)], RDD[(Long, osm.Way)], RDD[(Long, osm.Relation)]) =
   (sc.emptyRDD, sc.emptyRDD, sc.emptyRDD)
 
 /* All OSM Elements lifted into GeoTrellis Geometry types.
- * Note: type OSMFeature = Feature[Geometry, Tree[ElementData]]
+ * Note: type OSMFeature = Feature[Geometry, ElementData]
  */
 val features: RDD[osm.OSMFeature] =
-  osm.toFeatures(VectorPipe.logToStdout, nodes, ways, relations)
+  osm.snapshotFeatures(VectorPipe.logToStdout, nodes, ways, relations).geometries
 
 /* All Geometries clipped to your `layout` grid */
 val featGrid: RDD[(SpatialKey, Iterable[osm.OSMFeature])] =

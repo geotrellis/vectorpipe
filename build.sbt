@@ -30,7 +30,6 @@ val common = Seq(
     "com.github.julien-truffaut"  %% "monocle-core"          % "1.5.0-cats-M2",
     "com.github.julien-truffaut"  %% "monocle-macro"         % "1.5.0-cats-M2",
     "io.dylemma"                  %% "xml-spac"              % "0.3",
-    "org.apache.hadoop"           %  "hadoop-aws"            % "2.7.3" % "provided",
     "org.apache.spark"            %% "spark-hive"            % "2.2.0" % "provided",
     "org.locationtech.geotrellis" %% "geotrellis-spark"      % "1.2.0-RC2",
     "org.locationtech.geotrellis" %% "geotrellis-util"       % "1.2.0-RC2",

@@ -1,7 +1,7 @@
 VectorPipe
 ==========
 
-[![Bintray](https://img.shields.io/bintray/v/fosskers/maven/vectorpipe.svg)](https://bintray.com/fosskers/maven/vectorpipe)
+[![Bintray](https://img.shields.io/bintray/v/azavea/maven/vectorpipe.svg)](https://bintray.com/azavea/maven/vectorpipe)
 
 A pipeline for mass conversion of Vector data (OpenStreetMap, etc.) into
 Mapbox VectorTiles. Powered by [GeoTrellis](http://geotrellis.io) and

@@ -1,6 +1,8 @@
-name := """vectorpipe"""
+name := "vectorpipe"
 
-version := "1.0.0-SNAPSHOT"
+version := "0.1.0"
+
+description := "Convert Vector data to VectorTiles with GeoTrellis."
 
 organization := "com.azavea"
 
@@ -43,7 +45,11 @@ val common = Seq(
   parallelExecution in Test := false
 )
 
-lazy val lib = project.in(file(".")).settings(common)
+val release = Seq(
+  licenses += ("Apache-2.0", url("http://apache.org/licenses/LICENSE-2.0"))
+)
+
+lazy val lib = project.in(file(".")).settings(common, release)
 
 /* Benchmarking suite.
  * Benchmarks can be executed by first switching to the `bench` project and then by running:

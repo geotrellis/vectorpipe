@@ -46,6 +46,7 @@ val common = Seq(
 )
 
 val release = Seq(
+  bintrayOrganization := Some("azavea"),
   licenses += ("Apache-2.0", url("http://apache.org/licenses/LICENSE-2.0"))
 )
 

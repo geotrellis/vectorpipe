@@ -32,10 +32,7 @@ package object osm {
       .map { case (ns, ws, rs) => (sc.parallelize(ns), sc.parallelize(ws), sc.parallelize(rs)) }
   }
 
-  /** Given a path to an Apache ORC file containing OSM data, read out RDDs of each Element type.
-    * If you want to read a file from S3, you must call [[vectorpipe.useS3]] first
-    * to properly configure Hadoop to read your S3 credentials.
-    */
+  /** Given a path to an Apache ORC file containing OSM data, read out RDDs of each Element type. */
   def fromORC(
     path: String
   )(implicit ss: SparkSession): Try[(RDD[(Long, Node)], RDD[(Long, Way)], RDD[(Long, Relation)])] = {

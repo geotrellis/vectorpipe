@@ -53,11 +53,7 @@ import vectorpipe._
 implicit val ss: SparkSession =
   SparkSession.builder.master("local[*]").appName("orc-example").enableHiveSupport.getOrCreate
 
-/* If you want to read an ORC file from S3, you must call this first */
-// useS3(ss)
-
 val path: String = "s3://bucket/key/foo.orc"
-// val path: String = "/some/path/on/your/machine/foo.orc" /* If not using S3 */
 
 osm.fromORC(path) match {
   case Failure(err) => { } /* Does the file exist? Do you have the right AWS credentials? */

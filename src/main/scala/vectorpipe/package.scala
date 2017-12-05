@@ -1,14 +1,11 @@
 import java.nio.ByteBuffer
 
-import com.amazonaws.auth.{ AWSCredentialsProvider, DefaultAWSCredentialsProviderChain }
 import geotrellis.spark.io.avro._
 import geotrellis.spark.io.avro.codecs.Implicits._
 import geotrellis.vector.Extent
 import geotrellis.vectortile.VectorTile
 import org.apache.avro._
 import org.apache.avro.generic._
-import org.apache.hadoop.conf.Configuration
-import org.apache.spark.sql._
 
 // --- //
 
@@ -17,15 +14,6 @@ import org.apache.spark.sql._
   * instructions.
   */
 package object vectorpipe {
-
-  /** Configure Spark to read files from S3 - ''Mutates your underlying Hadoop Configuration!'' */
-  def useS3(ss: SparkSession): Unit = {
-    val creds: AWSCredentialsProvider = new DefaultAWSCredentialsProviderChain
-    val config: Configuration = ss.sparkContext.hadoopConfiguration
-    config.set("fs.s3.impl", classOf[org.apache.hadoop.fs.s3native.NativeS3FileSystem].getName)
-    config.set("fs.s3.awsAccessKeyId", creds.getCredentials.getAWSAccessKeyId)
-    config.set("fs.s3.awsSecretAccessKey", creds.getCredentials.getAWSSecretKey)
-  }
 
   /** Encode a [[VectorTile]] via Avro. This is the glue for Layer IO. */
   implicit val vectorTileCodec = new AvroRecordCodec[VectorTile] {

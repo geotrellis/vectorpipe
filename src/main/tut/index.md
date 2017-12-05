@@ -9,8 +9,6 @@ technologies:
  - third: ["Scala", "Functional Programming on the JVM"]
 ---
 
-**Note: VectorPipe has not yet been released.**
-
 # VectorPipe
 
 VectorPipe is a Scala library for transforming vector data of arbitrary
@@ -28,6 +26,10 @@ And produce:
 - Analytic Vector Tiles (AVTs)
 - Custom Vector Tile schemes (by writing a custom *Collator* function)
 
+Of course, you're not limited to just producing Vector Tiles. Once you've
+extracted your raw data into [GeoTrellis](https://geotrellis.io/) Geometries,
+you can do whatever you want with them (analytics, rasterizing, etc.).
+
 ### Dependencies
 
 - Scala 2.11
@@ -38,7 +40,9 @@ And produce:
 To use VectorPipe, add the following to your `build.sbt`:
 
 ```
-libraryDependencies += "com.azavea" %% "vectorpipe" % "1.0.0"
+resolvers += Resolver.bintrayRepo("azavea", "maven")
+
+libraryDependencies += "com.azavea" %% "vectorpipe" % "0.1.0"
 ```
 
 Now import the following, and you're good to go:

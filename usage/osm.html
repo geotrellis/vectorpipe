@@ -46,12 +46,8 @@ instead of <code class="highlighter-rouge">SparkContext</code> here:</p>
 <span class="k">implicit</span> <span class="k">val</span> <span class="n">ss</span><span class="k">:</span> <span class="kt">SparkSession</span> <span class="o">=</span>
   <span class="nc">SparkSession</span><span class="o">.</span><span class="n">builder</span><span class="o">.</span><span class="n">master</span><span class="o">(</span><span class="s">"local[*]"</span><span class="o">).</span><span class="n">appName</span><span class="o">(</span><span class="s">"orc-example"</span><span class="o">).</span><span class="n">enableHiveSupport</span><span class="o">.</span><span class="n">getOrCreate</span>
 
-<span class="cm">/* If you want to read an ORC file from S3, you must call this first */</span>
-<span class="c1">// useS3(ss)
-</span>
 <span class="k">val</span> <span class="n">path</span><span class="k">:</span> <span class="kt">String</span> <span class="o">=</span> <span class="s">"s3://bucket/key/foo.orc"</span>
-<span class="c1">// val path: String = "/some/path/on/your/machine/foo.orc" /* If not using S3 */
-</span>
+
 <span class="n">osm</span><span class="o">.</span><span class="n">fromORC</span><span class="o">(</span><span class="n">path</span><span class="o">)</span> <span class="k">match</span> <span class="o">{</span>
   <span class="k">case</span> <span class="nc">Failure</span><span class="o">(</span><span class="n">err</span><span class="o">)</span> <span class="k">=&gt;</span> <span class="o">{</span> <span class="o">}</span> <span class="cm">/* Does the file exist? Do you have the right AWS credentials? */</span>
   <span class="k">case</span> <span class="nc">Success</span><span class="o">((</span><span class="n">ns</span><span class="o">,</span><span class="n">ws</span><span class="o">,</span><span class="n">rs</span><span class="o">))</span> <span class="k">=&gt;</span> <span class="o">{</span> <span class="o">}</span>  <span class="cm">/* (RDD[(Long, Node)], RDD[(Long, Way)], RDD[(Long, Relation)]) */</span>

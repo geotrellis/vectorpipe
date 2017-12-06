@@ -359,7 +359,7 @@ read out RDDs of each <a href="Element.html" class="extype" name="vectorpipe.osm
       </a>
     </span>
       <p class="shortcomment cmt">Given a path to an OSM XML file, parse it into usable types.</p>
-    </li><li name="vectorpipe.osm#fromORC" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+    </li><li name="vectorpipe.osm#fromORC" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="fromORC(path:String)(implicitss:org.apache.spark.sql.SparkSession):scala.util.Try[(org.apache.spark.rdd.RDD[(Long,vectorpipe.osm.Node)],org.apache.spark.rdd.RDD[(Long,vectorpipe.osm.Way)],org.apache.spark.rdd.RDD[(Long,vectorpipe.osm.Relation)])]"></a>
       <a id="fromORC(String)(SparkSession):Try[(RDD[(Long,Node)],RDD[(Long,Way)],RDD[(Long,Relation)])]"></a>
       <h4 class="signature">
@@ -375,10 +375,7 @@ read out RDDs of each <a href="Element.html" class="extype" name="vectorpipe.osm
         <img src="../../lib/permalink.png" alt="Permalink" />
       </a>
     </span>
-      <p class="shortcomment cmt">Given a path to an Apache ORC file containing OSM data, read out RDDs of each Element type.</p><div class="fullcomment"><div class="comment cmt"><p>Given a path to an Apache ORC file containing OSM data, read out RDDs of each Element type.
-If you want to read a file from S3, you must call <a href="../package.html#useS3(ss:org.apache.spark.sql.SparkSession):Unit" class="extmbr" name="vectorpipe#useS3">vectorpipe.useS3</a> first
-to properly configure Hadoop to read your S3 credentials.
-</p></div></div>
+      <p class="shortcomment cmt">Given a path to an Apache ORC file containing OSM data, read out RDDs of each Element type.</p>
     </li><li name="vectorpipe.osm#historicalFeatures" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="historicalFeatures(nodes:org.apache.spark.rdd.RDD[(Long,vectorpipe.osm.Node)],ways:org.apache.spark.rdd.RDD[(Long,vectorpipe.osm.Way)]):vectorpipe.osm.Features"></a>
       <a id="historicalFeatures(RDD[(Long,Node)],RDD[(Long,Way)]):Features"></a>

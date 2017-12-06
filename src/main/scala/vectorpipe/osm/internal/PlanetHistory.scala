@@ -7,6 +7,7 @@ import scala.annotation.tailrec
 import cats.implicits._
 import geotrellis.vector._
 import org.apache.spark.rdd.RDD
+import org.apache.spark.storage.StorageLevel
 import vectorpipe.osm._
 
 // --- //
@@ -49,11 +50,14 @@ private[vectorpipe] object PlanetHistory {
     ways: RDD[(Long, Way)]
   ): (RDD[(Long, Node)], RDD[(Long, (Iterable[Way], Iterable[Node]))]) = {
 
+    /* This is called twice below, so we need to cache is, or else we'd repeat work */
+    val cachedWays: RDD[(Long, Way)] = ways.persist(StorageLevel.MEMORY_AND_DISK_SER)
+
     /* Forgive the `.distinct` here. If we don't do that, there will be Way ID duplication
      * in the first cogroup below.
      */
     val nodeIdsToWayIds: RDD[(Long, Long)] =
-      ways.flatMap { case (wayId, way) => way.nodes.map { nodeId => (nodeId, wayId) }}
+      cachedWays.flatMap { case (wayId, way) => way.nodes.map { nodeId => (nodeId, wayId) }}
         .distinct
 
     /* Every version of every Node, paired with the IDs of Ways that need them AT ANY TIME. */
@@ -62,7 +66,7 @@ private[vectorpipe] object PlanetHistory {
         .cogroup(nodeIdsToWayIds)
         /* The `.distinct` above ensures that `wayIds` here will contain unique values. */
         .flatMap { case (_, (ns, wayIds)) => ns.map(n => (n, wayIds)) }
-        .cache
+        .persist(StorageLevel.MEMORY_AND_DISK_SER)
 
     /* Not /that/ much duplication, as most Nodes are only needed by one Way (if any).
      * Any standalone Node whose `wayIds` is empty will be crushed away by the flatMap,
@@ -71,7 +75,7 @@ private[vectorpipe] object PlanetHistory {
     val wayIdToNodes: RDD[(Long, Node)] =
       nodesToWayIds.flatMap { case (node, wayIds) => wayIds.map(wayId => (wayId, node)) }
 
-    val edges: RDD[(Long, (Iterable[Way], Iterable[Node]))] = ways.cogroup(wayIdToNodes)
+    val edges: RDD[(Long, (Iterable[Way], Iterable[Node]))] = cachedWays.cogroup(wayIdToNodes)
 
     val points: RDD[(Long, Node)] =
       nodesToWayIds.filter { case (_, wayIds) => wayIds.isEmpty }.map { case (n, _) => (n.meta.id, n) }

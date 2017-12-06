@@ -3,6 +3,7 @@ VectorPipe
 
 [![Build Status](https://travis-ci.org/geotrellis/vectorpipe.svg?branch=master)](https://travis-ci.org/geotrellis/vectorpipe)
 [![Bintray](https://img.shields.io/bintray/v/azavea/maven/vectorpipe.svg)](https://bintray.com/azavea/maven/vectorpipe)
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/447170921bc94b3fb494bb2b965c2235)](https://www.codacy.com/app/fosskers/vectorpipe?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=geotrellis/vectorpipe&amp;utm_campaign=Badge_Grade)
 
 A pipeline for mass conversion of Vector data (OpenStreetMap, etc.) into
 Mapbox VectorTiles. Powered by [GeoTrellis](http://geotrellis.io) and

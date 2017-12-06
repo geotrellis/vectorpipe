@@ -1,6 +1,7 @@
 VectorPipe
 ==========
 
+[![Build Status](https://travis-ci.org/geotrellis/vectorpipe.svg?branch=master)](https://travis-ci.org/geotrellis/vectorpipe)
 [![Bintray](https://img.shields.io/bintray/v/azavea/maven/vectorpipe.svg)](https://bintray.com/azavea/maven/vectorpipe)
 
 A pipeline for mass conversion of Vector data (OpenStreetMap, etc.) into

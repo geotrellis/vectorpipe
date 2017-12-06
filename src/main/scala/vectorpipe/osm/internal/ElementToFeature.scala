@@ -9,6 +9,7 @@ import geotrellis.util._
 import geotrellis.vector._
 import geotrellis.vector.io._
 import org.apache.spark.rdd._
+import org.apache.spark.storage.StorageLevel
 import vectorpipe.osm._
 
 // --- //
@@ -32,18 +33,18 @@ private[vectorpipe] object ElementToFeature {
      * as well, but with an empty Iterable of Ways.
      */
     val grouped: RDD[(Iterable[Node], Iterable[Way])] =
-      nodes.cogroup(links).map(_._2)
+      nodes.cogroup(links).map(_._2).persist(StorageLevel.MEMORY_AND_DISK_SER)
 
     val linesPolys: RDD[Either[OSMLine, OSMPolygon]] =
       grouped
-        .flatMap({ case (ns, ws) =>
+        .flatMap { case (ns, ws) =>
           /* ASSUMPTION: `ns` is always length 1 because of the `cogroup` */
           val n = ns.head
 
           ws.map(w => (w, n))
-        })
+        }
         .groupByKey
-        .flatMap({ case (w, ns) =>
+        .flatMap { case (w, ns) =>
           /* De facto maximum of 2000 Nodes */
           val sorted: Vector[Node] = ns.toVector.sortBy(n => n.meta.id)
 
@@ -86,18 +87,20 @@ private[vectorpipe] object ElementToFeature {
           } catch {
             case e: Throwable => None // TODO Be more elegant about this?
           }
-        })
+        }
+
+    val persisted = linesPolys.persist(StorageLevel.MEMORY_AND_DISK_SER)
 
     // TODO: Improve this inefficient RDD splitting.
-    val lines: RDD[OSMLine] = linesPolys.flatMap({
+    val lines: RDD[OSMLine] = persisted.flatMap {
       case Left(l) => Some(l)
       case _ => None
-    })
+    }
 
-    val polys: RDD[OSMPolygon] = linesPolys.flatMap({
+    val polys: RDD[OSMPolygon] = persisted.flatMap {
       case Right(p) => Some(p)
       case _ => None
-    })
+    }
 
     /* Single Nodes unused in any Way */
     val points: RDD[OSMPoint] = grouped.flatMap({ case (ns, ws) =>
@@ -133,7 +136,10 @@ private[vectorpipe] object ElementToFeature {
 
     /* All Polygons, Lines and Relations bound by their IDs */
     val grouped =
-      polys.map(f => (f.data.id, f)).cogroup(lineLinks, relLinks).map(_._2)
+      polys.map(f => (f.data.id, f))
+        .cogroup(lineLinks, relLinks)
+        .map(_._2)
+        .persist(StorageLevel.MEMORY_AND_DISK_SER)
 
     val multipolys = grouped
       /* Assumption: Polygons and Lines exist in at most one "multipolygon" Relation */

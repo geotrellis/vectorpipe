@@ -27,26 +27,40 @@ import org.apache.spark.rdd._
   * GeoTrellis and Spark do most of our work for us. Writing a `main`
   * function that uses VectorPipe need not contain much more than:
   * {{{
+  * import geotrellis.proj4.WebMercator
+  * import geotrellis.spark.tiling.{LayoutDefinition, ZoomedLayoutScheme}
+  * import geotrellis.vectortile.VectorTile
+  * import org.apache.spark.rdd.RDD
+  * import org.apache.spark.sql.SparkSession
   * import vectorpipe._
+  *
+  * implicit val ss: SparkSession = ...
   *
   * val layout: LayoutDefinition =
   *   ZoomedLayoutScheme.layoutForZoom(15, WebMercator.worldExtent, 512)
   *
-  * ... // TODO dealing with ORC
+  * /* An ORC file containing OSM data. */
+  * val path: String = "s3://path/to/data.orc"
   *
-  * val (nodes, ways, relations): (RDD[osm.Node], RDD[osm.Way], RDD[osm.Relation]) = ...
+  * osm.fromORC(path) match {
+  *   case Failure(_) => { /* Handle the error. Was your path correct? */ }
+  *   case Success((nodes, ways, relations)) => {
   *
-  * val features: RDD[OSMFeature] =
-  *   osm.toFeatures(nodes, ways, relations)
+  *     val features: RDD[OSMFeature] =
+  *       osm.features(nodes, ways, relations).geometries
   *
-  * val featGrid: RDD[(SpatialKey, Iterable[OSMFeature])] =
-  *   VectorPipe.toGrid(Clip.byHybrid, layout, features)
+  *     val featGrid: RDD[(SpatialKey, Iterable[OSMFeature])] =
+  *       grid(Clip.byHybrid, layout, features)
   *
-  * val tiles: RDD[(SpatialKey, VectorTile)] =
-  *   VectorPipe.toVectorTile(Collate.byAnalytics, layout, featGrid)
+  *     val tiles: RDD[(SpatialKey, VectorTile)] =
+  *       vectortiles(Collate.byAnalytics, layout, featGrid)
+  *
+  *     // further processing / output
+  * }
+  *
+  * /* Nicely stop Spark */
+  * ss.stop()
   * }}}
-  * The `tiles` RDD could then be used as a GeoTrellis tile layer as
-  * needed.
   *
   * ==Writing Portable Tiles==
   * This method outputs VectorTiles to a directory structure appropriate for
@@ -76,21 +90,25 @@ import org.apache.spark.rdd._
   * import geotrellis.spark._
   * import geotrellis.spark.io._
   * import geotrellis.spark.io.file._    /* When writing to your local computer */
+  * import org.apache.spark.storage.StorageLevel
   *
   * /* IO classes */
   * val catalog: String = "/home/you/tiles/"  /* This must exist ahead of time! */
   * val store = FileAttributeStore(catalog)
   * val writer = FileLayerWriter(store)
   *
+  * /* Almost certainly necessary, to save Spark from repeating effort */
+  * val persisted = tiles.persist(StorageLevel.MEMORY_AND_DISK_SER)
+  *
   * /* Dynamically determine the KeyBounds */
   * val bounds: KeyBounds[SpatialKey] =
-  *   tiles.map({ case (key, _) => KeyBounds(key, key) }).reduce(_ combine _)
+  *   persisted.map({ case (key, _) => KeyBounds(key, key) }).reduce(_ combine _)
   *
   * /* Construct metadata for the Layer */
   * val meta = LayerMetadata(layout, bounds)
   *
   * /* Write the Tile Layer */
-  * writer.write(LayerId("north-van", 15), ContextRDD(tiles, meta), ZCurveKeyIndexMethod)
+  * writer.write(LayerId("north-van", 15), ContextRDD(persisted, meta), ZCurveKeyIndexMethod)
   * }}}
   *
   * @groupname actions Actions

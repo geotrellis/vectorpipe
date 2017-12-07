@@ -9,6 +9,7 @@ import geotrellis.vector._
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql._
+import org.apache.spark.storage.StorageLevel
 import vectorpipe.osm.internal.{ ElementToFeature => E2F, PlanetHistory }
 
 // --- //
@@ -42,9 +43,9 @@ package object osm {
   /** Given a [[DataFrame]] that follows [[https://github.com/mojodna/osm2orc#schema this table schema]],
     * read out RDDs of each [[Element]] type.
     */
-  def fromDataFrame(
-    data: DataFrame
-  )(implicit ss: SparkSession): (RDD[(Long, Node)], RDD[(Long, Way)], RDD[(Long, Relation)]) = {
+  def fromDataFrame(data: DataFrame): (RDD[(Long, Node)], RDD[(Long, Way)], RDD[(Long, Relation)]) = {
+    data.persist(StorageLevel.MEMORY_AND_DISK_SER)
+
     /* WARNING: Here be Reflection Dragons!
      * You may be look at the methods below and think: gee, that seems a bit verbose. You'd be right,
      * but that doesn't change what's necessary. The workings here are fairly brittle - things
@@ -60,8 +61,8 @@ package object osm {
   }
 
   /** Collect all the Nodes that exist in the given DataFrame. */
-  private[this] def allNodes(data: DataFrame)(implicit ss: SparkSession): RDD[(Long, Node)] = {
-    import ss.implicits._
+  private[this] def allNodes(data: DataFrame): RDD[(Long, Node)] = {
+    import data.sparkSession.implicits._
 
     data
       .select("lat", "lon", "id", "user", "uid", "changeset", "version", "timestamp", "visible", "tags")
@@ -84,8 +85,8 @@ package object osm {
   }
 
   /** Collect all the Ways that exist in the given DataFrame. */
-  private[this] def allWays(data: DataFrame)(implicit ss: SparkSession): RDD[(Long, Way)] = {
-    import ss.implicits._
+  private[this] def allWays(data: DataFrame): RDD[(Long, Way)] = {
+    import data.sparkSession.implicits._
 
     data
       .select($"nds.ref".alias("nds"), $"id", $"user", $"uid", $"changeset", $"version", $"timestamp", $"visible", $"tags")
@@ -106,8 +107,8 @@ package object osm {
   }
 
   /** Collect all the Relations that exist in the given DataFrame. */
-  private[this] def allRelations(data: DataFrame)(implicit ss: SparkSession): RDD[(Long, Relation)] = {
-    import ss.implicits._
+  private[this] def allRelations(data: DataFrame): RDD[(Long, Relation)] = {
+    import data.sparkSession.implicits._
 
     data
       .select($"members.type".alias("types"), $"members.ref".alias("refs"), $"members.role".alias("roles"), $"id", $"user", $"uid", $"changeset", $"version", $"timestamp", $"visible", $"tags")

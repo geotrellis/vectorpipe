@@ -1,6 +1,6 @@
 name := "vectorpipe"
 
-version := "0.1.0"
+version := "0.1.1"
 
 description := "Convert Vector data to VectorTiles with GeoTrellis."
 

@@ -13,7 +13,15 @@ import vectorpipe.osm.internal.PlanetHistory
 
 // --- //
 
-/** Types and functions unique to working with OpenStreetMap data. */
+/** Types and functions unique to working with OpenStreetMap data.
+  *
+  * @groupname elements Reading OSM Elements
+  * @groupprio elements 0
+  *
+  * @groupname conversion Element Conversion
+  * @groupdesc conversion Converting OSM Elements into GeoTrellis geometries.
+  * @groupprio conversion 1
+  */
 package object osm {
 
   type OSMFeature = Feature[Geometry, ElementMeta]
@@ -22,7 +30,10 @@ package object osm {
   private[vectorpipe] type OSMPolygon = Feature[Polygon, ElementMeta]
   private[vectorpipe] type OSMMultiPoly = Feature[MultiPolygon, ElementMeta]
 
-  /** Given a path to an OSM XML file, parse it into usable types. */
+  /** Given a path to an OSM XML file, parse it into usable types.
+    *
+    * @group elements
+    */
   def fromLocalXML(
     path: String
   )(implicit sc: SparkContext): Try[(RDD[(Long, Node)], RDD[(Long, Way)], RDD[(Long, Relation)])] = {
@@ -32,7 +43,10 @@ package object osm {
       .map { case (ns, ws, rs) => (sc.parallelize(ns), sc.parallelize(ws), sc.parallelize(rs)) }
   }
 
-  /** Given a path to an Apache ORC file containing OSM data, read out RDDs of each Element type. */
+  /** Given a path to an Apache ORC file containing OSM data, read out RDDs of each Element type.
+    *
+    * @group elements
+    */
   def fromORC(
     path: String
   )(implicit ss: SparkSession): Try[(RDD[(Long, Node)], RDD[(Long, Way)], RDD[(Long, Relation)])] = {
@@ -41,6 +55,8 @@ package object osm {
 
   /** Given a [[DataFrame]] that follows [[https://github.com/mojodna/osm2orc#schema this table schema]],
     * read out RDDs of each [[Element]] type.
+    *
+    * @group elements
     */
   def fromDataFrame(data: DataFrame): (RDD[(Long, Node)], RDD[(Long, Way)], RDD[(Long, Relation)]) = {
     data.persist(StorageLevel.MEMORY_AND_DISK_SER)
@@ -167,7 +183,10 @@ package object osm {
     )
   }
 
-  /** All Lines and Polygons that could be reconstructed from a set of all OSM Elements. */
+  /** All Lines and Polygons that could be reconstructed from a set of all OSM Elements.
+    *
+    * @group conversion
+    */
   def features(ns: RDD[(Long, Node)], ws: RDD[(Long, Way)], rs: RDD[(Long, Relation)]): Features = {
     PlanetHistory.features(ns, ws)
   }

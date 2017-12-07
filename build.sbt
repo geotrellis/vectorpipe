@@ -79,4 +79,4 @@ micrositeOrganizationHomepage := "https://www.azavea.com/"
 micrositeGithubOwner := "geotrellis"
 micrositeGithubRepo := "vectorpipe"
 micrositeBaseUrl := "/vectorpipe"
-micrositeDocumentationUrl := "/vectorpipe/latest/api/#vectorpipe.VectorPipe$" /* Location of Scaladocs */
+micrositeDocumentationUrl := "/vectorpipe/latest/api/#vectorpipe.package" /* Location of Scaladocs */

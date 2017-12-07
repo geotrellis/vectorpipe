@@ -104,7 +104,7 @@
       </a>
     </span>
       
-    </li><li name="_root_.vectorpipe" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
+    </li><li name="_root_.vectorpipe" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
       <a id="vectorpipe"></a>
       <a id="vectorpipe:vectorpipe"></a>
       <h4 class="signature">
@@ -120,9 +120,79 @@
         <img src="lib/permalink.png" alt="Permalink" />
       </a>
     </span>
-      <p class="shortcomment cmt">VectorPipe is a library for mass conversion of OSM data to VectorTiles,
-using GeoTrellis and Apache Spark - See the <a href="vectorpipe/VectorPipe$.html" class="extype" name="vectorpipe.VectorPipe">VectorPipe</a> object for usage
-instructions.</p>
+      <p class="shortcomment cmt">VectorPipe is a library for mass conversion of Vector data into Mapbox
+VectorTiles.</p><div class="fullcomment"><div class="comment cmt"><p>VectorPipe is a library for mass conversion of Vector data into Mapbox
+VectorTiles. It is powered by <a href="https://github.com/locationtech/geotrellis" target="_blank">GeoTrellis</a> and <a href="https://spark.apache.org" target="_blank">Apache Spark</a>.</p><h4>Outline</h4><p>GeoTrellis and Spark do most of our work for us. Writing a <code>main</code>
+function that uses VectorPipe need not contain much more than:</p><pre><span class="kw">import</span> geotrellis.proj4.WebMercator
+<span class="kw">import</span> geotrellis.spark.tiling.{LayoutDefinition, ZoomedLayoutScheme}
+<span class="kw">import</span> geotrellis.vectortile.VectorTile
+<span class="kw">import</span> org.apache.spark.rdd.RDD
+<span class="kw">import</span> org.apache.spark.sql.SparkSession
+<span class="kw">import</span> vectorpipe._
+
+<span class="kw">implicit</span> <span class="kw">val</span> ss: SparkSession = ...
+
+<span class="kw">val</span> layout: LayoutDefinition =
+  ZoomedLayoutScheme.layoutForZoom(<span class="num">15</span>, WebMercator.worldExtent, <span class="num">512</span>)
+
+<span class="cmt">/* An ORC file containing OSM data. */</span>
+<span class="kw">val</span> path: <span class="std">String</span> = <span class="lit">"s3://path/to/data.orc"</span>
+
+osm.fromORC(path) <span class="kw">match</span> {
+  <span class="kw">case</span> Failure(_) <span class="kw">=&gt;</span> { <span class="cmt">/* Handle the error. Was your path correct? */</span> }
+  <span class="kw">case</span> Success((nodes, ways, relations)) <span class="kw">=&gt;</span> {
+
+    <span class="kw">val</span> features: RDD[OSMFeature] =
+      osm.features(nodes, ways, relations).geometries
+
+    <span class="kw">val</span> featGrid: RDD[(SpatialKey, Iterable[OSMFeature])] =
+      grid(Clip.byHybrid, layout, features)
+
+    <span class="kw">val</span> tiles: RDD[(SpatialKey, VectorTile)] =
+      vectortiles(Collate.byAnalytics, layout, featGrid)
+
+    <span class="cmt">// further processing / output</span>
+}
+
+<span class="cmt">/* Nicely stop Spark */</span>
+ss.stop()</pre><h4>Writing Portable Tiles</h4><p>This method outputs VectorTiles to a directory structure appropriate for
+serving by a Tile Map Server. The VTs themselves are saved in the usual
+<code>.mvt</code> format, and so can be read by any other tool. The example that
+follows writes <code>tiles</code> from above to an S3 bucket:</p><pre><span class="kw">import</span> geotrellis.spark.io.s3._  <span class="cmt">// requires the `geotrellis-s3` library</span>
+
+<span class="cmt">/* How should a `SpatialKey` map to a filepath on S3? */</span>
+<span class="kw">val</span> s3PathFromKey: SpatialKey <span class="kw">=&gt;</span> <span class="std">String</span> = SaveToS3.spatialKeyToPath(
+  LayerId(<span class="lit">"sample"</span>, <span class="num">1</span>),  <span class="cmt">// Whatever zoom level it is</span>
+  <span class="lit">"s3://some-bucket/catalog/{name}/{z}/{x}/{y}.mvt"</span>
+)
+
+tiles.saveToS3(s3PathFromKey)</pre><h4>Writing a GeoTrellis Layer of VectorTiles</h4><p>The disadvantage of the &quot;Portable Tiles&quot; approach is that there is no
+way to read the tiles back into a <code>RDD[(SpatialKey, VectorTile)]</code> and do
+Spark-based manipulation operations. To do that, the tiles have to be
+written as a &quot;GeoTrellis Layer&quot; from the get-go. The output of such a write
+are split and compressed files that aren't readable by other tools. This
+method compresses VectorTiles to about half the size of a normal <code>.mvt</code>.</p><pre><span class="kw">import</span> geotrellis.spark._
+<span class="kw">import</span> geotrellis.spark.io._
+<span class="kw">import</span> geotrellis.spark.io.file._    <span class="cmt">/* When writing to your local computer */</span>
+<span class="kw">import</span> org.apache.spark.storage.StorageLevel
+
+<span class="cmt">/* IO classes */</span>
+<span class="kw">val</span> catalog: <span class="std">String</span> = <span class="lit">"/home/you/tiles/"</span>  <span class="cmt">/* This must exist ahead of time! */</span>
+<span class="kw">val</span> store = FileAttributeStore(catalog)
+<span class="kw">val</span> writer = FileLayerWriter(store)
+
+<span class="cmt">/* Almost certainly necessary, to save Spark from repeating effort */</span>
+<span class="kw">val</span> persisted = tiles.persist(StorageLevel.MEMORY_AND_DISK_SER)
+
+<span class="cmt">/* Dynamically determine the KeyBounds */</span>
+<span class="kw">val</span> bounds: KeyBounds[SpatialKey] =
+  persisted.map({ <span class="kw">case</span> (key, _) <span class="kw">=&gt;</span> KeyBounds(key, key) }).reduce(_ combine _)
+
+<span class="cmt">/* Construct metadata for the Layer */</span>
+<span class="kw">val</span> meta = LayerMetadata(layout, bounds)
+
+<span class="cmt">/* Write the Tile Layer */</span>
+writer.write(LayerId(<span class="lit">"north-van"</span>, <span class="num">15</span>), ContextRDD(persisted, meta), ZCurveKeyIndexMethod)</pre></div></div>
     </li></ol>
             </div>
 

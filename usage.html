@@ -28,15 +28,15 @@ entire <code class="highlighter-rouge">main</code> isn’t much more than:</p>
  * Note: type OSMFeature = Feature[Geometry, ElementData]
  */</span>
 <span class="k">val</span> <span class="n">features</span><span class="k">:</span> <span class="kt">RDD</span><span class="o">[</span><span class="kt">osm.OSMFeature</span><span class="o">]</span> <span class="k">=</span>
-  <span class="n">osm</span><span class="o">.</span><span class="n">snapshotFeatures</span><span class="o">(</span><span class="nc">VectorPipe</span><span class="o">.</span><span class="n">logToStdout</span><span class="o">,</span> <span class="n">nodes</span><span class="o">,</span> <span class="n">ways</span><span class="o">,</span> <span class="n">relations</span><span class="o">).</span><span class="n">geometries</span>
+  <span class="n">osm</span><span class="o">.</span><span class="n">features</span><span class="o">(</span><span class="n">nodes</span><span class="o">,</span> <span class="n">ways</span><span class="o">,</span> <span class="n">relations</span><span class="o">).</span><span class="n">geometries</span>
 
 <span class="cm">/* All Geometries clipped to your `layout` grid */</span>
 <span class="k">val</span> <span class="n">featGrid</span><span class="k">:</span> <span class="kt">RDD</span><span class="o">[(</span><span class="kt">SpatialKey</span>, <span class="kt">Iterable</span><span class="o">[</span><span class="kt">osm.OSMFeature</span><span class="o">])]</span> <span class="k">=</span>
-  <span class="nc">VectorPipe</span><span class="o">.</span><span class="n">toGrid</span><span class="o">(</span><span class="nc">Clip</span><span class="o">.</span><span class="n">byHybrid</span><span class="o">,</span> <span class="nc">VectorPipe</span><span class="o">.</span><span class="n">logToStdout</span><span class="o">,</span> <span class="n">layout</span><span class="o">,</span> <span class="n">features</span><span class="o">)</span>
+  <span class="n">grid</span><span class="o">(</span><span class="nc">Clip</span><span class="o">.</span><span class="n">byHybrid</span><span class="o">,</span> <span class="n">logToStdout</span><span class="o">,</span> <span class="n">layout</span><span class="o">,</span> <span class="n">features</span><span class="o">)</span>
 
 <span class="cm">/* A grid of Vector Tiles */</span>
 <span class="k">val</span> <span class="n">tiles</span><span class="k">:</span> <span class="kt">RDD</span><span class="o">[(</span><span class="kt">SpatialKey</span>, <span class="kt">VectorTile</span><span class="o">)]</span> <span class="k">=</span>
-  <span class="nc">VectorPipe</span><span class="o">.</span><span class="n">toVectorTile</span><span class="o">(</span><span class="nc">Collate</span><span class="o">.</span><span class="n">byOSM</span><span class="o">,</span> <span class="n">layout</span><span class="o">,</span> <span class="n">featGrid</span><span class="o">)</span>
+  <span class="n">vectortiles</span><span class="o">(</span><span class="nc">Collate</span><span class="o">.</span><span class="n">byOSM</span><span class="o">,</span> <span class="n">layout</span><span class="o">,</span> <span class="n">featGrid</span><span class="o">)</span>
 
 <span class="cm">/* Further processing here, writing to S3, etc. */</span>
 

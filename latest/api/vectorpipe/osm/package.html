@@ -47,7 +47,8 @@
       </span>
       </h4>
       
-          <div id="comment" class="fullcommenttop"><div class="comment cmt"><p>Types and functions unique to working with OpenStreetMap data.</p></div><div class="toggleContainer block">
+          <div id="comment" class="fullcommenttop"><div class="comment cmt"><p>Types and functions unique to working with OpenStreetMap data.
+</p></div><div class="toggleContainer block">
           <span class="toggle">Linear Supertypes</span>
           <div class="superTypes hiddenContent"><span class="extype" name="scala.AnyRef">AnyRef</span>, <span class="extype" name="scala.Any">Any</span></div>
         </div></div>
@@ -58,7 +59,7 @@
         <div id="order">
               <span class="filtertype">Ordering</span>
               <ol>
-                
+                <li class="group out"><span>Grouped</span></li>
                 <li class="alpha in"><span>Alphabetic</span></li>
                 <li class="inherit out"><span>By Inheritance</span></li>
               </ol>
@@ -324,25 +325,42 @@ the user can discard types they don't need.
       </a>
     </span>
       
-    </li><li name="vectorpipe.osm#fromDataFrame" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="fromDataFrame(data:org.apache.spark.sql.DataFrame)(implicitss:org.apache.spark.sql.SparkSession):(org.apache.spark.rdd.RDD[(Long,vectorpipe.osm.Node)],org.apache.spark.rdd.RDD[(Long,vectorpipe.osm.Way)],org.apache.spark.rdd.RDD[(Long,vectorpipe.osm.Relation)])"></a>
-      <a id="fromDataFrame(DataFrame)(SparkSession):(RDD[(Long,Node)],RDD[(Long,Way)],RDD[(Long,Relation)])"></a>
+    </li><li name="vectorpipe.osm#features" visbl="pub" data-isabs="false" fullComment="no" group="conversion">
+      <a id="features(ns:org.apache.spark.rdd.RDD[(Long,vectorpipe.osm.Node)],ws:org.apache.spark.rdd.RDD[(Long,vectorpipe.osm.Way)],rs:org.apache.spark.rdd.RDD[(Long,vectorpipe.osm.Relation)]):vectorpipe.osm.Features"></a>
+      <a id="features(RDD[(Long,Node)],RDD[(Long,Way)],RDD[(Long,Relation)]):Features"></a>
       <h4 class="signature">
       <span class="modifier_kind">
         <span class="modifier"></span>
         <span class="kind">def</span>
       </span>
       <span class="symbol">
-        <span class="name">fromDataFrame</span><span class="params">(<span name="data">data: <span class="extype" name="org.apache.spark.sql.DataFrame">DataFrame</span></span>)</span><span class="params">(<span class="implicit">implicit </span><span name="ss">ss: <span class="extype" name="org.apache.spark.sql.SparkSession">SparkSession</span></span>)</span><span class="result">: (<span class="extype" name="org.apache.spark.rdd.RDD">RDD</span>[(<span class="extype" name="scala.Long">Long</span>, <a href="Node.html" class="extype" name="vectorpipe.osm.Node">Node</a>)], <span class="extype" name="org.apache.spark.rdd.RDD">RDD</span>[(<span class="extype" name="scala.Long">Long</span>, <a href="Way.html" class="extype" name="vectorpipe.osm.Way">Way</a>)], <span class="extype" name="org.apache.spark.rdd.RDD">RDD</span>[(<span class="extype" name="scala.Long">Long</span>, <a href="Relation.html" class="extype" name="vectorpipe.osm.Relation">Relation</a>)])</span>
+        <span class="name">features</span><span class="params">(<span name="ns">ns: <span class="extype" name="org.apache.spark.rdd.RDD">RDD</span>[(<span class="extype" name="scala.Long">Long</span>, <a href="Node.html" class="extype" name="vectorpipe.osm.Node">Node</a>)]</span>, <span name="ws">ws: <span class="extype" name="org.apache.spark.rdd.RDD">RDD</span>[(<span class="extype" name="scala.Long">Long</span>, <a href="Way.html" class="extype" name="vectorpipe.osm.Way">Way</a>)]</span>, <span name="rs">rs: <span class="extype" name="org.apache.spark.rdd.RDD">RDD</span>[(<span class="extype" name="scala.Long">Long</span>, <a href="Relation.html" class="extype" name="vectorpipe.osm.Relation">Relation</a>)]</span>)</span><span class="result">: <a href="Features.html" class="extype" name="vectorpipe.osm.Features">Features</a></span>
       </span>
       </h4><span class="permalink">
-      <a href="../../index.html#vectorpipe.osm.package@fromDataFrame(data:org.apache.spark.sql.DataFrame)(implicitss:org.apache.spark.sql.SparkSession):(org.apache.spark.rdd.RDD[(Long,vectorpipe.osm.Node)],org.apache.spark.rdd.RDD[(Long,vectorpipe.osm.Way)],org.apache.spark.rdd.RDD[(Long,vectorpipe.osm.Relation)])" title="Permalink" target="_top">
+      <a href="../../index.html#vectorpipe.osm.package@features(ns:org.apache.spark.rdd.RDD[(Long,vectorpipe.osm.Node)],ws:org.apache.spark.rdd.RDD[(Long,vectorpipe.osm.Way)],rs:org.apache.spark.rdd.RDD[(Long,vectorpipe.osm.Relation)]):vectorpipe.osm.Features" title="Permalink" target="_top">
+        <img src="../../lib/permalink.png" alt="Permalink" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">All Lines and Polygons that could be reconstructed from a set of all OSM Elements.</p>
+    </li><li name="vectorpipe.osm#fromDataFrame" visbl="pub" data-isabs="false" fullComment="no" group="elements">
+      <a id="fromDataFrame(data:org.apache.spark.sql.DataFrame):(org.apache.spark.rdd.RDD[(Long,vectorpipe.osm.Node)],org.apache.spark.rdd.RDD[(Long,vectorpipe.osm.Way)],org.apache.spark.rdd.RDD[(Long,vectorpipe.osm.Relation)])"></a>
+      <a id="fromDataFrame(DataFrame):(RDD[(Long,Node)],RDD[(Long,Way)],RDD[(Long,Relation)])"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">fromDataFrame</span><span class="params">(<span name="data">data: <span class="extype" name="org.apache.spark.sql.DataFrame">DataFrame</span></span>)</span><span class="result">: (<span class="extype" name="org.apache.spark.rdd.RDD">RDD</span>[(<span class="extype" name="scala.Long">Long</span>, <a href="Node.html" class="extype" name="vectorpipe.osm.Node">Node</a>)], <span class="extype" name="org.apache.spark.rdd.RDD">RDD</span>[(<span class="extype" name="scala.Long">Long</span>, <a href="Way.html" class="extype" name="vectorpipe.osm.Way">Way</a>)], <span class="extype" name="org.apache.spark.rdd.RDD">RDD</span>[(<span class="extype" name="scala.Long">Long</span>, <a href="Relation.html" class="extype" name="vectorpipe.osm.Relation">Relation</a>)])</span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../../index.html#vectorpipe.osm.package@fromDataFrame(data:org.apache.spark.sql.DataFrame):(org.apache.spark.rdd.RDD[(Long,vectorpipe.osm.Node)],org.apache.spark.rdd.RDD[(Long,vectorpipe.osm.Way)],org.apache.spark.rdd.RDD[(Long,vectorpipe.osm.Relation)])" title="Permalink" target="_top">
         <img src="../../lib/permalink.png" alt="Permalink" />
       </a>
     </span>
       <p class="shortcomment cmt">Given a <span class="extype" name="DataFrame">DataFrame</span> that follows <a href="https://github.com/mojodna/osm2orc#schema" target="_blank">this table schema</a>,
 read out RDDs of each <a href="Element.html" class="extype" name="vectorpipe.osm.Element">Element</a> type.</p>
-    </li><li name="vectorpipe.osm#fromLocalXML" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
+    </li><li name="vectorpipe.osm#fromLocalXML" visbl="pub" data-isabs="false" fullComment="no" group="elements">
       <a id="fromLocalXML(path:String)(implicitsc:org.apache.spark.SparkContext):scala.util.Try[(org.apache.spark.rdd.RDD[(Long,vectorpipe.osm.Node)],org.apache.spark.rdd.RDD[(Long,vectorpipe.osm.Way)],org.apache.spark.rdd.RDD[(Long,vectorpipe.osm.Relation)])]"></a>
       <a id="fromLocalXML(String)(SparkContext):Try[(RDD[(Long,Node)],RDD[(Long,Way)],RDD[(Long,Relation)])]"></a>
       <h4 class="signature">
@@ -359,7 +377,7 @@ read out RDDs of each <a href="Element.html" class="extype" name="vectorpipe.osm
       </a>
     </span>
       <p class="shortcomment cmt">Given a path to an OSM XML file, parse it into usable types.</p>
-    </li><li name="vectorpipe.osm#fromORC" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
+    </li><li name="vectorpipe.osm#fromORC" visbl="pub" data-isabs="false" fullComment="no" group="elements">
       <a id="fromORC(path:String)(implicitss:org.apache.spark.sql.SparkSession):scala.util.Try[(org.apache.spark.rdd.RDD[(Long,vectorpipe.osm.Node)],org.apache.spark.rdd.RDD[(Long,vectorpipe.osm.Way)],org.apache.spark.rdd.RDD[(Long,vectorpipe.osm.Relation)])]"></a>
       <a id="fromORC(String)(SparkSession):Try[(RDD[(Long,Node)],RDD[(Long,Way)],RDD[(Long,Relation)])]"></a>
       <h4 class="signature">
@@ -376,58 +394,6 @@ read out RDDs of each <a href="Element.html" class="extype" name="vectorpipe.osm
       </a>
     </span>
       <p class="shortcomment cmt">Given a path to an Apache ORC file containing OSM data, read out RDDs of each Element type.</p>
-    </li><li name="vectorpipe.osm#historicalFeatures" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="historicalFeatures(nodes:org.apache.spark.rdd.RDD[(Long,vectorpipe.osm.Node)],ways:org.apache.spark.rdd.RDD[(Long,vectorpipe.osm.Way)]):vectorpipe.osm.Features"></a>
-      <a id="historicalFeatures(RDD[(Long,Node)],RDD[(Long,Way)]):Features"></a>
-      <h4 class="signature">
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">def</span>
-      </span>
-      <span class="symbol">
-        <span class="name">historicalFeatures</span><span class="params">(<span name="nodes">nodes: <span class="extype" name="org.apache.spark.rdd.RDD">RDD</span>[(<span class="extype" name="scala.Long">Long</span>, <a href="Node.html" class="extype" name="vectorpipe.osm.Node">Node</a>)]</span>, <span name="ways">ways: <span class="extype" name="org.apache.spark.rdd.RDD">RDD</span>[(<span class="extype" name="scala.Long">Long</span>, <a href="Way.html" class="extype" name="vectorpipe.osm.Way">Way</a>)]</span>)</span><span class="result">: <a href="Features.html" class="extype" name="vectorpipe.osm.Features">Features</a></span>
-      </span>
-      </h4><span class="permalink">
-      <a href="../../index.html#vectorpipe.osm.package@historicalFeatures(nodes:org.apache.spark.rdd.RDD[(Long,vectorpipe.osm.Node)],ways:org.apache.spark.rdd.RDD[(Long,vectorpipe.osm.Way)]):vectorpipe.osm.Features" title="Permalink" target="_top">
-        <img src="../../lib/permalink.png" alt="Permalink" />
-      </a>
-    </span>
-      <p class="shortcomment cmt">All Lines and Polygons that could be reconstructed from a set of all
-historical OSM Elements.</p>
-    </li><li name="vectorpipe.osm#snapshotFeatures" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="snapshotFeatures(logError:(geotrellis.vector.Feature[geotrellis.vector.Line,vectorpipe.osm.ElementMeta]=&gt;String)=&gt;(geotrellis.vector.Feature[geotrellis.vector.Line,vectorpipe.osm.ElementMeta]=&gt;Unit),nodes:org.apache.spark.rdd.RDD[(Long,vectorpipe.osm.Node)],ways:org.apache.spark.rdd.RDD[(Long,vectorpipe.osm.Way)],relations:org.apache.spark.rdd.RDD[(Long,vectorpipe.osm.Relation)]):vectorpipe.osm.Features"></a>
-      <a id="snapshotFeatures(((Feature[Line,ElementMeta])⇒String)⇒(Feature[Line,ElementMeta])⇒Unit,RDD[(Long,Node)],RDD[(Long,Way)],RDD[(Long,Relation)]):Features"></a>
-      <h4 class="signature">
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">def</span>
-      </span>
-      <span class="symbol">
-        <span class="name">snapshotFeatures</span><span class="params">(<span name="logError">logError: ((<span class="extype" name="geotrellis.vector.Feature">Feature</span>[<span class="extype" name="geotrellis.vector.Line">Line</span>, <a href="ElementMeta.html" class="extype" name="vectorpipe.osm.ElementMeta">ElementMeta</a>]) ⇒ <span class="extype" name="scala.Predef.String">String</span>) ⇒ (<span class="extype" name="geotrellis.vector.Feature">Feature</span>[<span class="extype" name="geotrellis.vector.Line">Line</span>, <a href="ElementMeta.html" class="extype" name="vectorpipe.osm.ElementMeta">ElementMeta</a>]) ⇒ <span class="extype" name="scala.Unit">Unit</span></span>, <span name="nodes">nodes: <span class="extype" name="org.apache.spark.rdd.RDD">RDD</span>[(<span class="extype" name="scala.Long">Long</span>, <a href="Node.html" class="extype" name="vectorpipe.osm.Node">Node</a>)]</span>, <span name="ways">ways: <span class="extype" name="org.apache.spark.rdd.RDD">RDD</span>[(<span class="extype" name="scala.Long">Long</span>, <a href="Way.html" class="extype" name="vectorpipe.osm.Way">Way</a>)]</span>, <span name="relations">relations: <span class="extype" name="org.apache.spark.rdd.RDD">RDD</span>[(<span class="extype" name="scala.Long">Long</span>, <a href="Relation.html" class="extype" name="vectorpipe.osm.Relation">Relation</a>)]</span>)</span><span class="result">: <a href="Features.html" class="extype" name="vectorpipe.osm.Features">Features</a></span>
-      </span>
-      </h4><span class="permalink">
-      <a href="../../index.html#vectorpipe.osm.package@snapshotFeatures(logError:(geotrellis.vector.Feature[geotrellis.vector.Line,vectorpipe.osm.ElementMeta]=&gt;String)=&gt;(geotrellis.vector.Feature[geotrellis.vector.Line,vectorpipe.osm.ElementMeta]=&gt;Unit),nodes:org.apache.spark.rdd.RDD[(Long,vectorpipe.osm.Node)],ways:org.apache.spark.rdd.RDD[(Long,vectorpipe.osm.Way)],relations:org.apache.spark.rdd.RDD[(Long,vectorpipe.osm.Relation)]):vectorpipe.osm.Features" title="Permalink" target="_top">
-        <img src="../../lib/permalink.png" alt="Permalink" />
-      </a>
-    </span>
-      <p class="shortcomment cmt">Convert an RDD of raw OSM <a href="Element.html" class="extype" name="vectorpipe.osm.Element">Element</a>s into interpreted GeoTrellis
-<span class="extype" name="Feature">Feature</span>s.</p><div class="fullcomment"><div class="comment cmt"><p>Convert an RDD of raw OSM <a href="Element.html" class="extype" name="vectorpipe.osm.Element">Element</a>s into interpreted GeoTrellis
-<span class="extype" name="Feature">Feature</span>s. In order to mix the various subtypes together, they've
-been upcasted internally to <span class="extype" name="Geometry">Geometry</span>. Note:</p><pre><span class="kw">type</span> OSMFeature = Feature[Geometry, ElementMeta]</pre><h5>Behaviour</h5><p>This algorithm aims to losslessly &quot;sanitize&quot; its input data,
-in that it will break down malformed Relation structures, as
-well as cull member references to Elements which no longer
-exist (or exist outside the subset of data you're working
-on). Mathematically speaking, there should exist a function
-to reverse this conversion. This theoretical function and
-<code>toFeatures</code> form an isomorphism if the source data is
-correct. In other words, given:</p><pre>parse: XML <span class="kw">=&gt;</span> RDD[Element]
-toFeatures: RDD[Element] <span class="kw">=&gt;</span> RDD[OSMFeature]
-restore: RDD[OSMFeature] <span class="kw">=&gt;</span> RDD[Element]
-unparse: RDD[Element] <span class="kw">=&gt;</span> XML</pre><p>then:</p><pre>unparse(restore(toFeatures(parse(xml: XML))))</pre><p>will yield a body of semantically correct OSM data.</p><p>To achieve this sanity, the algorithm has the following behaviour:</p><ul><li>Graphs of <a href="Relation.html" class="extype" name="vectorpipe.osm.Relation">Relation</a>s will be broken into spanning <span class="extype" name="Tree">Tree</span>s.</li><li>It doesn't make sense to represent non-multipolygon Relations as
-    GeoTrellis <code>Geometry</code>s, so Relation metadata is disseminated
-    across its child members. Otherwise, Relations are &quot;dropped&quot;
-    from the output.
-</li></ul></div></div>
     </li></ol>
             </div>
 
@@ -446,7 +412,13 @@ unparse: RDD[Element] <span class="kw">=&gt;</span> XML</pre><p>then:</p><pre>un
         </div>
 
         <div id="groupedMembers">
-        <div class="group" name="Ungrouped">
+        <div class="group" name="elements">
+              <h3>Reading OSM Elements</h3>
+              
+            </div><div class="group" name="conversion">
+              <h3>Element Conversion</h3>
+              <div class="comment cmt"><p>Converting OSM Elements into GeoTrellis geometries.</p></div>
+            </div><div class="group" name="Ungrouped">
               <h3>Ungrouped</h3>
               
             </div>

@@ -47,10 +47,78 @@
       </span>
       </h4>
       
-          <div id="comment" class="fullcommenttop"><div class="comment cmt"><p>VectorPipe is a library for mass conversion of OSM data to VectorTiles,
-using GeoTrellis and Apache Spark - See the <a href="VectorPipe$.html" class="extype" name="vectorpipe.VectorPipe">VectorPipe</a> object for usage
-instructions.
-</p></div><div class="toggleContainer block">
+          <div id="comment" class="fullcommenttop"><div class="comment cmt"><p>VectorPipe is a library for mass conversion of Vector data into Mapbox
+VectorTiles. It is powered by <a href="https://github.com/locationtech/geotrellis" target="_blank">GeoTrellis</a> and <a href="https://spark.apache.org" target="_blank">Apache Spark</a>.</p><h4>Outline</h4><p>GeoTrellis and Spark do most of our work for us. Writing a <code>main</code>
+function that uses VectorPipe need not contain much more than:</p><pre><span class="kw">import</span> geotrellis.proj4.WebMercator
+<span class="kw">import</span> geotrellis.spark.tiling.{LayoutDefinition, ZoomedLayoutScheme}
+<span class="kw">import</span> geotrellis.vectortile.VectorTile
+<span class="kw">import</span> org.apache.spark.rdd.RDD
+<span class="kw">import</span> org.apache.spark.sql.SparkSession
+<span class="kw">import</span> vectorpipe._
+
+<span class="kw">implicit</span> <span class="kw">val</span> ss: SparkSession = ...
+
+<span class="kw">val</span> layout: LayoutDefinition =
+  ZoomedLayoutScheme.layoutForZoom(<span class="num">15</span>, WebMercator.worldExtent, <span class="num">512</span>)
+
+<span class="cmt">/* An ORC file containing OSM data. */</span>
+<span class="kw">val</span> path: <span class="std">String</span> = <span class="lit">"s3://path/to/data.orc"</span>
+
+osm.fromORC(path) <span class="kw">match</span> {
+  <span class="kw">case</span> Failure(_) <span class="kw">=&gt;</span> { <span class="cmt">/* Handle the error. Was your path correct? */</span> }
+  <span class="kw">case</span> Success((nodes, ways, relations)) <span class="kw">=&gt;</span> {
+
+    <span class="kw">val</span> features: RDD[OSMFeature] =
+      osm.features(nodes, ways, relations).geometries
+
+    <span class="kw">val</span> featGrid: RDD[(SpatialKey, Iterable[OSMFeature])] =
+      grid(Clip.byHybrid, layout, features)
+
+    <span class="kw">val</span> tiles: RDD[(SpatialKey, VectorTile)] =
+      vectortiles(Collate.byAnalytics, layout, featGrid)
+
+    <span class="cmt">// further processing / output</span>
+}
+
+<span class="cmt">/* Nicely stop Spark */</span>
+ss.stop()</pre><h4>Writing Portable Tiles</h4><p>This method outputs VectorTiles to a directory structure appropriate for
+serving by a Tile Map Server. The VTs themselves are saved in the usual
+<code>.mvt</code> format, and so can be read by any other tool. The example that
+follows writes <code>tiles</code> from above to an S3 bucket:</p><pre><span class="kw">import</span> geotrellis.spark.io.s3._  <span class="cmt">// requires the `geotrellis-s3` library</span>
+
+<span class="cmt">/* How should a `SpatialKey` map to a filepath on S3? */</span>
+<span class="kw">val</span> s3PathFromKey: SpatialKey <span class="kw">=&gt;</span> <span class="std">String</span> = SaveToS3.spatialKeyToPath(
+  LayerId(<span class="lit">"sample"</span>, <span class="num">1</span>),  <span class="cmt">// Whatever zoom level it is</span>
+  <span class="lit">"s3://some-bucket/catalog/{name}/{z}/{x}/{y}.mvt"</span>
+)
+
+tiles.saveToS3(s3PathFromKey)</pre><h4>Writing a GeoTrellis Layer of VectorTiles</h4><p>The disadvantage of the &quot;Portable Tiles&quot; approach is that there is no
+way to read the tiles back into a <code>RDD[(SpatialKey, VectorTile)]</code> and do
+Spark-based manipulation operations. To do that, the tiles have to be
+written as a &quot;GeoTrellis Layer&quot; from the get-go. The output of such a write
+are split and compressed files that aren't readable by other tools. This
+method compresses VectorTiles to about half the size of a normal <code>.mvt</code>.</p><pre><span class="kw">import</span> geotrellis.spark._
+<span class="kw">import</span> geotrellis.spark.io._
+<span class="kw">import</span> geotrellis.spark.io.file._    <span class="cmt">/* When writing to your local computer */</span>
+<span class="kw">import</span> org.apache.spark.storage.StorageLevel
+
+<span class="cmt">/* IO classes */</span>
+<span class="kw">val</span> catalog: <span class="std">String</span> = <span class="lit">"/home/you/tiles/"</span>  <span class="cmt">/* This must exist ahead of time! */</span>
+<span class="kw">val</span> store = FileAttributeStore(catalog)
+<span class="kw">val</span> writer = FileLayerWriter(store)
+
+<span class="cmt">/* Almost certainly necessary, to save Spark from repeating effort */</span>
+<span class="kw">val</span> persisted = tiles.persist(StorageLevel.MEMORY_AND_DISK_SER)
+
+<span class="cmt">/* Dynamically determine the KeyBounds */</span>
+<span class="kw">val</span> bounds: KeyBounds[SpatialKey] =
+  persisted.map({ <span class="kw">case</span> (key, _) <span class="kw">=&gt;</span> KeyBounds(key, key) }).reduce(_ combine _)
+
+<span class="cmt">/* Construct metadata for the Layer */</span>
+<span class="kw">val</span> meta = LayerMetadata(layout, bounds)
+
+<span class="cmt">/* Write the Tile Layer */</span>
+writer.write(LayerId(<span class="lit">"north-van"</span>, <span class="num">15</span>), ContextRDD(persisted, meta), ZCurveKeyIndexMethod)</pre></div><div class="toggleContainer block">
           <span class="toggle">Linear Supertypes</span>
           <div class="superTypes hiddenContent"><span class="extype" name="scala.AnyRef">AnyRef</span>, <span class="extype" name="scala.Any">Any</span></div>
         </div></div>
@@ -61,7 +129,7 @@ instructions.
         <div id="order">
               <span class="filtertype">Ordering</span>
               <ol>
-                
+                <li class="group out"><span>Grouped</span></li>
                 <li class="alpha in"><span>Alphabetic</span></li>
                 <li class="inherit out"><span>By Inheritance</span></li>
               </ol>
@@ -89,7 +157,27 @@ instructions.
         <div id="allMembers">
         
 
-        
+        <div id="types" class="types members">
+              <h3>Type Members</h3>
+              <ol><li name="vectorpipe.LayerMetadata" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+      <a id="LayerMetadata[K]extendsProductwithSerializable"></a>
+      <a id="LayerMetadata[K]:LayerMetadata[K]"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">case class</span>
+      </span>
+      <span class="symbol">
+        <a href="LayerMetadata.html"><span class="name">LayerMetadata</span></a><span class="tparams">[<span name="K">K</span>]</span><span class="params">(<span name="layout">layout: <span class="extype" name="geotrellis.spark.tiling.LayoutDefinition">LayoutDefinition</span></span>, <span name="bounds">bounds: <span class="extype" name="geotrellis.spark.KeyBounds">KeyBounds</span>[<span class="extype" name="vectorpipe.LayerMetadata.K">K</span>]</span>)</span><span class="params">(<span class="implicit">implicit </span><span name="evidence$1">evidence$1: <span class="extype" name="spray.json.JsonFormat">JsonFormat</span>[<span class="extype" name="vectorpipe.LayerMetadata.K">K</span>]</span>)</span><span class="result"> extends <span class="extype" name="scala.Product">Product</span> with <span class="extype" name="scala.Serializable">Serializable</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../index.html#vectorpipe.package@LayerMetadata[K]extendsProductwithSerializable" title="Permalink" target="_top">
+        <img src="../lib/permalink.png" alt="Permalink" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">Minimalist Layer-level metadata.</p><div class="fullcomment"><div class="comment cmt"><p>Minimalist Layer-level metadata. Necessary for writing layers of VectorTiles.</p></div></div>
+    </li></ol>
+            </div>
 
         
 
@@ -154,83 +242,107 @@ fine-grained choices.</p><h6>Metadata Transformation Functions</h6><p>One of the
 <a href="https://geotrellis.github.io/scaladocs/latest/#geotrellis.vectortile.package" target="_blank">geotrellis.vectortile</a></p><h4>On Winding Order</h4><p>VectorTiles require that Polygon exteriors have clockwise winding order,
 and that interior holes have counter-clockwise winding order. These assume
 that the origin <code>(0,0)</code> is in the <b>top-left</b> corner.</p><p><b>Any custom collator which does not call <code>generically</code> must correct
-for Polygon winding order manually.</b> This can be done via the <a href="util/package.html#winding(p:geotrellis.vector.Polygon):geotrellis.vector.Polygon" class="extmbr" name="vectorpipe.util#winding">vectorpipe.util.winding</a>
+for Polygon winding order manually.</b> This can be done via the <a href="#winding(p:geotrellis.vector.Polygon):geotrellis.vector.Polygon" class="extmbr" name="vectorpipe#winding">vectorpipe.winding</a>
 function.</p><p>But why correct for winding order at all? Well, OSM data makes no guarantee
 about what winding order its derived Polygons will have. We could correct
 winding order when our first <code>RDD[OSMFeature]</code> is created, except that its
 unlikely that the clipping process afterward would maintain our winding for
 all Polygons.
 </p></div></div>
-    </li><li name="vectorpipe.VectorPipe" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
-      <a id="VectorPipe"></a>
-      <a id="VectorPipe:VectorPipe"></a>
+    </li><li name="vectorpipe.LayerMetadata" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
+      <a id="LayerMetadata"></a>
+      <a id="LayerMetadata:LayerMetadata"></a>
       <h4 class="signature">
       <span class="modifier_kind">
         <span class="modifier"></span>
         <span class="kind">object</span>
       </span>
       <span class="symbol">
-        <a href="VectorPipe$.html"><span class="name">VectorPipe</span></a>
+        <a href="LayerMetadata$.html"><span class="name">LayerMetadata</span></a><span class="result"> extends <span class="extype" name="scala.Serializable">Serializable</span></span>
       </span>
       </h4><span class="permalink">
-      <a href="../index.html#vectorpipe.package@VectorPipe" title="Permalink" target="_top">
+      <a href="../index.html#vectorpipe.package@LayerMetadata" title="Permalink" target="_top">
         <img src="../lib/permalink.png" alt="Permalink" />
       </a>
     </span>
-      <p class="shortcomment cmt">VectorPipe is a library for mass conversion of OSM data into Mapbox
-VectorTiles.</p><div class="fullcomment"><div class="comment cmt"><p>VectorPipe is a library for mass conversion of OSM data into Mapbox
-VectorTiles. It is powered by <a href="https://github.com/locationtech/geotrellis" target="_blank">GeoTrellis</a> and <a href="https://spark.apache.org" target="_blank">Apache Spark</a>.</p><h4>Outline</h4><p>GeoTrellis and Spark do most of our work for us. Writing a <code>main</code>
-function that uses VectorPipe need not contain much more than:</p><pre><span class="kw">import</span> vectorpipe._
-
-<span class="kw">val</span> layout: LayoutDefinition =
-  ZoomedLayoutScheme.layoutForZoom(<span class="num">15</span>, WebMercator.worldExtent, <span class="num">512</span>)
-
-... <span class="cmt">// TODO dealing with ORC</span>
-
-<span class="kw">val</span> (nodes, ways, relations): (RDD[osm.Node], RDD[osm.Way], RDD[osm.Relation]) = ...
-
-<span class="kw">val</span> features: RDD[OSMFeature] =
-  osm.toFeatures(nodes, ways, relations)
-
-<span class="kw">val</span> featGrid: RDD[(SpatialKey, Iterable[OSMFeature])] =
-  VectorPipe.toGrid(Clip.byHybrid, layout, features)
-
-<span class="kw">val</span> tiles: RDD[(SpatialKey, VectorTile)] =
-  VectorPipe.toVectorTile(Collate.byAnalytics, layout, featGrid)</pre><p>The <code>tiles</code> RDD could then be used as a GeoTrellis tile layer as
-needed.</p><h4>Writing Portable Tiles</h4><p>This method outputs VectorTiles to a directory structure appropriate for
-serving by a Tile Map Server. The VTs themselves are saved in the usual
-<code>.mvt</code> format, and so can be read by any other tool. The example that
-follows writes <code>tiles</code> from above to an S3 bucket:</p><pre><span class="kw">import</span> geotrellis.spark.io.s3._  <span class="cmt">// requires the `geotrellis-s3` library</span>
-
-<span class="cmt">/* How should a `SpatialKey` map to a filepath on S3? */</span>
-<span class="kw">val</span> s3PathFromKey: SpatialKey <span class="kw">=&gt;</span> <span class="std">String</span> = SaveToS3.spatialKeyToPath(
-  LayerId(<span class="lit">"sample"</span>, <span class="num">1</span>),  <span class="cmt">// Whatever zoom level it is</span>
-  <span class="lit">"s3://some-bucket/catalog/{name}/{z}/{x}/{y}.mvt"</span>
-)
-
-tiles.saveToS3(s3PathFromKey)</pre><h4>Writing a GeoTrellis Layer of VectorTiles</h4><p>The disadvantage of the &quot;Portable Tiles&quot; approach is that there is no
-way to read the tiles back into a <code>RDD[(SpatialKey, VectorTile)]</code> and do
-Spark-based manipulation operations. To do that, the tiles have to be
-written as a &quot;GeoTrellis Layer&quot; from the get-go. The output of such a write
-are split and compressed files that aren't readable by other tools. This
-method compresses VectorTiles to about half the size of a normal <code>.mvt</code>.</p><pre><span class="kw">import</span> geotrellis.spark._
-<span class="kw">import</span> geotrellis.spark.io._
-<span class="kw">import</span> geotrellis.spark.io.file._    <span class="cmt">/* When writing to your local computer */</span>
-
-<span class="cmt">/* IO classes */</span>
-<span class="kw">val</span> catalog: <span class="std">String</span> = <span class="lit">"/home/you/tiles/"</span>  <span class="cmt">/* This must exist ahead of time! */</span>
-<span class="kw">val</span> store = FileAttributeStore(catalog)
-<span class="kw">val</span> writer = FileLayerWriter(store)
-
-<span class="cmt">/* Dynamically determine the KeyBounds */</span>
-<span class="kw">val</span> bounds: KeyBounds[SpatialKey] =
-  tiles.map({ <span class="kw">case</span> (key, _) <span class="kw">=&gt;</span> KeyBounds(key, key) }).reduce(_ combine _)
-
-<span class="cmt">/* Construct metadata for the Layer */</span>
-<span class="kw">val</span> meta = LayerMetadata(layout, bounds)
-
-<span class="cmt">/* Write the Tile Layer */</span>
-writer.write(LayerId(<span class="lit">"north-van"</span>, <span class="num">15</span>), ContextRDD(tiles, meta), ZCurveKeyIndexMethod)</pre></div></div>
+      
+    </li><li name="vectorpipe#grid" visbl="pub" data-isabs="false" fullComment="yes" group="actions">
+      <a id="grid[D](clip:(geotrellis.vector.Extent,geotrellis.vector.Feature[geotrellis.vector.Geometry,D],geotrellis.spark.clip.ClipToGrid.Predicates)=&gt;Option[geotrellis.vector.Feature[geotrellis.vector.Geometry,D]],logError:(((geotrellis.vector.Extent,geotrellis.vector.Feature[geotrellis.vector.Geometry,D]))=&gt;String)=&gt;(((geotrellis.vector.Extent,geotrellis.vector.Feature[geotrellis.vector.Geometry,D]))=&gt;Unit),ld:geotrellis.spark.tiling.LayoutDefinition,rdd:org.apache.spark.rdd.RDD[geotrellis.vector.Feature[geotrellis.vector.Geometry,D]]):org.apache.spark.rdd.RDD[(geotrellis.spark.SpatialKey,Iterable[geotrellis.vector.Feature[geotrellis.vector.Geometry,D]])]"></a>
+      <a id="grid[D]((Extent,Feature[Geometry,D],Predicates)⇒Option[Feature[Geometry,D]],(((Extent,Feature[Geometry,D]))⇒String)⇒((Extent,Feature[Geometry,D]))⇒Unit,LayoutDefinition,RDD[Feature[Geometry,D]]):RDD[(SpatialKey,Iterable[Feature[Geometry,D]])]"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">grid</span><span class="tparams">[<span name="D">D</span>]</span><span class="params">(<span name="clip">clip: (<span class="extype" name="geotrellis.vector.Extent">Extent</span>, <span class="extype" name="geotrellis.vector.Feature">Feature</span>[<span class="extype" name="geotrellis.vector.Geometry">Geometry</span>, <span class="extype" name="vectorpipe.grid.D">D</span>], <span class="extype" name="geotrellis.spark.clip.ClipToGrid.Predicates">Predicates</span>) ⇒ <span class="extype" name="scala.Option">Option</span>[<span class="extype" name="geotrellis.vector.Feature">Feature</span>[<span class="extype" name="geotrellis.vector.Geometry">Geometry</span>, <span class="extype" name="vectorpipe.grid.D">D</span>]]</span>, <span name="logError">logError: (((<span class="extype" name="geotrellis.vector.Extent">Extent</span>, <span class="extype" name="geotrellis.vector.Feature">Feature</span>[<span class="extype" name="geotrellis.vector.Geometry">Geometry</span>, <span class="extype" name="vectorpipe.grid.D">D</span>])) ⇒ <span class="extype" name="scala.Predef.String">String</span>) ⇒ ((<span class="extype" name="geotrellis.vector.Extent">Extent</span>, <span class="extype" name="geotrellis.vector.Feature">Feature</span>[<span class="extype" name="geotrellis.vector.Geometry">Geometry</span>, <span class="extype" name="vectorpipe.grid.D">D</span>])) ⇒ <span class="extype" name="scala.Unit">Unit</span></span>, <span name="ld">ld: <span class="extype" name="geotrellis.spark.tiling.LayoutDefinition">LayoutDefinition</span></span>, <span name="rdd">rdd: <span class="extype" name="org.apache.spark.rdd.RDD">RDD</span>[<span class="extype" name="geotrellis.vector.Feature">Feature</span>[<span class="extype" name="geotrellis.vector.Geometry">Geometry</span>, <span class="extype" name="vectorpipe.grid.D">D</span>]]</span>)</span><span class="result">: <span class="extype" name="org.apache.spark.rdd.RDD">RDD</span>[(<span class="extype" name="geotrellis.spark.SpatialKey">SpatialKey</span>, <span class="extype" name="scala.Iterable">Iterable</span>[<span class="extype" name="geotrellis.vector.Feature">Feature</span>[<span class="extype" name="geotrellis.vector.Geometry">Geometry</span>, <span class="extype" name="vectorpipe.grid.D">D</span>]])]</span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../index.html#vectorpipe.package@grid[D](clip:(geotrellis.vector.Extent,geotrellis.vector.Feature[geotrellis.vector.Geometry,D],geotrellis.spark.clip.ClipToGrid.Predicates)=&gt;Option[geotrellis.vector.Feature[geotrellis.vector.Geometry,D]],logError:(((geotrellis.vector.Extent,geotrellis.vector.Feature[geotrellis.vector.Geometry,D]))=&gt;String)=&gt;(((geotrellis.vector.Extent,geotrellis.vector.Feature[geotrellis.vector.Geometry,D]))=&gt;Unit),ld:geotrellis.spark.tiling.LayoutDefinition,rdd:org.apache.spark.rdd.RDD[geotrellis.vector.Feature[geotrellis.vector.Geometry,D]]):org.apache.spark.rdd.RDD[(geotrellis.spark.SpatialKey,Iterable[geotrellis.vector.Feature[geotrellis.vector.Geometry,D]])]" title="Permalink" target="_top">
+        <img src="../lib/permalink.png" alt="Permalink" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">Given a particular Layout (tile grid), split a collection of <span class="extype" name="Feature">Feature</span>s
+into a grid of them indexed by <span class="extype" name="SpatialKey">SpatialKey</span>.</p><div class="fullcomment"><div class="comment cmt"><p>Given a particular Layout (tile grid), split a collection of <span class="extype" name="Feature">Feature</span>s
+into a grid of them indexed by <span class="extype" name="SpatialKey">SpatialKey</span>.</p><h4>Clipping Strategies</h4><p>A clipping strategy defines how Geometries which stretch outside their
+associated bounding box should be reduced to better fit it. This is
+benefical, as it saves on storage for large, complex Geometries who
+only partially intersect some bounding box. The excess points will be
+cut out, but the &quot;how&quot; is a matter of weighing PROs and CONs in the
+context of the user's use-case. Several strategies come to mind:</p><ul><li>Clip directly on the bounding box</li><li>Clip just outside the bounding box</li><li>Keep the nearest Point outside the bounding box, wherever it is</li><li>Custom clipping for each OSM Element type (building, etc)</li><li>Don't clip</li></ul><p>These clipping strategies are defined in <span class="extype" name="vectorpipe.geom.Clip">vectorpipe.geom.Clip</span>,
+where you can find further explanation.
+</p></div><dl class="paramcmts block"><dt class="param">clip</dt><dd class="cmt"><p>A function which represents a &quot;clipping strategy&quot;.</p></dd><dt class="param">logError</dt><dd class="cmt"><p>An IO function that will log any clipping failures.</p></dd><dt class="param">ld</dt><dd class="cmt"><p>The LayoutDefinition defining the area to gridify.</p></dd></dl></div>
+    </li><li name="vectorpipe#logNothing" visbl="pub" data-isabs="false" fullComment="no" group="logging">
+      <a id="logNothing[A](f:A=&gt;String):A=&gt;Unit"></a>
+      <a id="logNothing[A]((A)⇒String):(A)⇒Unit"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">logNothing</span><span class="tparams">[<span name="A">A</span>]</span><span class="params">(<span name="f">f: (<span class="extype" name="vectorpipe.logNothing.A">A</span>) ⇒ <span class="extype" name="scala.Predef.String">String</span></span>)</span><span class="result">: (<span class="extype" name="vectorpipe.logNothing.A">A</span>) ⇒ <span class="extype" name="scala.Unit">Unit</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../index.html#vectorpipe.package@logNothing[A](f:A=&gt;String):A=&gt;Unit" title="Permalink" target="_top">
+        <img src="../lib/permalink.png" alt="Permalink" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">Skip over some failure.</p>
+    </li><li name="vectorpipe#logToLog4j" visbl="pub" data-isabs="false" fullComment="no" group="logging">
+      <a id="logToLog4j[A](f:A=&gt;String):A=&gt;Unit"></a>
+      <a id="logToLog4j[A]((A)⇒String):(A)⇒Unit"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">logToLog4j</span><span class="tparams">[<span name="A">A</span>]</span><span class="params">(<span name="f">f: (<span class="extype" name="vectorpipe.logToLog4j.A">A</span>) ⇒ <span class="extype" name="scala.Predef.String">String</span></span>)</span><span class="result">: (<span class="extype" name="vectorpipe.logToLog4j.A">A</span>) ⇒ <span class="extype" name="scala.Unit">Unit</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../index.html#vectorpipe.package@logToLog4j[A](f:A=&gt;String):A=&gt;Unit" title="Permalink" target="_top">
+        <img src="../lib/permalink.png" alt="Permalink" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">Log an error as an ERROR through Spark's default log4j.</p>
+    </li><li name="vectorpipe#logToStdout" visbl="pub" data-isabs="false" fullComment="no" group="logging">
+      <a id="logToStdout[A](f:A=&gt;String):A=&gt;Unit"></a>
+      <a id="logToStdout[A]((A)⇒String):(A)⇒Unit"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">logToStdout</span><span class="tparams">[<span name="A">A</span>]</span><span class="params">(<span name="f">f: (<span class="extype" name="vectorpipe.logToStdout.A">A</span>) ⇒ <span class="extype" name="scala.Predef.String">String</span></span>)</span><span class="result">: (<span class="extype" name="vectorpipe.logToStdout.A">A</span>) ⇒ <span class="extype" name="scala.Unit">Unit</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../index.html#vectorpipe.package@logToStdout[A](f:A=&gt;String):A=&gt;Unit" title="Permalink" target="_top">
+        <img src="../lib/permalink.png" alt="Permalink" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">Log an error to STDOUT.</p>
     </li><li name="vectorpipe.osm" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
       <a id="osm"></a>
       <a id="osm:osm"></a>
@@ -248,24 +360,7 @@ writer.write(LayerId(<span class="lit">"north-van"</span>, <span class="num">15<
       </a>
     </span>
       <p class="shortcomment cmt">Types and functions unique to working with OpenStreetMap data.</p>
-    </li><li name="vectorpipe.util" visbl="pub" data-isabs="false" fullComment="no" group="Ungrouped">
-      <a id="util"></a>
-      <a id="util:util"></a>
-      <h4 class="signature">
-      <span class="modifier_kind">
-        <span class="modifier"></span>
-        <span class="kind">package</span>
-      </span>
-      <span class="symbol">
-        <a href="util/package.html"><span class="name">util</span></a>
-      </span>
-      </h4><span class="permalink">
-      <a href="../index.html#vectorpipe.package@util" title="Permalink" target="_top">
-        <img src="../lib/permalink.png" alt="Permalink" />
-      </a>
-    </span>
-      
-    </li><li name="vectorpipe#vectorTileCodec" visbl="pub" data-isabs="false" fullComment="yes" group="Ungrouped">
+    </li><li name="vectorpipe#vectorTileCodec" visbl="pub" data-isabs="false" fullComment="yes" group="instances">
       <a id="vectorTileCodec:geotrellis.spark.io.avro.AvroRecordCodec[geotrellis.vectortile.VectorTile]"></a>
       <a id="vectorTileCodec:AvroRecordCodec[VectorTile]"></a>
       <h4 class="signature">
@@ -281,7 +376,48 @@ writer.write(LayerId(<span class="lit">"north-van"</span>, <span class="num">15<
         <img src="../lib/permalink.png" alt="Permalink" />
       </a>
     </span>
-      <p class="shortcomment cmt">Encode a <span class="extype" name="VectorTile">VectorTile</span> via Avro.</p><div class="fullcomment"><div class="comment cmt"><p>Encode a <span class="extype" name="VectorTile">VectorTile</span> via Avro. This is the glue for Layer IO.</p></div></div>
+      <p class="shortcomment cmt">Encode a <span class="extype" name="VectorTile">VectorTile</span> via Avro.</p><div class="fullcomment"><div class="comment cmt"><p>Encode a <span class="extype" name="VectorTile">VectorTile</span> via Avro. This is the glue for Layer IO.
+</p></div></div>
+    </li><li name="vectorpipe#vectortiles" visbl="pub" data-isabs="false" fullComment="yes" group="actions">
+      <a id="vectortiles[G&lt;:geotrellis.vector.Geometry,D](collate:(geotrellis.vector.Extent,Iterable[geotrellis.vector.Feature[G,D]])=&gt;geotrellis.vectortile.VectorTile,ld:geotrellis.spark.tiling.LayoutDefinition,rdd:org.apache.spark.rdd.RDD[(geotrellis.spark.SpatialKey,Iterable[geotrellis.vector.Feature[G,D]])]):org.apache.spark.rdd.RDD[(geotrellis.spark.SpatialKey,geotrellis.vectortile.VectorTile)]"></a>
+      <a id="vectortiles[G&lt;:Geometry,D]((Extent,Iterable[Feature[G,D]])⇒VectorTile,LayoutDefinition,RDD[(SpatialKey,Iterable[Feature[G,D]])]):RDD[(SpatialKey,VectorTile)]"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">vectortiles</span><span class="tparams">[<span name="G">G &lt;: <span class="extype" name="geotrellis.vector.Geometry">Geometry</span></span>, <span name="D">D</span>]</span><span class="params">(<span name="collate">collate: (<span class="extype" name="geotrellis.vector.Extent">Extent</span>, <span class="extype" name="scala.Iterable">Iterable</span>[<span class="extype" name="geotrellis.vector.Feature">Feature</span>[<span class="extype" name="vectorpipe.vectortiles.G">G</span>, <span class="extype" name="vectorpipe.vectortiles.D">D</span>]]) ⇒ <span class="extype" name="geotrellis.vectortile.VectorTile">VectorTile</span></span>, <span name="ld">ld: <span class="extype" name="geotrellis.spark.tiling.LayoutDefinition">LayoutDefinition</span></span>, <span name="rdd">rdd: <span class="extype" name="org.apache.spark.rdd.RDD">RDD</span>[(<span class="extype" name="geotrellis.spark.SpatialKey">SpatialKey</span>, <span class="extype" name="scala.Iterable">Iterable</span>[<span class="extype" name="geotrellis.vector.Feature">Feature</span>[<span class="extype" name="vectorpipe.vectortiles.G">G</span>, <span class="extype" name="vectorpipe.vectortiles.D">D</span>]])]</span>)</span><span class="result">: <span class="extype" name="org.apache.spark.rdd.RDD">RDD</span>[(<span class="extype" name="geotrellis.spark.SpatialKey">SpatialKey</span>, <span class="extype" name="geotrellis.vectortile.VectorTile">VectorTile</span>)]</span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../index.html#vectorpipe.package@vectortiles[G&lt;:geotrellis.vector.Geometry,D](collate:(geotrellis.vector.Extent,Iterable[geotrellis.vector.Feature[G,D]])=&gt;geotrellis.vectortile.VectorTile,ld:geotrellis.spark.tiling.LayoutDefinition,rdd:org.apache.spark.rdd.RDD[(geotrellis.spark.SpatialKey,Iterable[geotrellis.vector.Feature[G,D]])]):org.apache.spark.rdd.RDD[(geotrellis.spark.SpatialKey,geotrellis.vectortile.VectorTile)]" title="Permalink" target="_top">
+        <img src="../lib/permalink.png" alt="Permalink" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">Given a collection of GeoTrellis <code>Feature</code>s which have been associated
+with some <code>SpatialKey</code> and a &quot;collation&quot; function, form those <code>Feature</code>s
+into a <code>VectorTile</code>.</p><div class="fullcomment"><div class="comment cmt"><p>Given a collection of GeoTrellis <code>Feature</code>s which have been associated
+with some <code>SpatialKey</code> and a &quot;collation&quot; function, form those <code>Feature</code>s
+into a <code>VectorTile</code>.
+</p></div><dl class="attributes block"> <dt>See also</dt><dd><span class="cmt"><p><a href="Collate$.html" class="extype" name="vectorpipe.Collate">vectorpipe.Collate</a></p></span></dd></dl></div>
+    </li><li name="vectorpipe#winding" visbl="pub" data-isabs="false" fullComment="no" group="utility">
+      <a id="winding(p:geotrellis.vector.Polygon):geotrellis.vector.Polygon"></a>
+      <a id="winding(Polygon):Polygon"></a>
+      <h4 class="signature">
+      <span class="modifier_kind">
+        <span class="modifier"></span>
+        <span class="kind">def</span>
+      </span>
+      <span class="symbol">
+        <span class="name">winding</span><span class="params">(<span name="p">p: <span class="extype" name="geotrellis.vector.Polygon">Polygon</span></span>)</span><span class="result">: <span class="extype" name="geotrellis.vector.Polygon">Polygon</span></span>
+      </span>
+      </h4><span class="permalink">
+      <a href="../index.html#vectorpipe.package@winding(p:geotrellis.vector.Polygon):geotrellis.vector.Polygon" title="Permalink" target="_top">
+        <img src="../lib/permalink.png" alt="Permalink" />
+      </a>
+    </span>
+      <p class="shortcomment cmt">Ensure a <span class="extype" name="geotrellis.vector.Polygon">geotrellis.vector.Polygon</span> has the correct winding order
+to be used in a <span class="extype" name="VectorTile">VectorTile</span>.</p>
     </li></ol>
             </div>
 
@@ -300,7 +436,21 @@ writer.write(LayerId(<span class="lit">"north-van"</span>, <span class="num">15<
         </div>
 
         <div id="groupedMembers">
-        <div class="group" name="Ungrouped">
+        <div class="group" name="actions">
+              <h3>Actions</h3>
+              <div class="comment cmt"><p>Functions to transform <code>RDD</code>s of Features along the pipeline.</p></div>
+            </div><div class="group" name="logging">
+              <h3>Error Logging</h3>
+              <div class="comment cmt"><p>Useful defaults for functions like <a href="#grid[D](clip:(geotrellis.vector.Extent,geotrellis.vector.Feature[geotrellis.vector.Geometry,D],geotrellis.spark.clip.ClipToGrid.Predicates)=&gt;Option[geotrellis.vector.Feature[geotrellis.vector.Geometry,D]],logError:(((geotrellis.vector.Extent,geotrellis.vector.Feature[geotrellis.vector.Geometry,D]))=&gt;String)=&gt;(((geotrellis.vector.Extent,geotrellis.vector.Feature[geotrellis.vector.Geometry,D]))=&gt;Unit),ld:geotrellis.spark.tiling.LayoutDefinition,rdd:org.apache.spark.rdd.RDD[geotrellis.vector.Feature[geotrellis.vector.Geometry,D]]):org.apache.spark.rdd.RDD[(geotrellis.spark.SpatialKey,Iterable[geotrellis.vector.Feature[geotrellis.vector.Geometry,D]])]" class="extmbr" name="vectorpipe#grid">vectorpipe.grid</a>, where
+                   we wish to log small failures and skip them, instead of crashing
+                   the entire Spark job.</p></div>
+            </div><div class="group" name="utility">
+              <h3>Utility Functions</h3>
+              
+            </div><div class="group" name="instances">
+              <h3>Typeclass Instances</h3>
+              
+            </div><div class="group" name="Ungrouped">
               <h3>Ungrouped</h3>
               
             </div>

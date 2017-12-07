@@ -1,4 +1,4 @@
-package vectorpipe.util
+package vectorpipe
 
 import geotrellis.spark._
 import geotrellis.spark.io._

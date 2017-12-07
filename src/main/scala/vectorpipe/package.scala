@@ -2,6 +2,7 @@ import java.nio.ByteBuffer
 
 import scala.util.{ Try, Success, Failure }
 
+import com.vividsolutions.jts.{geom => jts}
 import geotrellis.proj4._
 import geotrellis.spark._
 import geotrellis.spark.clip.ClipToGrid.Predicates
@@ -18,7 +19,7 @@ import org.apache.spark.rdd._
 
 // --- //
 
-/** VectorPipe is a library for mass conversion of OSM data into Mapbox
+/** VectorPipe is a library for mass conversion of Vector data into Mapbox
   * VectorTiles. It is powered by [[https://github.com/locationtech/geotrellis
   * GeoTrellis]] and [[https://spark.apache.org Apache Spark]].
   *
@@ -102,8 +103,11 @@ import org.apache.spark.rdd._
   *                    the entire Spark job.
   * @groupprio logging 1
   *
+  * @groupname utility Utility Functions
+  * @groupprio utility 2
+  *
   * @groupname instances Typeclass Instances
-  * @groupprio instances 2
+  * @groupprio instances 3
   */
 package object vectorpipe {
 
@@ -189,6 +193,26 @@ package object vectorpipe {
     * @group logging
     */
   def logNothing[A](f: A => String): A => Unit = { _ => () }
+
+  /** Ensure a [[geotrellis.vector.Polygon]] has the correct winding order
+    * to be used in a [[VectorTile]].
+    *
+    * @group utility
+    */
+  def winding(p: Polygon): Polygon = {
+    /* `normalize` works in-place, so we clone first to avoid clobbering the
+     * GT Polygon.
+     */
+    val geom = p.jtsGeom.clone.asInstanceOf[jts.Polygon]
+    geom.normalize
+
+    /* `normalize` makes exteriors run clockwise and holes run
+     * counter-clockwise, but assuming that (0,0) is in the bottom left. VTs assume
+     * (0,0) is in the top-left, so we need to reverse the results of the
+     * normalization.
+     */
+    Polygon(geom.reverse().asInstanceOf[jts.Polygon])
+  }
 
   /** Encode a [[VectorTile]] via Avro. This is the glue for Layer IO.
     *

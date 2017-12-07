@@ -5,7 +5,6 @@ import scala.annotation.tailrec
 import geotrellis.vector._
 import geotrellis.vectortile._
 import vectorpipe.osm._
-import vectorpipe.util._
 
 // --- //
 
@@ -69,7 +68,7 @@ import vectorpipe.util._
   * that the origin `(0,0)` is in the '''top-left''' corner.
   *
   * '''Any custom collator which does not call `generically` must correct
-  * for Polygon winding order manually.''' This can be done via the [[vectorpipe.util.winding]]
+  * for Polygon winding order manually.''' This can be done via the [[vectorpipe.winding]]
   * function.
   *
   * But why correct for winding order at all? Well, OSM data makes no guarantee

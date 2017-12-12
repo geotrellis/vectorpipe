@@ -29,15 +29,15 @@ val (nodes, ways, relations): (RDD[(Long, osm.Node)], RDD[(Long, osm.Way)], RDD[
  * Note: type OSMFeature = Feature[Geometry, ElementData]
  */
 val features: RDD[osm.OSMFeature] =
-  osm.snapshotFeatures(VectorPipe.logToStdout, nodes, ways, relations).geometries
+  osm.features(nodes, ways, relations).geometries
 
 /* All Geometries clipped to your `layout` grid */
 val featGrid: RDD[(SpatialKey, Iterable[osm.OSMFeature])] =
-  VectorPipe.toGrid(Clip.byHybrid, VectorPipe.logToStdout, layout, features)
+  grid(Clip.byHybrid, logToStdout, layout, features)
 
 /* A grid of Vector Tiles */
 val tiles: RDD[(SpatialKey, VectorTile)] =
-  VectorPipe.toVectorTile(Collate.byOSM, layout, featGrid)
+  vectortiles(Collate.byOSM, layout, featGrid)
 
 /* Further processing here, writing to S3, etc. */
 

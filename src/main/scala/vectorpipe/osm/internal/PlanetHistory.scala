@@ -51,7 +51,7 @@ private[vectorpipe] object PlanetHistory {
   ): (RDD[(Long, Node)], RDD[(Long, (Iterable[Way], Iterable[Node]))]) = {
 
     /* This is called twice below, so we need to cache is, or else we'd repeat work */
-    val cachedWays: RDD[(Long, Way)] = ways.persist(StorageLevel.MEMORY_AND_DISK_SER)
+    val cachedWays: RDD[(Long, Way)] = ways.persist(StorageLevel.MEMORY_ONLY)
 
     /* Forgive the `.distinct` here. If we don't do that, there will be Way ID duplication
      * in the first cogroup below.
@@ -66,7 +66,7 @@ private[vectorpipe] object PlanetHistory {
         .cogroup(nodeIdsToWayIds)
         /* The `.distinct` above ensures that `wayIds` here will contain unique values. */
         .flatMap { case (_, (ns, wayIds)) => ns.map(n => (n, wayIds)) }
-        .persist(StorageLevel.MEMORY_AND_DISK_SER)
+        .persist(StorageLevel.MEMORY_ONLY)
 
     /* Not /that/ much duplication, as most Nodes are only needed by one Way (if any).
      * Any standalone Node whose `wayIds` is empty will be crushed away by the flatMap,

@@ -4,17 +4,23 @@ import java.io.{ FileInputStream, InputStream }
 
 import scala.util.Try
 
-import cats.implicits._
 import geotrellis.vector._
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql._
-import org.apache.spark.storage.StorageLevel
-import vectorpipe.osm.internal.{ ElementToFeature => E2F, PlanetHistory }
+import vectorpipe.osm.internal.PlanetHistory
 
 // --- //
 
-/** Types and functions unique to working with OpenStreetMap data. */
+/** Types and functions unique to working with OpenStreetMap data.
+  *
+  * @groupname elements Reading OSM Elements
+  * @groupprio elements 0
+  *
+  * @groupname conversion Element Conversion
+  * @groupdesc conversion Converting OSM Elements into GeoTrellis geometries.
+  * @groupprio conversion 1
+  */
 package object osm {
 
   type OSMFeature = Feature[Geometry, ElementMeta]
@@ -23,7 +29,10 @@ package object osm {
   private[vectorpipe] type OSMPolygon = Feature[Polygon, ElementMeta]
   private[vectorpipe] type OSMMultiPoly = Feature[MultiPolygon, ElementMeta]
 
-  /** Given a path to an OSM XML file, parse it into usable types. */
+  /** Given a path to an OSM XML file, parse it into usable types.
+    *
+    * @group elements
+    */
   def fromLocalXML(
     path: String
   )(implicit sc: SparkContext): Try[(RDD[(Long, Node)], RDD[(Long, Way)], RDD[(Long, Relation)])] = {
@@ -33,7 +42,10 @@ package object osm {
       .map { case (ns, ws, rs) => (sc.parallelize(ns), sc.parallelize(ws), sc.parallelize(rs)) }
   }
 
-  /** Given a path to an Apache ORC file containing OSM data, read out RDDs of each Element type. */
+  /** Given a path to an Apache ORC file containing OSM data, read out RDDs of each Element type.
+    *
+    * @group elements
+    */
   def fromORC(
     path: String
   )(implicit ss: SparkSession): Try[(RDD[(Long, Node)], RDD[(Long, Way)], RDD[(Long, Relation)])] = {
@@ -42,10 +54,10 @@ package object osm {
 
   /** Given a [[DataFrame]] that follows [[https://github.com/mojodna/osm2orc#schema this table schema]],
     * read out RDDs of each [[Element]] type.
+    *
+    * @group elements
     */
   def fromDataFrame(data: DataFrame): (RDD[(Long, Node)], RDD[(Long, Way)], RDD[(Long, Relation)]) = {
-    data.persist(StorageLevel.MEMORY_AND_DISK_SER)
-
     /* WARNING: Here be Reflection Dragons!
      * You may be look at the methods below and think: gee, that seems a bit verbose. You'd be right,
      * but that doesn't change what's necessary. The workings here are fairly brittle - things
@@ -168,81 +180,11 @@ package object osm {
     )
   }
 
-  /**
-   * Convert an RDD of raw OSM [[Element]]s into interpreted GeoTrellis
-   * [[Feature]]s. In order to mix the various subtypes together, they've
-   * been upcasted internally to [[Geometry]]. Note:
-   * {{{
-   * type OSMFeature = Feature[Geometry, ElementMeta]
-   * }}}
-   *
-   * ===Behaviour===
-   * This algorithm aims to losslessly "sanitize" its input data,
-   * in that it will break down malformed Relation structures, as
-   * well as cull member references to Elements which no longer
-   * exist (or exist outside the subset of data you're working
-   * on). Mathematically speaking, there should exist a function
-   * to reverse this conversion. This theoretical function and
-   * `toFeatures` form an isomorphism if the source data is
-   * correct. In other words, given:
-   * {{{
-   * parse: XML => RDD[Element]
-   * toFeatures: RDD[Element] => RDD[OSMFeature]
-   * restore: RDD[OSMFeature] => RDD[Element]
-   * unparse: RDD[Element] => XML
-   * }}}
-   * then:
-   * {{{
-   * unparse(restore(toFeatures(parse(xml: XML))))
-   * }}}
-   * will yield a body of semantically correct OSM data.
-   *
-   * To achieve this sanity, the algorithm has the following behaviour:
-   *   - Graphs of [[Relation]]s will be broken into spanning [[Tree]]s.
-   *   - It doesn't make sense to represent non-multipolygon Relations as
-   *     GeoTrellis `Geometry`s, so Relation metadata is disseminated
-   *     across its child members. Otherwise, Relations are "dropped"
-   *     from the output.
-   */
-  def snapshotFeatures(
-    logError: (Feature[Line, ElementMeta] => String) => Feature[Line, ElementMeta] => Unit,
-    nodes: RDD[(Long, Node)],
-    ways: RDD[(Long, Way)],
-    relations: RDD[(Long, Relation)]
-  ): Features = {
-
-    /* All Geometric OSM Relations.
-     * A (likely false) assumption made in the `flatTree` function is that
-     * Geometric Relations never appear in Relation Graphs. Therefore we can
-     * naively grab them all here.
-     */
-    val geomRelations: RDD[(Long, Relation)] = relations.filter { case (_, r) =>
-      r.meta.tags.get("type") === Some("multipolygon")
-    }
-
-    val (points, rawLines, rawPolys) = E2F.geometries(nodes, ways)
-
-    /* Depending on the dataset used, `Way` data may be incomplete. That is,
-     * the local version of a Way may have fewer Node references than the original
-     * as found on OpenStreetMap. These usually occur along "dataset bounding
-     * boxes" found in OSM subregion extracts, where a Polygon is cut in half by
-     * the BBOX. The resulting Polygons, with only a subset of the original Nodes,
-     * are often self-intersecting. This causes Topology Exceptions during the
-     * clipping stage of the pipeline. Our only recourse is to remove them here.
-     *
-     * See: https://github.com/geotrellis/vectorpipe/pull/16#issuecomment-290144694
-     */
-    val simplePolys = rawPolys.filter(_.geom.isValid)
-
-    val (multiPolys, lines, polys) = E2F.multipolygons(logError, rawLines, simplePolys, geomRelations)
-
-    Features(points, lines, polys, multiPolys)
-  }
-
-  /** All Lines and Polygons that could be reconstructed from a set of all
-    * historical OSM Elements.
+  /** All Lines and Polygons that could be reconstructed from a set of all OSM Elements.
+    *
+    * @group conversion
     */
-  def historicalFeatures(nodes: RDD[(Long, Node)], ways: RDD[(Long, Way)]): Features = {
-    PlanetHistory.features(nodes, ways)
+  def features(ns: RDD[(Long, Node)], ws: RDD[(Long, Way)], rs: RDD[(Long, Relation)]): Features = {
+    PlanetHistory.features(ns, ws)
   }
 }

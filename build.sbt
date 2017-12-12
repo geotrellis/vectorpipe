@@ -1,6 +1,6 @@
 name := "vectorpipe"
 
-version := "0.1.1"
+version := "0.2.1"
 
 description := "Convert Vector data to VectorTiles with GeoTrellis."
 
@@ -24,6 +24,8 @@ val common = Seq(
     "-Ywarn-dead-code",
     "-Ywarn-numeric-widen"
   ),
+
+  scalacOptions in (Compile, doc) += "-groups",
 
   /* For Monocle's Lens auto-generation */
   addCompilerPlugin("org.scalamacros" %% "paradise" % "2.1.0" cross CrossVersion.full),
@@ -77,4 +79,4 @@ micrositeOrganizationHomepage := "https://www.azavea.com/"
 micrositeGithubOwner := "geotrellis"
 micrositeGithubRepo := "vectorpipe"
 micrositeBaseUrl := "/vectorpipe"
-micrositeDocumentationUrl := "/vectorpipe/latest/api/#vectorpipe.VectorPipe$" /* Location of Scaladocs */
+micrositeDocumentationUrl := "/vectorpipe/latest/api/#vectorpipe.package" /* Location of Scaladocs */

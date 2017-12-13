@@ -1,6 +1,6 @@
 name := "vectorpipe"
 
-version := "0.2.1"
+version := "0.2.2"
 
 description := "Convert Vector data to VectorTiles with GeoTrellis."
 
@@ -35,10 +35,8 @@ val common = Seq(
     "com.github.julien-truffaut"  %% "monocle-macro"         % "1.5.0-cats-M2",
     "io.dylemma"                  %% "xml-spac"              % "0.3",
     "org.apache.spark"            %% "spark-hive"            % "2.2.0" % "provided",
-    "org.locationtech.geotrellis" %% "geotrellis-spark"      % "1.2.0-RC2",
-    "org.locationtech.geotrellis" %% "geotrellis-util"       % "1.2.0-RC2",
-    "org.locationtech.geotrellis" %% "geotrellis-vector"     % "1.2.0-RC2",
-    "org.locationtech.geotrellis" %% "geotrellis-vectortile" % "1.2.0-RC2",
+    "org.locationtech.geotrellis" %% "geotrellis-spark"      % "1.2.0",
+    "org.locationtech.geotrellis" %% "geotrellis-vectortile" % "1.2.0",
     "org.scalatest"               %% "scalatest"             % "3.0.1" % "test",
     "org.spire-math"              %% "spire"                 % "0.13.0",
     "org.typelevel"               %% "cats-core"             % "1.0.0-RC1"

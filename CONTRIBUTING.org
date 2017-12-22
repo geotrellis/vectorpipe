@@ -204,3 +204,13 @@ your updated microsite can be published to
 #+BEGIN_EXAMPLE
 sbt> publishMicrosite
 #+END_EXAMPLE
+** Publishing to Bintray
+
+Provided you have permissions to publish to [[https://bintray.com/azavea][Azavea's Bintray]], all that's necessary
+to proceed is:
+
+#+BEGIN_EXAMPLE
+sbt> publish
+#+END_EXAMPLE
+
+in your SBT shell.

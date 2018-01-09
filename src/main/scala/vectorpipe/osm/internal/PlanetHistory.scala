@@ -15,9 +15,13 @@ import vectorpipe.osm._
 private[vectorpipe] object PlanetHistory {
 
   /** For all given Ways, associate with their Nodes to produce GeoTrellis Lines and Polygons. */
-  def features(nodes: RDD[(Long, Node)], ways: RDD[(Long, Way)]): Features = {
+  def features(
+    nodes: RDD[(Long, Node)],
+    ways: RDD[(Long, Way)],
+    storageLevel: StorageLevel
+  ): Features = {
 
-    val (loneNodes, edges) = joinedWays(nodes, ways)
+    val (loneNodes, edges) = joinedWays(nodes, ways, storageLevel)
 
     val lap: RDD[(List[OSMLine], List[OSMPolygon])] = edges.map { case (_, (ws, ns)) =>
       linesAndPolys(ws.toList, ns.toList)
@@ -47,11 +51,12 @@ private[vectorpipe] object PlanetHistory {
     */
   private[this] def joinedWays(
     nodes: RDD[(Long, Node)],
-    ways: RDD[(Long, Way)]
+    ways: RDD[(Long, Way)],
+    storageLevel: StorageLevel
   ): (RDD[(Long, Node)], RDD[(Long, (Iterable[Way], Iterable[Node]))]) = {
 
-    /* This is called twice below, so we need to cache is, or else we'd repeat work */
-    val cachedWays: RDD[(Long, Way)] = ways.persist(StorageLevel.MEMORY_ONLY)
+    /* This is called twice below, so in most cases we should cache it, or else we'd repeat work */
+    val cachedWays: RDD[(Long, Way)] = ways.persist(storageLevel)
 
     /* Forgive the `.distinct` here. If we don't do that, there will be Way ID duplication
      * in the first cogroup below.
@@ -66,7 +71,7 @@ private[vectorpipe] object PlanetHistory {
         .cogroup(nodeIdsToWayIds)
         /* The `.distinct` above ensures that `wayIds` here will contain unique values. */
         .flatMap { case (_, (ns, wayIds)) => ns.map(n => (n, wayIds)) }
-        .persist(StorageLevel.MEMORY_ONLY)
+        .persist(storageLevel)
 
     /* Not /that/ much duplication, as most Nodes are only needed by one Way (if any).
      * Any standalone Node whose `wayIds` is empty will be crushed away by the flatMap,

@@ -6,6 +6,7 @@ import scala.util.Try
 
 import geotrellis.vector._
 import org.apache.spark.SparkContext
+import org.apache.spark.storage.StorageLevel
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql._
 import vectorpipe.osm.internal.PlanetHistory
@@ -182,9 +183,18 @@ package object osm {
 
   /** All Lines and Polygons that could be reconstructed from a set of all OSM Elements.
     *
+    * This operation will create internal, intermediate `RDD`s that can be persisted
+    * at a specified `StorageLevel`. By default, this level will be `MEMORY_ONLY`;
+    * however, another `StorageLevel`, including `NONE`, can be chosen.
+    *
     * @group conversion
     */
-  def features(ns: RDD[(Long, Node)], ws: RDD[(Long, Way)], rs: RDD[(Long, Relation)]): Features = {
-    PlanetHistory.features(ns, ws)
+  def features(
+    ns: RDD[(Long, Node)],
+    ws: RDD[(Long, Way)],
+    rs: RDD[(Long, Relation)],
+    storageLevel: StorageLevel = StorageLevel.MEMORY_ONLY
+  ): Features = {
+    PlanetHistory.features(ns, ws, storageLevel)
   }
 }

@@ -1,4 +1,4 @@
-package vectorpipe.osm
+package vectorpipe.osm.cmd
 
 import java.net.URI
 
@@ -18,14 +18,14 @@ import org.locationtech.geomesa.spark.jts._
 /*
  * Usage example:
  *
- * sbt "project ingest" assembly
+ * sbt "assembly"
  *
  * spark-submit \
- *   --class osmesa.ExtractMultiPolygons \
- *   ingest/target/scala-2.11/osmesa-ingest.jar \
- *   --orc $HOME/data/rhode-island.orc \
- *   --cache $HOME/.orc \
- *   --out $HOME/data/rhode-island-geoms
+ *   --class vectorpipe.osm.cmd.ExtractMultiPolygons \
+ *   target/scala-2.11/vectorpipe-assembly-0.2.2.jar \
+ *   --orc /tmp/rhode-island.orc \
+ *   --cache /tmp/.orc \
+ *   --out /tmp/rhode-island-geoms
  */
 
 object ExtractMultiPolygons extends CommandApp(

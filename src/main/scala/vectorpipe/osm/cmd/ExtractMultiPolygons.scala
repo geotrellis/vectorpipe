@@ -10,7 +10,6 @@ import org.apache.spark.sql._
 import org.apache.spark.sql.functions._
 import vectorpipe.osm.internal._
 import vectorpipe.osm.internal.functions._
-import vectorpipe.osm.internal.util.Caching
 
 import org.locationtech.geomesa.spark.jts._
 
@@ -36,9 +35,8 @@ object ExtractMultiPolygons extends CommandApp(
     /* CLI option handling */
     val orcO = Opts.option[String]("orc", help = "Location of the .orc file to process")
     val outGeomsO = Opts.option[String]("out", help = "Location of the ORC file to write containing geometries")
-    val cacheDirO = Opts.option[String]("cache", help = "Location to cache ORC files").withDefault("")
 
-    (orcO, outGeomsO, cacheDirO).mapN { (orc, outGeoms, cacheDir) =>
+    (orcO, outGeomsO).mapN { (orc, outGeoms) =>
       /* Settings compatible with both local and EMR execution */
       val conf = new SparkConf()
         .setIfMissing("spark.master", "local[*]")
@@ -59,13 +57,6 @@ object ExtractMultiPolygons extends CommandApp(
       Logger.getRootLogger.setLevel(Level.WARN)
 
       val df = ss.read.orc(orc)
-
-      implicit val cache: Caching = Option(new URI(cacheDir).getScheme) match {
-        case Some("s3") => Caching.onS3(cacheDir)
-        // bare paths don't get a scheme
-        case None if cacheDir != "" => Caching.onFs(cacheDir)
-        case _ => Caching.none
-      }
 
       // DOWN: get all versions of raw elements
 
@@ -101,9 +92,8 @@ object ExtractMultiPolygons extends CommandApp(
 
       // assemble way geometries
 
-      val wayGeoms = cache.orc("way-geoms") {
+      val wayGeoms =
         ProcessOSM.reconstructWayGeometries(referencedWays, referencedNodes, Some(nodesToWays))
-      }
 
       val relationGeoms = ProcessOSM.reconstructRelationGeometries(relations, wayGeoms)
 

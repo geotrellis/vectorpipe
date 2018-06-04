@@ -4,7 +4,6 @@ import org.locationtech.geomesa.spark.jts._
 
 import vectorpipe.osm.internal._
 import vectorpipe.osm.internal.functions._
-import vectorpipe.osm.internal.util._
 
 import geotrellis.vector.{Extent, Point => GTPoint, Polygon => GTPolygon, MultiPolygon => GTMultiPolygon, Line, Feature, GeomFactory}
 
@@ -19,50 +18,26 @@ import java.net.URI
 
 class OSMReader(
   val sourceDataFrame: DataFrame,
-  cacheDirectory: Option[URI],
   targetExtent: Option[Extent]
 )(implicit val ss: SparkSession) extends Serializable {
 
   import ss.implicits._
 
-  private implicit val cache: Caching =
-    cacheDirectory match {
-      case Some(dir) =>
-        Option(dir.getScheme) match {
-          case Some("s3") => Caching.onS3(dir.toString)
-          case None if dir != "" => Caching.onFs(dir.toString)
-          case _ => Caching.none
-        }
-      case None => Caching.none
-    }
-
   private lazy val info = sourceDataFrame.select('id, 'uid, 'user)
 
-  private lazy val ppnodes = cache.orc("prepared_nodes.orc") {
-    ProcessOSM.preprocessNodes(sourceDataFrame, targetExtent)
-  }
+  private lazy val ppnodes = ProcessOSM.preprocessNodes(sourceDataFrame, targetExtent)
 
-  private lazy val ppways = cache.orc("prepared_ways.orc") {
-    ProcessOSM.preprocessWays(sourceDataFrame)
-  }
+  private lazy val ppways = ProcessOSM.preprocessWays(sourceDataFrame)
 
-  private lazy val pprelations = cache.orc("prepared_relations.orc") {
-    ProcessOSM.preprocessRelations(sourceDataFrame)
-  }
+  private lazy val pprelations = ProcessOSM.preprocessRelations(sourceDataFrame)
 
-  lazy val nodeGeoms = cache.orc("node_geoms.orc") {
-    ProcessOSM.constructPointGeometries(ppnodes)
-  }
+  lazy val nodeGeoms = ProcessOSM.constructPointGeometries(ppnodes)
 
-  lazy val wayGeoms = cache.orc("way_geoms.orc") {
-    ProcessOSM.reconstructWayGeometries(ppways, ppnodes)
-  }
+  lazy val wayGeoms = ProcessOSM.reconstructWayGeometries(ppways, ppnodes)
 
-  lazy val relationGeoms = cache.orc("relation_geoms.orc") {
-    ProcessOSM.reconstructRelationGeometries(pprelations, wayGeoms)
-  }
+  lazy val relationGeoms = ProcessOSM.reconstructRelationGeometries(pprelations, wayGeoms)
 
-  lazy val allGeoms = cache.orc("all_geoms.orc") {
+  lazy val allGeoms = {
     import sourceDataFrame.sparkSession.implicits._
 
     nodeGeoms
@@ -76,7 +51,7 @@ class OSMReader(
     ElementMeta(
       id = row.getAs[Long]("id"),
       user = row.getAs[String]("user"),
-      uid = row.getAs[Long]("uid"),
+      uid = 0.toLong, row.getAs[Long]("uid"),
       changeset = row.getAs[Long]("changeset"),
       version = row.getAs[Int]("version").toLong,
       minorVersion = row.getAs[Int]("minorVersion").toLong,
@@ -144,27 +119,23 @@ class OSMReader(
 
 object OSMReader {
   def apply(sourceURI: URI)(implicit ss: SparkSession): OSMReader =
-    apply(ss.read.orc(sourceURI.toString), None, None)(ss)
+    apply(ss.read.orc(sourceURI.toString), None)(ss)
 
-  def apply(sourceURI: URI, cacheDirectory: String)(implicit ss: SparkSession): OSMReader =
-    apply(sourceURI, new URI(cacheDirectory))(ss)
+  def apply(source: String)(implicit ss: SparkSession): OSMReader =
+    apply(ss.read.orc(source), None)(ss)
 
-  def apply(sourceURI: URI, cacheDirectory: String, targetExtent: Extent)(implicit ss: SparkSession): OSMReader =
-    apply(ss.read.orc(sourceURI.toString), Some(new URI(cacheDirectory)), Some(targetExtent))(ss)
+  def apply(sourceURI: URI, targetExtent: Extent)(implicit ss: SparkSession): OSMReader =
+    apply(ss.read.orc(sourceURI.toString), Some(targetExtent))(ss)
 
-  def apply(sourceURI: URI, cacheDirectory: URI)(implicit ss: SparkSession): OSMReader =
-    apply(ss.read.orc(sourceURI.toString), Some(cacheDirectory), None)(ss)
+  def apply(source: String, targetExtent: Extent)(implicit ss: SparkSession): OSMReader =
+    apply(ss.read.orc(source), Some(targetExtent))(ss)
 
-  def apply(sourceURI: URI, cacheDirectory: URI, targetExtent: Extent)(implicit ss: SparkSession): OSMReader =
-    apply(ss.read.orc(sourceURI.toString), Some(cacheDirectory), Some(targetExtent))(ss)
-
-  def apply(sourceDataFrame: DataFrame, cacheDirectory: URI, targetExtent: Extent)(implicit ss: SparkSession): OSMReader =
-    apply(sourceDataFrame, Some(cacheDirectory), Some(targetExtent))(ss)
+  def apply(sourceDataFrame: DataFrame, targetExtent: Extent)(implicit ss: SparkSession): OSMReader =
+    apply(sourceDataFrame, Some(targetExtent))(ss)
 
   def apply(
     sourceDataFrame: DataFrame,
-    cacheDirectory: Option[URI],
     targetExtent: Option[Extent]
   )(implicit ss: SparkSession): OSMReader =
-    new OSMReader(sourceDataFrame, cacheDirectory, targetExtent)(ss.withJTS)
+    new OSMReader(sourceDataFrame, targetExtent)(ss.withJTS)
 }

@@ -5,7 +5,7 @@ import org.locationtech.geomesa.spark.jts._
 import vectorpipe.osm.internal._
 import vectorpipe.osm.internal.functions._
 
-import geotrellis.vector.{Extent, Point => GTPoint, Polygon => GTPolygon, MultiPolygon => GTMultiPolygon, Line, Feature, GeomFactory}
+import geotrellis.vector.{Extent, Geometry => GTGeometry, Feature}
 
 import com.vividsolutions.jts.geom._
 
@@ -35,7 +35,9 @@ class OSMReader(
 
   lazy val wayGeoms = ProcessOSM.reconstructWayGeometries(ppways, ppnodes)
 
-  lazy val relationGeoms = ProcessOSM.reconstructRelationGeometries(pprelations, wayGeoms)
+  lazy val relationGeoms =
+    ProcessOSM.reconstructMultiPolygonRelationGeometries(pprelations, wayGeoms)
+      .union(ProcessOSM.reconstructRouteRelationGeometries(pprelations, wayGeoms))
 
   lazy val allGeoms = {
     import sourceDataFrame.sparkSession.implicits._
@@ -51,7 +53,7 @@ class OSMReader(
     ElementMeta(
       id = row.getAs[Long]("id"),
       user = row.getAs[String]("user"),
-      uid = 0.toLong, row.getAs[Long]("uid"),
+      uid = row.getAs[Long]("uid"),
       changeset = row.getAs[Long]("changeset"),
       version = row.getAs[Int]("version").toLong,
       minorVersion = row.getAs[Int]("minorVersion").toLong,
@@ -60,59 +62,31 @@ class OSMReader(
       tags = row.getAs[Map[String, String]]("tags")
     )
 
-  lazy val pointFeaturesRDD: RDD[Feature[GTPoint, ElementMeta]] =
+  lazy val nodeFeaturesRDD: RDD[Feature[GTGeometry, ElementMeta]] =
     nodeGeoms
-      .join(info, Seq("id"))
       .filter($"geom".isNotNull)
+      .join(info, Seq("id"))
       .rdd
       .map { row =>
-        Feature(GTPoint(row.getAs[Point]("geom")), createElementMeta(row))
+        Feature(row.getAs[Geometry]("geom"), createElementMeta(row))
       }
 
-  lazy val lineFeaturesRDD: RDD[Feature[Line, ElementMeta]] =
+  lazy val wayFeaturesRDD: RDD[Feature[GTGeometry, ElementMeta]] =
     wayGeoms
-      .drop("geometryChanged")
-      .union(relationGeoms)
+      .filter($"geom".isNotNull)
       .join(info, Seq("id"))
-      .filter { row =>
-        row.getAs[Geometry]("geom") match {
-          case l: LineString => true
-          case _ => false
-        }
-      }
       .rdd
       .map { row =>
-          Feature(Line(row.getAs[LineString]("geom")), createElementMeta(row))
+        Feature(row.getAs[Geometry]("geom"), createElementMeta(row))
       }
 
-  lazy val polygonFeaturesRDD: RDD[Feature[GTPolygon, ElementMeta]] =
+  lazy val relationFeaturesRDD: RDD[Feature[GTGeometry, ElementMeta]] =
     relationGeoms
-      .union(wayGeoms.drop("geometryChanged"))
+      .filter($"geom".isNotNull)
       .join(info, Seq("id"))
-      .filter { row =>
-        row.getAs[Geometry]("geom") match {
-          case p: Polygon => true
-          case _ => false
-        }
-      }
       .rdd
       .map { row =>
-        Feature(GTPolygon(row.getAs[Polygon]("geom")), createElementMeta(row))
-      }
-
-  lazy val multiPolygonFeaturesRDD: RDD[Feature[GTMultiPolygon, ElementMeta]] =
-    relationGeoms
-      .union(wayGeoms.drop("geometryChanged"))
-      .join(info, Seq("id"))
-      .filter { row =>
-        row.getAs[Geometry]("geom") match {
-          case _: MultiPolygon => true
-          case _ => false
-        }
-      }
-      .rdd
-      .map { row =>
-        Feature(GTMultiPolygon(row.getAs[MultiPolygon]("geom")), createElementMeta(row))
+        Feature(row.getAs[Geometry]("geom"), createElementMeta(row))
       }
 }
 

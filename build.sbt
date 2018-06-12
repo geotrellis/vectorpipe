@@ -1,7 +1,5 @@
 name := "vectorpipe"
 
-version := "0.2.2"
-
 description := "Convert Vector data to VectorTiles with GeoTrellis."
 
 organization := "com.azavea"
@@ -11,18 +9,53 @@ organizationName := "Azavea"
 scalaVersion in ThisBuild := "2.11.12"
 
 val common = Seq(
+  version := Version.vectorpipe,
   resolvers ++= Seq(
     "locationtech-releases" at "https://repo.locationtech.org/content/groups/releases",
     Resolver.bintrayRepo("azavea", "maven")
   ),
 
+  initialCommands in console :=
+    """
+    import org.apache.spark._
+    import org.apache.spark.sql._
+
+    import org.locationtech.geomesa.spark.jts._
+
+    import vectorpipe.osm._
+    import vectorpipe.osm.internal._
+
+    import java.net.URI
+
+    implicit val ss =
+      SparkSession
+        .builder()
+        .master("local[*]")
+        .appName("vectorpipe console")
+        .config("spark.ui.enabled", true)
+        .getOrCreate()
+        .withJTS
+    """.stripMargin,
+
   scalacOptions := Seq(
     "-deprecation",
     "-Ypartial-unification",
     "-Ywarn-value-discard",
-    "-Ywarn-unused-import",
     "-Ywarn-dead-code",
-    "-Ywarn-numeric-widen"
+    "-Ywarn-numeric-widen",
+    "-language:implicitConversions",
+    "-language:reflectiveCalls"
+  ),
+
+  resolvers ++= Seq(
+    Resolver.bintrayRepo("lonelyplanet", "maven"),
+    Resolver.bintrayRepo("bkirwi", "maven"), // Required for `decline` dependency
+    "locationtech-releases" at "https://repo.locationtech.org/content/repositories/releases/",
+    "locationtech-snapshots" at "https://repo.locationtech.org/content/repositories/snapshots/",
+    "geosolutions" at "http://maven.geo-solutions.it/",
+    "boundless" at "https://repo.boundlessgeo.com/main/",
+    "osgeo" at "http://download.osgeo.org/webdav/geotools/",
+    "apache.commons.io" at "https://mvnrepository.com/artifact/commons-io/commons-io"
   ),
 
   scalacOptions in (Compile, doc) += "-groups",
@@ -31,18 +64,26 @@ val common = Seq(
   addCompilerPlugin("org.scalamacros" %% "paradise" % "2.1.0" cross CrossVersion.full),
 
   libraryDependencies ++= Seq(
-    "com.github.julien-truffaut"  %% "monocle-core"          % "1.5.0-cats-M2",
-    "com.github.julien-truffaut"  %% "monocle-macro"         % "1.5.0-cats-M2",
+    "org.locationtech.geotrellis" %% "geotrellis-vectortile" % Version.geotrellis exclude("com.google.protobuf", "protobuf-java"),
+    "org.locationtech.geotrellis" %% "geotrellis-s3"         % Version.geotrellis exclude("com.google.protobuf", "protobuf-java"),
+    "org.locationtech.geomesa"    %% "geomesa-spark-jts"     % Version.geomesa,
+    "org.apache.spark"            %% "spark-hive"            % Version.spark % "provided",
+    "org.spire-math"              %% "spire"                 % Version.spire,
+    "org.typelevel"               %% "cats-core"             % Version.cats,
+    "com.monovore"                %% "decline"               % Version.decline,
+    "org.scalatest"               %% "scalatest"             % Version.scalaTest % "test",
+    "com.github.julien-truffaut"  %% "monocle-core"          % Version.monocle,
+    "com.github.julien-truffaut"  %% "monocle-macro"         % Version.monocle,
+    "com.github.seratch"          %% "awscala"               % "0.6.1",
+    "org.apache.commons"           % "commons-compress"      % "1.16.1",
+    "com.google.protobuf"          % "protobuf-java"         % "2.5.0",
     "io.dylemma"                  %% "xml-spac"              % "0.3",
-    "org.apache.spark"            %% "spark-hive"            % "2.2.0" % "provided",
-    "org.locationtech.geotrellis" %% "geotrellis-spark"      % "1.2.0",
-    "org.locationtech.geotrellis" %% "geotrellis-vectortile" % "1.2.0",
-    "org.scalatest"               %% "scalatest"             % "3.0.1" % "test",
-    "org.spire-math"              %% "spire"                 % "0.13.0",
-    "org.typelevel"               %% "cats-core"             % "1.0.0-RC1"
+    "javax.media"                  % "jai_core"              % "1.1.3" % "test" from "http://download.osgeo.org/webdav/geotools/javax/media/jai_core/1.1.3/jai_core-1.1.3.jar",
   ),
 
-  parallelExecution in Test := false
+  parallelExecution in Test := false,
+  fork in Test := false,
+  testOptions in Test += Tests.Argument("-oDF")
 )
 
 val release = Seq(
@@ -51,6 +92,32 @@ val release = Seq(
 )
 
 lazy val lib = project.in(file(".")).settings(common, release)
+
+assemblyShadeRules in assembly := {
+  val shadePackage = "com.azavea.shaded.demo"
+  Seq(
+    ShadeRule.rename("com.google.common.**" -> s"$shadePackage.google.common.@1")
+      .inLibrary("com.azavea.geotrellis" %% "geotrellis-cassandra" % Version.geotrellis).inAll,
+    ShadeRule.rename("io.netty.**" -> s"$shadePackage.io.netty.@1")
+      .inLibrary("com.azavea.geotrellis" %% "geotrellis-hbase" % Version.geotrellis).inAll,
+    ShadeRule.rename("com.fasterxml.jackson.**" -> s"$shadePackage.com.fasterxml.jackson.@1")
+      .inLibrary("com.networknt" % "json-schema-validator" % "0.1.7").inAll,
+    ShadeRule.rename("org.apache.avro.**" -> s"$shadePackage.org.apache.avro.@1")
+      .inLibrary("com.azavea.geotrellis" %% "geotrellis-spark" % Version.geotrellis).inAll
+  )
+}
+
+assemblyMergeStrategy in assembly := {
+  case s if s.startsWith("META-INF/services") => MergeStrategy.concat
+  case "reference.conf" | "application.conf"  => MergeStrategy.concat
+  case "META-INF/MANIFEST.MF" | "META-INF\\MANIFEST.MF" => MergeStrategy.discard
+  case "META-INF/ECLIPSEF.RSA" | "META-INF/ECLIPSEF.SF" => MergeStrategy.discard
+  case "META-INF/ECLIPSE_.RSA" | "META-INF/ECLIPSE_.SF" => MergeStrategy.discard
+  case s if s.startsWith("META-INF/") && s.endsWith("SF") => MergeStrategy.discard
+  case s if s.startsWith("META-INF/") && s.endsWith("RSA") => MergeStrategy.discard
+  case s if s.startsWith("META-INF/") && s.endsWith("DSA") => MergeStrategy.discard
+  case _ => MergeStrategy.first
+}
 
 /* Benchmarking suite.
  * Benchmarks can be executed by first switching to the `bench` project and then by running:

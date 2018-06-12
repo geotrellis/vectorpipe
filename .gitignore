@@ -13,3 +13,6 @@
 .ensime_cache/*
 clipping/*
 osmosis/*
+
+derby.log
+metastore_db/*

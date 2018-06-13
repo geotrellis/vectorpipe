@@ -88,7 +88,13 @@ val common = Seq(
 
 val release = Seq(
   bintrayOrganization := Some("azavea"),
-  licenses += ("Apache-2.0", url("http://apache.org/licenses/LICENSE-2.0"))
+  bintrayRepository := "maven",
+  bintrayVcsUrl := Some("https://github.com/geotrellis/vectorpipe.git"),
+  publishMavenStyle := true,
+  publishArtifact in Test := false,
+  pomIncludeRepository := { _ => false },
+  licenses += ("Apache-2.0", url("http://apache.org/licenses/LICENSE-2.0")),
+  homepage := Some(url("https://geotrellis.github.io/vectorpipe/"))
 )
 
 lazy val lib = project.in(file(".")).settings(common, release)

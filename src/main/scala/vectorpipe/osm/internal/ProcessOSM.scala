@@ -5,7 +5,7 @@ import java.sql.Timestamp
 import org.locationtech.geomesa.spark.jts._
 import org.apache.spark.sql.jts.GeometryUDT
 
-import com.vividsolutions.jts.geom._
+import org.locationtech.jts.geom._
 
 import geotrellis.vector.{Extent, GeomFactory}
 

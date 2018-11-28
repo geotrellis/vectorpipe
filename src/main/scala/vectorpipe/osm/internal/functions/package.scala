@@ -11,9 +11,9 @@ import org.apache.spark.sql.functions.udf
 
 import java.sql.Timestamp
 
-import com.vividsolutions.jts.geom
-import com.vividsolutions.jts.geom._
-import com.vividsolutions.jts.geom.prep.PreparedGeometryFactory
+import org.locationtech.jts.geom
+import org.locationtech.jts.geom._
+import org.locationtech.jts.geom.prep.PreparedGeometryFactory
 
 import com.google.common.collect.{Range, RangeMap, TreeRangeMap}
 
@@ -236,6 +236,8 @@ package object functions {
   }
 
   private class ReversedCoordinateSequence(sequence: CoordinateSequence) extends CoordinateSequence {
+    override def copy(): ReversedCoordinateSequence = this
+
     private def getIndex(i: Int): Int = size - 1 - i
 
     override def getDimension: Int = sequence.getDimension
@@ -276,6 +278,8 @@ package object functions {
   }
 
   private class PartialCoordinateSequence(sequence: CoordinateSequence, offset: Int) extends CoordinateSequence {
+    override def copy(): PartialCoordinateSequence = this
+
     private lazy val _size: Int = sequence.size() - offset
 
     private lazy val coordinates: Array[Coordinate] = {
@@ -323,6 +327,8 @@ package object functions {
 
   // rather than being a nested set of CoordinateSequences, this is a mutable wrapper to avoid deep call stacks
   private class VirtualCoordinateSequence(sequences: Seq[CoordinateSequence]) extends CoordinateSequence {
+    override def copy(): VirtualCoordinateSequence = this
+
     private val rangeMap: RangeMap[Integer, CoordinateSequence] = TreeRangeMap.create[Integer, CoordinateSequence]
 
     sequences.zip(sequences.map(_.size).scanLeft(0)(_ + _).dropRight(1))

@@ -2,7 +2,7 @@ import java.nio.ByteBuffer
 
 import scala.util.{ Try, Success, Failure }
 
-import com.vividsolutions.jts.{geom => jts}
+import org.locationtech.jts.{geom => jts}
 import geotrellis.proj4._
 import geotrellis.spark._
 import geotrellis.spark.clip.ClipToGrid.Predicates

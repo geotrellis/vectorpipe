@@ -68,7 +68,7 @@ class OSMReader(
       .join(info, Seq("id"))
       .rdd
       .map { row =>
-        Feature(row.getAs[Geometry]("geom"), createElementMeta(row))
+        Feature(row.getAs[GTGeometry]("geom"), createElementMeta(row))
       }
 
   lazy val wayFeaturesRDD: RDD[Feature[GTGeometry, ElementMeta]] =
@@ -77,7 +77,7 @@ class OSMReader(
       .join(info, Seq("id"))
       .rdd
       .map { row =>
-        Feature(row.getAs[Geometry]("geom"), createElementMeta(row))
+        Feature(row.getAs[GTGeometry]("geom"), createElementMeta(row))
       }
 
   lazy val relationFeaturesRDD: RDD[Feature[GTGeometry, ElementMeta]] =
@@ -86,7 +86,7 @@ class OSMReader(
       .join(info, Seq("id"))
       .rdd
       .map { row =>
-        Feature(row.getAs[Geometry]("geom"), createElementMeta(row))
+        Feature(row.getAs[GTGeometry]("geom"), createElementMeta(row))
       }
 }
 

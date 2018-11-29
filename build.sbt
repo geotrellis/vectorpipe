@@ -6,10 +6,10 @@ organization := "com.azavea"
 
 organizationName := "Azavea"
 
-scalaVersion in ThisBuild := "2.11.12"
-
 val common = Seq(
   version := Version.vectorpipe,
+  scalaVersion := Version.scala,
+  crossScalaVersions := Version.crossScala,
   resolvers ++= Seq(
     "locationtech-releases" at "https://repo.locationtech.org/content/groups/releases",
     Resolver.bintrayRepo("azavea", "maven")

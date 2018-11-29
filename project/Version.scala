@@ -1,4 +1,6 @@
 object Version {
+  val scala = "2.11.12"
+  val crossScala = Seq(scala, "2.12.7")
   val vectorpipe = "0.3.0"
   val geotrellis = "3.0.0-SNAPSHOT"
   val geomesa    = "2.0.1"

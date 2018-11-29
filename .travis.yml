@@ -2,6 +2,7 @@ language: scala
 
 scala:
   - 2.11.12
+  - 2.12.7
 
 sbt_args: -J-Xmx6g
 

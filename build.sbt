@@ -26,9 +26,7 @@ lazy val commonSettings = Seq(
     "-language:existentials",
     "-language:experimental.macros",
     "-feature",
-    "-Ywarn-value-discard",
     "-Ywarn-dead-code",
-    "-Ywarn-numeric-widen",
     "-Ypartial-unification",
     "-Ypatmat-exhaust-depth", "100"
   ),

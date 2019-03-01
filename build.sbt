@@ -48,28 +48,6 @@ lazy val commonSettings = Seq(
     "apache.commons.io" at "https://mvnrepository.com/artifact/commons-io/commons-io"
   ),
 
-  initialCommands in console :=
-    """
-    import org.apache.spark._
-    import org.apache.spark.sql._
-
-    import org.locationtech.geomesa.spark.jts._
-
-    import vectorpipe.osm._
-    import vectorpipe.osm.internal._
-
-    import java.net.URI
-
-    implicit val ss =
-      SparkSession
-        .builder()
-        .master("local[*]")
-        .appName("vectorpipe console")
-        .config("spark.ui.enabled", true)
-        .getOrCreate()
-        .withJTS
-    """.stripMargin,
-
   updateOptions := updateOptions.value.withGigahorse(false),
 
   shellPrompt := { s => Project.extract(s).currentProject.id + " > " },

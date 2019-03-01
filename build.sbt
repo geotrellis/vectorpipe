@@ -1,18 +1,53 @@
 name := "vectorpipe"
 
-description := "Convert Vector data to VectorTiles with GeoTrellis."
+description := "Import OSM data and output to VectorTiles with GeoTrellis."
 
-organization := "com.azavea"
+import Dependencies._
 
-organizationName := "Azavea"
+lazy val commonSettings = Seq(
+  organization := "com.azavea",
 
-scalaVersion in ThisBuild := "2.11.12"
+  organizationName := "Azavea",
 
-val common = Seq(
   version := Version.vectorpipe,
+
+  cancelable in Global := true,
+
+  scalaVersion in ThisBuild := Version.scala,
+
+  scalacOptions := Seq(
+    "-deprecation",
+    "-unchecked",
+    "-feature",
+    "-language:implicitConversions",
+    "-language:reflectiveCalls",
+    "-language:higherKinds",
+    "-language:postfixOps",
+    "-language:existentials",
+    "-language:experimental.macros",
+    "-feature",
+    "-Ywarn-value-discard",
+    "-Ywarn-dead-code",
+    "-Ywarn-numeric-widen",
+    "-Ypartial-unification",
+    "-Ypatmat-exhaust-depth", "100"
+  ),
+
+  scalacOptions in (Compile, doc) += "-groups",
+
+  /* For Monocle's Lens auto-generation */
+  addCompilerPlugin("org.scalamacros" %% "paradise" % "2.1.0" cross CrossVersion.full),
+
   resolvers ++= Seq(
-    "locationtech-releases" at "https://repo.locationtech.org/content/groups/releases",
-    Resolver.bintrayRepo("azavea", "maven")
+    Resolver.bintrayRepo("lonelyplanet", "maven"),
+    Resolver.bintrayRepo("kwark", "maven"), // Required for Slick 3.1.1.2, see https://github.com/azavea/raster-foundry/pull/1576
+    Resolver.bintrayRepo("bkirwi", "maven"), // Required for `decline` dependency
+    "locationtech-releases" at "https://repo.locationtech.org/content/repositories/releases/",
+    "locationtech-snapshots" at "https://repo.locationtech.org/content/repositories/snapshots/",
+    "geosolutions" at "http://maven.geo-solutions.it/",
+    "boundless" at "https://repo.boundlessgeo.com/main/",
+    "osgeo" at "http://download.osgeo.org/webdav/geotools/",
+    "apache.commons.io" at "https://mvnrepository.com/artifact/commons-io/commons-io"
   ),
 
   initialCommands in console :=
@@ -37,53 +72,32 @@ val common = Seq(
         .withJTS
     """.stripMargin,
 
-  scalacOptions := Seq(
-    "-deprecation",
-    "-Ypartial-unification",
-    "-Ywarn-value-discard",
-    "-Ywarn-dead-code",
-    "-Ywarn-numeric-widen",
-    "-language:implicitConversions",
-    "-language:reflectiveCalls"
-  ),
+  updateOptions := updateOptions.value.withGigahorse(false),
 
-  resolvers ++= Seq(
-    Resolver.bintrayRepo("lonelyplanet", "maven"),
-    Resolver.bintrayRepo("bkirwi", "maven"), // Required for `decline` dependency
-    "locationtech-releases" at "https://repo.locationtech.org/content/repositories/releases/",
-    "locationtech-snapshots" at "https://repo.locationtech.org/content/repositories/snapshots/",
-    "geosolutions" at "http://maven.geo-solutions.it/",
-    "boundless" at "https://repo.boundlessgeo.com/main/",
-    "osgeo" at "http://download.osgeo.org/webdav/geotools/",
-    "apache.commons.io" at "https://mvnrepository.com/artifact/commons-io/commons-io"
-  ),
+  shellPrompt := { s => Project.extract(s).currentProject.id + " > " },
 
-  scalacOptions in (Compile, doc) += "-groups",
-
-  /* For Monocle's Lens auto-generation */
-  addCompilerPlugin("org.scalamacros" %% "paradise" % "2.1.0" cross CrossVersion.full),
-
-  libraryDependencies ++= Seq(
-    "org.locationtech.geotrellis" %% "geotrellis-vectortile" % Version.geotrellis exclude("com.google.protobuf", "protobuf-java"),
-    "org.locationtech.geotrellis" %% "geotrellis-s3"         % Version.geotrellis exclude("com.google.protobuf", "protobuf-java"),
-    "org.locationtech.geomesa"    %% "geomesa-spark-jts"     % Version.geomesa,
-    "org.apache.spark"            %% "spark-hive"            % Version.spark % "provided",
-    "org.spire-math"              %% "spire"                 % Version.spire,
-    "org.typelevel"               %% "cats-core"             % Version.cats,
-    "com.monovore"                %% "decline"               % Version.decline,
-    "org.scalatest"               %% "scalatest"             % Version.scalaTest % "test",
-    "com.github.julien-truffaut"  %% "monocle-core"          % Version.monocle,
-    "com.github.julien-truffaut"  %% "monocle-macro"         % Version.monocle,
-    "com.github.seratch"          %% "awscala"               % "0.6.1",
-    "org.apache.commons"           % "commons-compress"      % "1.16.1",
-    "com.google.protobuf"          % "protobuf-java"         % "2.5.0",
-    "io.dylemma"                  %% "xml-spac"              % "0.3",
-    "javax.media"                  % "jai_core"              % "1.1.3" % "test" from "http://download.osgeo.org/webdav/geotools/javax/media/jai_core/1.1.3/jai_core-1.1.3.jar",
-  ),
-
-  parallelExecution in Test := false,
-  fork in Test := false,
-  testOptions in Test += Tests.Argument("-oDF")
+  assemblyMergeStrategy in assembly := {
+    case "reference.conf" | "application.conf"  => MergeStrategy.concat
+    case PathList("META-INF", xs@_*) =>
+      xs match {
+        case ("MANIFEST.MF" :: Nil) => MergeStrategy.discard
+        // Concatenate everything in the services directory to keep GeoTools happy.
+        case ("services" :: _ :: Nil) =>
+          MergeStrategy.concat
+        // Concatenate these to keep JAI happy.
+        case ("javax.media.jai.registryFile.jai" :: Nil) | ("registryFile.jai" :: Nil) | ("registryFile.jaiext" :: Nil) =>
+          MergeStrategy.concat
+        case (name :: Nil) => {
+          // Must exclude META-INF/*.([RD]SA|SF) to avoid "Invalid signature file digest for Manifest main attributes" exception.
+          if (name.endsWith(".RSA") || name.endsWith(".DSA") || name.endsWith(".SF"))
+            MergeStrategy.discard
+          else
+            MergeStrategy.first
+        }
+        case _ => MergeStrategy.first
+      }
+    case _ => MergeStrategy.first
+  }
 )
 
 val release = Seq(
@@ -97,57 +111,91 @@ val release = Seq(
   homepage := Some(url("https://geotrellis.github.io/vectorpipe/"))
 )
 
-lazy val lib = project.in(file(".")).settings(common, release)
+val vpExtraSettings = Seq(
+  libraryDependencies ++= Seq(
+    //  gtGeomesa exclude("com.google.protobuf", "protobuf-java") exclude("org.locationtech.geomesa",
+    // "geomesa-accumulo-datastore"),
+    gtGeotools exclude ("com.google.protobuf", "protobuf-java"),
+    "com.github.seratch" %% "awscala" % "0.6.1",
+    "org.scalaj" %% "scalaj-http" % "2.3.0",
+    sparkHive % Provided,
+    sparkJts,
+    gtS3 exclude ("com.google.protobuf", "protobuf-java") exclude ("com.amazonaws", "aws-java-sdk-s3"),
+    gtSpark exclude ("com.google.protobuf", "protobuf-java"),
+    gtVectorTile exclude ("com.google.protobuf", "protobuf-java"),
+    decline,
+    jaiCore,
+    gtVector,
+    cats,
+    scalactic,
+    scalatest,
+    circeCore,
+    circeGeneric,
+    circeExtras,
+    circeParser,
+    circeOptics,
+    circeJava8,
+    circeYaml,
+    "com.softwaremill.macmemo" %% "macros" % "0.4",
+    "com.amazonaws" % "aws-java-sdk-s3" % "1.11.340" % Provided
+  ),
 
-assemblyShadeRules in assembly := {
-  val shadePackage = "com.azavea.shaded.demo"
-  Seq(
-    ShadeRule.rename("com.google.common.**" -> s"$shadePackage.google.common.@1")
-      .inLibrary("com.azavea.geotrellis" %% "geotrellis-cassandra" % Version.geotrellis).inAll,
-    ShadeRule.rename("io.netty.**" -> s"$shadePackage.io.netty.@1")
-      .inLibrary("com.azavea.geotrellis" %% "geotrellis-hbase" % Version.geotrellis).inAll,
-    ShadeRule.rename("com.fasterxml.jackson.**" -> s"$shadePackage.com.fasterxml.jackson.@1")
-      .inLibrary("com.networknt" % "json-schema-validator" % "0.1.7").inAll,
-    ShadeRule.rename("org.apache.avro.**" -> s"$shadePackage.org.apache.avro.@1")
-      .inLibrary("com.azavea.geotrellis" %% "geotrellis-spark" % Version.geotrellis).inAll
-  )
-}
+  Test / fork := true,
+  Test / baseDirectory := (baseDirectory.value).getParentFile,
+  Test / parallelExecution := false,
+  Test / testOptions += Tests.Argument("-oDF")
 
-assemblyMergeStrategy in assembly := {
-  case s if s.startsWith("META-INF/services") => MergeStrategy.concat
-  case "reference.conf" | "application.conf"  => MergeStrategy.concat
-  case "META-INF/MANIFEST.MF" | "META-INF\\MANIFEST.MF" => MergeStrategy.discard
-  case "META-INF/ECLIPSEF.RSA" | "META-INF/ECLIPSEF.SF" => MergeStrategy.discard
-  case "META-INF/ECLIPSE_.RSA" | "META-INF/ECLIPSE_.SF" => MergeStrategy.discard
-  case s if s.startsWith("META-INF/") && s.endsWith("SF") => MergeStrategy.discard
-  case s if s.startsWith("META-INF/") && s.endsWith("RSA") => MergeStrategy.discard
-  case s if s.startsWith("META-INF/") && s.endsWith("DSA") => MergeStrategy.discard
-  case _ => MergeStrategy.first
-}
+)
+
+// /* Microsite Settings
+//  *
+//  * To generate the microsite locally, use `sbt makeMicrosite`.
+//  * To publish the site to Github, use `sbt publishMicrosite`.
+//  *
+//  * Spark deps must not be marked `provided` while doing these, or you will get errors.
+//  */
+
+// enablePlugins(MicrositesPlugin)
+// enablePlugins(SiteScaladocPlugin)
+
+// micrositeName := "VectorPipe"
+// micrositeDescription := "Convert Vector data into VectorTiles"
+// micrositeAuthor := "GeoTrellis Team at Azavea"
+// micrositeGitterChannel := false
+// micrositeOrganizationHomepage := "https://www.azavea.com/"
+// micrositeGithubOwner := "geotrellis"
+// micrositeGithubRepo := "vectorpipe"
+// micrositeBaseUrl := "/vectorpipe"
+// micrositeDocumentationUrl := "/vectorpipe/latest/api/#vectorpipe.package" /* Location of Scaladocs */
+
+/* Main project */
+lazy val vectorpipe = project
+  .in(file("."))
+  .settings(commonSettings, vpExtraSettings, release)
 
 /* Benchmarking suite.
  * Benchmarks can be executed by first switching to the `bench` project and then by running:
       jmh:run -t 1 -f 1 -wi 5 -i 5 .*Bench.*
  */
-lazy val bench = project.in(file("bench")).settings(common).dependsOn(lib).enablePlugins(JmhPlugin)
+lazy val bench = project
+  .in(file("bench"))
+  .settings(commonSettings)
+  .dependsOn(vectorpipe)
+  .enablePlugins(JmhPlugin)
 
-/* Microsite Settings
- *
- * To generate the microsite locally, use `sbt makeMicrosite`.
- * To publish the site to Github, use `sbt publishMicrosite`.
- *
- * Spark deps must not be marked `provided` while doing these, or you will get errors.
- */
 
-enablePlugins(MicrositesPlugin)
-enablePlugins(SiteScaladocPlugin)
 
-micrositeName := "VectorPipe"
-micrositeDescription := "Convert Vector data into VectorTiles"
-micrositeAuthor := "GeoTrellis Team at Azavea"
-micrositeGitterChannel := false
-micrositeOrganizationHomepage := "https://www.azavea.com/"
-micrositeGithubOwner := "geotrellis"
-micrositeGithubRepo := "vectorpipe"
-micrositeBaseUrl := "/vectorpipe"
-micrositeDocumentationUrl := "/vectorpipe/latest/api/#vectorpipe.package" /* Location of Scaladocs */
+
+// assemblyShadeRules in assembly := {
+//   val shadePackage = "com.azavea.shaded.demo"
+//   Seq(
+//     ShadeRule.rename("com.google.common.**" -> s"$shadePackage.google.common.@1")
+//       .inLibrary("com.azavea.geotrellis" %% "geotrellis-cassandra" % Version.geotrellis).inAll,
+//     ShadeRule.rename("io.netty.**" -> s"$shadePackage.io.netty.@1")
+//       .inLibrary("com.azavea.geotrellis" %% "geotrellis-hbase" % Version.geotrellis).inAll,
+//     ShadeRule.rename("com.fasterxml.jackson.**" -> s"$shadePackage.com.fasterxml.jackson.@1")
+//       .inLibrary("com.networknt" % "json-schema-validator" % "0.1.7").inAll,
+//     ShadeRule.rename("org.apache.avro.**" -> s"$shadePackage.org.apache.avro.@1")
+//       .inLibrary("com.azavea.geotrellis" %% "geotrellis-spark" % Version.geotrellis).inAll
+//   )
+// }

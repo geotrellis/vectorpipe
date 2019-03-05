@@ -7,12 +7,20 @@ import scala.xml.Node
 case class Member(`type`: Byte, ref: Long, role: String)
 
 object Member {
-  def fromXML(node: Node): Member = {
-    val `type` = node \@ "type" match {
+  def typeFromString(str: String): Byte = str match {
       case "node"     => NodeType
       case "way"      => WayType
       case "relation" => RelationType
-    }
+  }
+
+  def stringFromByte(b: Byte): String = b match {
+      case NodeType     => "node"
+      case WayType      => "way"
+      case RelationType => "relation"
+  }
+
+  def fromXML(node: Node): Member = {
+    val `type` = typeFromString(node \@ "type")
     val ref = (node \@ "ref").toLong
     val role = node \@ "role"
 

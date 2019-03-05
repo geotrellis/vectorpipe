@@ -2,6 +2,7 @@ package vectorpipe
 
 import java.io._
 import java.sql.Timestamp
+import scala.util.{Try, Success, Failure}
 
 import geotrellis.vector._
 import geotrellis.vector.io._
@@ -64,6 +65,20 @@ object ProcessOSM {
       Nil)
 
   lazy val VersionedElementEncoder: Encoder[Row] = RowEncoder(VersionedElementSchema)
+
+  /* support UDF for constructGeometries */
+  private case class StrMember(`type`: String, ref: Long, role: String)
+  private val convertMembers = org.apache.spark.sql.functions.udf { member: Seq[Row] =>
+    if (member == null)
+      null
+    else {
+      member.map { row: Row =>
+        StrMember(vectorpipe.model.Member.stringFromByte(row.getAs[Byte]("type")),
+                  row.getAs[Long]("ref"),
+                  row.getAs[String]("role"))
+      }
+    }
+  }
 
   /**
     * Snapshot pre-processed elements.
@@ -213,9 +228,28 @@ object ProcessOSM {
     * @param elements DataFrame containing node, way, and relation elements
     * @return DataFrame containing geometries.
     */
-  def constructGeometries(elements: DataFrame): DataFrame = {
-    import elements.sparkSession.implicits._
+  def constructGeometries(input: DataFrame): DataFrame = {
+    import input.sparkSession.implicits._
     val st_pointToGeom = org.apache.spark.sql.functions.udf { pt: jts.Point => pt.asInstanceOf[jts.Geometry] }
+
+    // The following type conversion needed in case input comes from Change source
+    val elements =
+      Try(input.schema
+               .find(_.name == "members")
+               .get
+               .dataType
+               .asInstanceOf[ArrayType]
+               .elementType
+               .asInstanceOf[StructType]
+               .find(_.name == "type")
+               .get) match {
+        case Failure(_) => throw new IllegalArgumentException(s"Could not get type of 'members' in schema ${input.schema}")
+        case Success(field) =>
+          if (field.dataType == ByteType)
+            input.withColumn("members", convertMembers('members))
+          else
+            input
+      }
 
     val nodes = ProcessOSM.preprocessNodes(elements)
 

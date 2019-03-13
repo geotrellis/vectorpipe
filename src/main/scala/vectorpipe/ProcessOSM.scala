@@ -20,7 +20,7 @@ import com.vividsolutions.jts.{geom => jts}
 import vectorpipe.functions.osm._
 import vectorpipe.relations.MultiPolygons
 import vectorpipe.relations.Routes
-import vectorpipe.util.Caching
+import vectorpipe.util.{Caching, Resource}
 import spray.json._
 
 object ProcessOSM {
@@ -668,121 +668,6 @@ object ProcessOSM {
 
     geoms
       .join(changesets.select('id as 'changeset, 'uid, 'user), Seq("changeset"))
-  }
-
-  object Resource {
-    def apply(name: String): String = {
-      val stream: InputStream = getClass.getResourceAsStream(s"/$name")
-      try {
-        scala.io.Source.fromInputStream(stream).getLines.mkString(" ")
-      } finally {
-        stream.close()
-      }
-    }
-  }
-
-  case class CountryId(code: String)
-
-  object MyJsonProtocol extends DefaultJsonProtocol {
-
-    implicit object CountryIdJsonFormat extends RootJsonFormat[CountryId] {
-      def read(value: JsValue): CountryId =
-        value.asJsObject.getFields("ADM0_A3") match {
-          case Seq(JsString(code)) =>
-            CountryId(code)
-          case v =>
-            throw DeserializationException(s"CountryId expected, got $v")
-        }
-
-      def write(v: CountryId): JsValue =
-        JsObject(
-          "code" -> JsString(v.code)
-        )
-    }
-
-  }
-
-  import MyJsonProtocol._
-
-  object Countries {
-    lazy val all: Vector[MultiPolygonFeature[CountryId]] = {
-      val collection =
-        Resource("countries.geojson").
-          parseGeoJson[JsonFeatureCollection]
-
-      val polys =
-        collection.
-          getAllPolygonFeatures[CountryId].
-          map(_.mapGeom(MultiPolygon(_)))
-
-      val mps =
-        collection.
-          getAllMultiPolygonFeatures[CountryId]
-
-      polys ++ mps
-    }
-
-    def indexed: SpatialIndex[MultiPolygonFeature[CountryId]] =
-      SpatialIndex.fromExtents(all) { mpf => mpf.geom.envelope }
-
-  }
-
-  class CountryLookup() extends Serializable {
-    private val index =
-      geotrellis.vector.SpatialIndex.fromExtents(
-        Countries.all.
-          map { mpf =>
-            (mpf.geom.prepare, mpf.data)
-          }
-      ) { case (pg, _) => pg.geom.envelope }
-
-    def lookup(geom: geotrellis.vector.Geometry): Traversable[CountryId] = {
-      val t =
-        new Traversable[(geotrellis.vector.prepared.PreparedGeometry[geotrellis.vector.MultiPolygon], CountryId)] {
-          override def foreach[U](f: ((geotrellis.vector.prepared.PreparedGeometry[geotrellis.vector.MultiPolygon],
-            CountryId)) => U): Unit = {
-            val visitor = new com.vividsolutions.jts.index.ItemVisitor {
-              override def visitItem(obj: AnyRef): Unit = f(obj.asInstanceOf[(geotrellis.vector.prepared
-              .PreparedGeometry[geotrellis.vector.MultiPolygon], CountryId)])
-            }
-            index.rtree.query(geom.jtsGeom.getEnvelopeInternal, visitor)
-          }
-        }
-
-      t.
-        filter(_._1.intersects(geom)).
-        map(_._2)
-    }
-  }
-
-  def geocode(geoms: DataFrame): DataFrame = {
-    val newSchema = StructType(geoms.schema.fields :+ StructField(
-      "countries", ArrayType(StringType, containsNull = false), nullable = true))
-    implicit val encoder: Encoder[Row] = RowEncoder(newSchema)
-
-    geoms
-      .mapPartitions { partition =>
-        val countryLookup = new CountryLookup()
-
-        partition.map { row =>
-          val countryCodes = Option(row.getAs[jts.Geometry]("geom")).map(Geometry(_)) match {
-            case Some(geom) => countryLookup.lookup(geom).map(x => x.code)
-            case None => Seq.empty[String]
-          }
-
-          Row.fromSeq(row.toSeq :+ countryCodes)
-        }
-      }
-  }
-
-  def regionsByChangeset(geomCountries: Dataset[Row]): DataFrame = {
-    import geomCountries.sparkSession.implicits._
-
-    geomCountries
-      .where('country.isNotNull)
-      .groupBy('changeset)
-      .agg(collect_set('country) as 'countries)
-
   }
 
 }

@@ -181,7 +181,7 @@ package object osm {
 
   lazy val compressMemberTypes: UserDefinedFunction = udf(_compressMemberTypes, MemberSchema)
 
-  private case class StrMember(`type`: String, ref: Long, role: String)
+  case class StrMember(`type`: String, ref: Long, role: String)
 
   private val convertMembers = org.apache.spark.sql.functions.udf { member: Seq[Row] =>
     if (member == null)

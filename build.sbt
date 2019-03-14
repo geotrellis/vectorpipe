@@ -92,9 +92,9 @@ val vpExtraSettings = Seq(
     //  gtGeomesa exclude("com.google.protobuf", "protobuf-java") exclude("org.locationtech.geomesa",
     // "geomesa-accumulo-datastore"),
     gtGeotools exclude ("com.google.protobuf", "protobuf-java"),
-    "com.github.seratch" %% "awscala" % "0.6.1",
-    "org.scalaj" %% "scalaj-http" % "2.3.0",
-    sparkHive % Provided,
+    awscala,
+    scalaj,
+    sparkSql % Provided,
     sparkJts,
     gtS3 exclude ("com.google.protobuf", "protobuf-java") exclude ("com.amazonaws", "aws-java-sdk-s3"),
     gtSpark exclude ("com.google.protobuf", "protobuf-java"),
@@ -113,7 +113,7 @@ val vpExtraSettings = Seq(
     circeJava8,
     circeYaml,
     "com.softwaremill.macmemo" %% "macros" % "0.4",
-    "com.amazonaws" % "aws-java-sdk-s3" % "1.11.340" % Provided
+    "com.amazonaws" % "aws-java-sdk-s3" % "1.11.518" % Provided
   ),
 
   test in assembly := {},

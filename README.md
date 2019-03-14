@@ -132,3 +132,20 @@ and following that,
 ```bash
 spark-shell --jars target/scala_2.11/vectorpipe.jar
 ```
+
+### IntelliJ IDEA
+
+When developing with IntelliJ IDEA, the sbt plugin will see Spark dependencies
+as provided, which will prevent them from being indexed properly, resulting in
+errors / warnings within the IDE. To fix this, create `idea.sbt` at the root of
+the project:
+
+```scala
+import Dependencies._
+
+lazy val mainRunner = project.in(file("mainRunner")).dependsOn(RootProject(file("."))).settings(
+  libraryDependencies ++= Seq(
+    sparkSql % Compile
+  )
+)
+```

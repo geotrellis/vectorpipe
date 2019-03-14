@@ -36,6 +36,7 @@ trait TestEnvironment extends BeforeAndAfterAll { self: Suite with BeforeAndAfte
     .config("spark.serializer", classOf[KryoSerializer].getName)
     .config("spark.kryo.registrationRequired", "false")
     .config("spark.kryoserializer.buffer.max", "500m")
+    .config("spark.sql.orc.impl", "native")
     .getOrCreate()
 
   // get the name of the class which mixes in this trait

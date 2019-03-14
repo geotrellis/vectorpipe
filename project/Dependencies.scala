@@ -1,7 +1,10 @@
 import sbt._
 
 object Dependencies {
+  val awscala        = "com.github.seratch"          %% "awscala"                     % Version.awscala
   val decline        = "com.monovore"                %% "decline"                     % Version.decline
+  val spark          = "org.apache.spark"            %% "spark-core"                  % Version.spark
+  val sparkSql       = "org.apache.spark"            %% "spark-sql"                   % Version.spark
   val sparkHive      = "org.apache.spark"            %% "spark-hive"                  % Version.spark
   val sparkStreaming = "org.apache.spark"            %% "spark-streaming"             % Version.spark
   val sparkJts       = "org.locationtech.geomesa"    %% "geomesa-spark-jts"           % Version.geomesa
@@ -23,14 +26,14 @@ object Dependencies {
   val hbaseServer    = "org.apache.hbase" % "hbase-server" % "1.3.1"
   val geomesaHbaseDatastore = "org.locationtech.geomesa" % "geomesa-hbase-datastore_2.11" % Version.geomesa
   val kryo           = "com.esotericsoftware"        % "kryo-shaded"                   % Version.kryo
-  val snakeyaml      = "org.yaml"                    % "snakeyaml"                     % Version.snakeyaml
   val circeCore      = "io.circe"                    %% "circe-core"                   % Version.circe
   val circeGeneric   = "io.circe"                    %% "circe-generic"                % Version.circe
   val circeExtras    = "io.circe"                    %% "circe-generic-extras"         % Version.circe
   val circeParser    = "io.circe"                    %% "circe-parser"                 % Version.circe
   val circeOptics    = "io.circe"                    %% "circe-optics"                 % Version.circe
   val circeJava8     = "io.circe"                    %% "circe-java8"                  % Version.circe
-  val circeYaml      = "io.circe"                    %% "circe-yaml"                   % "0.8.0"
+  val circeYaml      = "io.circe"                    %% "circe-yaml"                   % "0.9.0"
   val logging        = "com.typesafe.scala-logging"  %% "scala-logging"                % Version.scalaLogging
   val commonsIO      = "commons-io"                  %  "commons-io"                   % Version.commonsIO
+  val scalaj         = "org.scalaj"                  %% "scalaj-http"                  % Version.scalaj
 }

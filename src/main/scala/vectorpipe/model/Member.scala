@@ -11,6 +11,7 @@ object Member {
       case "node"     => NodeType
       case "way"      => WayType
       case "relation" => RelationType
+      case _ => null.asInstanceOf[Byte]
   }
 
   def stringFromByte(b: Byte): String = b match {

@@ -114,14 +114,8 @@ class MultiPolygonRelationReconstructionSpec extends PropSpec with TableDrivenPr
             case ((changeset, id, version, minorVersion, updated, validUntil), rows) =>
               val members = rows.toVector
               // TODO store Bytes as the type in fixtures
-              val types = members.map(_.getAs[String]("type") match {
-                case "node" => NodeType
-                case "way" => WayType
-                case "relation" => RelationType
-                case _ => null.asInstanceOf[Byte]
-              })
+              val types = members.map(Member.typeFromString(_.getAs[String]("type")))
               val roles = members.map(_.getAs[String]("role"))
-              //val geoms = members.map(_.getAs[jts.Geometry]("geom"))
               val geoms = members.map(_.getAs[jts.Geometry]("geometry"))
               val mp = build(id, version, updated, types, roles, geoms).orNull
 

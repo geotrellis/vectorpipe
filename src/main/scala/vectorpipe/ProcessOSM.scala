@@ -20,7 +20,7 @@ import com.vividsolutions.jts.{geom => jts}
 import vectorpipe.functions.osm._
 import vectorpipe.relations.MultiPolygons
 import vectorpipe.relations.Routes
-import vectorpipe.util.{Caching, Resource}
+import vectorpipe.util.Resource
 import spray.json._
 
 object ProcessOSM {
@@ -65,20 +65,6 @@ object ProcessOSM {
       Nil)
 
   lazy val VersionedElementEncoder: Encoder[Row] = RowEncoder(VersionedElementSchema)
-
-  /* support UDF for constructGeometries */
-  private case class StrMember(`type`: String, ref: Long, role: String)
-  private val convertMembers = org.apache.spark.sql.functions.udf { member: Seq[Row] =>
-    if (member == null)
-      null
-    else {
-      member.map { row: Row =>
-        StrMember(vectorpipe.model.Member.stringFromByte(row.getAs[Byte]("type")),
-                  row.getAs[Long]("ref"),
-                  row.getAs[String]("role"))
-      }
-    }
-  }
 
   /**
     * Snapshot pre-processed elements.
@@ -232,25 +218,7 @@ object ProcessOSM {
     import input.sparkSession.implicits._
     val st_pointToGeom = org.apache.spark.sql.functions.udf { pt: jts.Point => pt.asInstanceOf[jts.Geometry] }
 
-    // The following type conversion needed in case input comes from Change source
-    val elements =
-      Try(input.schema
-               .find(_.name == "members")
-               .get
-               .dataType
-               .asInstanceOf[ArrayType]
-               .elementType
-               .asInstanceOf[StructType]
-               .find(_.name == "type")
-               .get) match {
-        case Failure(_) => throw new IllegalArgumentException(s"Could not get type of 'members' in schema ${input.schema}")
-        case Success(field) =>
-          if (field.dataType == ByteType)
-            input.withColumn("members", convertMembers('members))
-          else
-            input
-      }
-
+    val elements = elaborateMemberTypes(input)
     val nodes = ProcessOSM.preprocessNodes(elements)
 
     val nodeGeoms = ProcessOSM.constructPointGeometries(nodes)
@@ -308,8 +276,7 @@ object ProcessOSM {
     * @param _nodesToWays Optional lookup table.
     * @return Way geometries.
     */
-  def reconstructWayGeometries(_ways: DataFrame, _nodes: DataFrame, _nodesToWays: Option[DataFrame] = None)(implicit
-                                                                                                            cache: Caching = Caching.none, cachePartitions: Option[Int] = None): DataFrame = {
+  def reconstructWayGeometries(_ways: DataFrame, _nodes: DataFrame, _nodesToWays: Option[DataFrame] = None): DataFrame = {
     implicit val ss: SparkSession = _ways.sparkSession
     import ss.implicits._
     ss.withJTS
@@ -504,20 +471,14 @@ object ProcessOSM {
     * @param geoms      DataFrame containing way geometries to use in reconstruction.
     * @return Relations geometries.
     */
-  def reconstructRelationGeometries(_relations: DataFrame, geoms: DataFrame)(implicit cache: Caching = Caching.none,
-                                                                             cachePartitions: Option[Int] = None)
-  : DataFrame = {
+  def reconstructRelationGeometries(_relations: DataFrame, geoms: DataFrame): DataFrame = {
     val relations = preprocessRelations(_relations)
 
     reconstructMultiPolygonRelationGeometries(relations, geoms)
       .union(reconstructRouteRelationGeometries(relations, geoms))
   }
 
-  def reconstructMultiPolygonRelationGeometries(_relations: DataFrame, geoms: DataFrame)(implicit cache: Caching =
-  Caching.none,
-                                                                                         cachePartitions: Option[Int]
-                                                                                         = None)
-  : DataFrame = {
+  def reconstructMultiPolygonRelationGeometries(_relations: DataFrame, geoms: DataFrame): DataFrame = {
     implicit val ss: SparkSession = _relations.sparkSession
     import ss.implicits._
     ss.withJTS
@@ -579,10 +540,7 @@ object ProcessOSM {
         'minorVersion)
   }
 
-  def reconstructRouteRelationGeometries(_relations: DataFrame, geoms: DataFrame)(implicit cache: Caching = Caching
-    .none,
-                                                                                  cachePartitions: Option[Int] = None)
-  : DataFrame = {
+  def reconstructRouteRelationGeometries(_relations: DataFrame, geoms: DataFrame): DataFrame = {
     implicit val ss: SparkSession = _relations.sparkSession
     import ss.implicits._
     ss.withJTS

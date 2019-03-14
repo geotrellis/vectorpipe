@@ -1,11 +1,14 @@
 package vectorpipe.functions
 
 import org.apache.spark.sql.expressions.UserDefinedFunction
+import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{Column, Row}
 import vectorpipe.ProcessOSM._
+import vectorpipe.model.Member
 
+import scala.util.{Try, Success, Failure}
 import scala.util.matching.Regex
 
 package object osm {
@@ -169,11 +172,7 @@ package object osm {
 
   private val _compressMemberTypes = (members: Seq[Row]) =>
     members.map { row =>
-      val t = row.getAs[String]("type") match {
-        case "node" => NodeType
-        case "way" => WayType
-        case "relation" => RelationType
-      }
+      val t = Member.typeFromString(row.getAs[String]("type"))
       val ref = row.getAs[Long]("ref")
       val role = row.getAs[String]("role")
 
@@ -181,6 +180,37 @@ package object osm {
     }
 
   lazy val compressMemberTypes: UserDefinedFunction = udf(_compressMemberTypes, MemberSchema)
+
+  private case class StrMember(`type`: String, ref: Long, role: String)
+
+  private val convertMembers = org.apache.spark.sql.functions.udf { member: Seq[Row] =>
+    if (member == null)
+      null
+    else {
+      member.map { row: Row =>
+        StrMember(vectorpipe.model.Member.stringFromByte(row.getAs[Byte]("type")),
+                  row.getAs[Long]("ref"),
+                  row.getAs[String]("role"))
+      }
+    }
+  }
+
+  def elaborateMemberTypes(input: DataFrame): DataFrame = {
+    // The following type conversion needed in case input comes from Change source
+    Try(input.schema("members")
+             .dataType
+             .asInstanceOf[ArrayType]
+             .elementType
+             .asInstanceOf[StructType]
+             .apply("type")) match {
+      case Failure(_) => throw new IllegalArgumentException(s"Could not get type of 'members' in schema ${input.schema}")
+      case Success(field) =>
+        if (field.dataType == ByteType)
+            input.withColumn("members", convertMembers(col("members")))
+          else
+            input
+      }
+  }
 
   // matches letters or emoji (no numbers or punctuation)
   private val ContentMatcher: Regex = """[\p{L}\uD83C-\uDBFF\uDC00-\uDFFF]""".r

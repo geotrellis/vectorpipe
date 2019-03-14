@@ -31,12 +31,7 @@ object AugmentedDiff {
   def apply(sequence: Int,
             prev: Option[Feature[GTGeometry, ElementWithSequence]],
             curr: Feature[GTGeometry, ElementWithSequence]): AugmentedDiff = {
-    val `type` = curr.data.`type` match {
-      case "node"     => ProcessOSM.NodeType
-      case "way"      => ProcessOSM.WayType
-      case "relation" => ProcessOSM.RelationType
-    }
-
+    val `type` = Member.typeFromString(curr.data.`type`)
     val minorVersion = prev.map(_.data.version).getOrElse(Int.MinValue) == curr.data.version
 
     AugmentedDiff(

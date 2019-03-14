@@ -2,6 +2,7 @@ package vectorpipe
 
 import java.sql.Timestamp
 
+import com.vividsolutions.jts.{geom => jts}
 import geotrellis.vector._
 import org.apache.log4j.Logger
 import org.apache.spark.sql._
@@ -12,10 +13,8 @@ import org.apache.spark.sql.functions._
 import org.apache.spark.sql.jts.GeometryUDT
 import org.apache.spark.sql.types._
 import org.locationtech.geomesa.spark.jts._
-import com.vividsolutions.jts.{geom => jts}
 import vectorpipe.functions.osm._
-import vectorpipe.relations.MultiPolygons
-import vectorpipe.relations.Routes
+import vectorpipe.relations.{MultiPolygons, Routes}
 
 object ProcessOSM {
   val NodeType: Byte = 1
@@ -63,6 +62,9 @@ object ProcessOSM {
   /**
     * Snapshot pre-processed elements.
     *
+    * A Time Pin is stuck through a set of elements that have been augmented with a 'validUntil column to identify all
+    * that were valid at a specific point in time (i.e. updated before the target timestamp and valid after it).
+    *
     * @param df        Elements (including 'validUntil column)
     * @param timestamp Optional timestamp to snapshot at
     * @return DataFrame containing valid elements at timestamp (or now)
@@ -77,9 +79,11 @@ object ProcessOSM {
   }
 
   /**
-    * Pre-process nodes. Copies coordinates + tags from versions prior to being deleted (!'visible), as they're cleared
-    * out otherwise, and adds 'validUntil based on the creation timestamp of the next version. Nodes with null
-    * 'validUntil values are currently valid.
+    * Pre-process nodes.
+    *
+    * Copies coordinates + tags from versions prior to being deleted (!'visible), as they're cleared out otherwise, and
+    * adds 'validUntil based on the creation timestamp of the next version. Nodes with null 'validUntil values are
+    * currently valid.
     *
     * @param history DataFrame containing nodes.
     * @return processed nodes.
@@ -127,9 +131,11 @@ object ProcessOSM {
   }
 
   /**
-    * Pre-process ways. Copies tags from versions prior to being deleted (!'visible), as they're cleared out
-    * otherwise, dereferences 'nds.ref, and adds 'validUntil based on the creation timestamp of the next version. Ways
-    * with null 'validUntil values are currently valid.
+    * Pre-process ways.
+    *
+    * Copies tags from versions prior to being deleted (!'visible), as they're cleared out otherwise, dereferences
+    * 'nds.ref, and adds 'validUntil based on the creation timestamp of the next version. Ways with null 'validUntil
+    * values are currently valid.
     *
     * @param history DataFrame containing ways.
     * @return processed ways.
@@ -166,9 +172,11 @@ object ProcessOSM {
   }
 
   /**
-    * Pre-process relations. Copies tags from versions prior to being deleted (!'visible), as they're cleared out
-    * otherwise, and adds 'validUntil based on the creation timestamp of the next version. Relations with null
-    * 'validUntil values are currently valid.
+    * Pre-process relations.
+    *
+    * Copies tags from versions prior to being deleted (!'visible), as they're cleared out otherwise, and adds
+    * 'validUntil based on the creation timestamp of the next version. Relations with null 'validUntil values are
+    * currently valid.
     *
     * @param history DataFrame containing relations.
     * @return processed relations.
@@ -205,6 +213,10 @@ object ProcessOSM {
   /**
     * Construct all geometries for a set of elements.
     *
+    * This currently produces Points for nodes containing "interesting" tags, LineStrings and Polygons for ways
+    * (according to OSM rules for defining areas), MultiPolygons for multipolygon and boundary relations, and
+    * LineStrings / MultiLineStrings for route relations.
+    *
     * @param elements DataFrame containing node, way, and relation elements
     * @return DataFrame containing geometries.
     */
@@ -229,8 +241,9 @@ object ProcessOSM {
   }
 
   /**
-    * Construct point geometries. "Uninteresting" nodes are not included, so this is not suitable for way/relation
-    * assembly.
+    * Construct point geometries.
+    *
+    * "Uninteresting" nodes are not included, so this is not suitable for producing vertices for way/relation assembly.
     *
     * @param nodes DataFrame containing nodes
     * @return Nodes as Point geometries
@@ -263,7 +276,8 @@ object ProcessOSM {
     * Reconstruct way geometries.
     *
     * Nodes and ways contain implicit timestamps that will be used to generate minor versions of geometry that they're
-    * associated with (each entry that exists within a changeset).
+    * associated with (each entry that exists within a changeset). Output geometries will be LineStrings or Polygons
+    * according to OSM conventions for defining areas.
     *
     * @param _ways        DataFrame containing ways to reconstruct.
     * @param _nodes       DataFrame containing nodes used to construct ways.
@@ -459,11 +473,12 @@ object ProcessOSM {
     * Reconstruct relation geometries.
     *
     * Nodes and ways contain implicit timestamps that will be used to generate minor versions of geometry that they're
-    * associated with (each entry that exists within a changeset).
+    * associated with (each entry that exists within a changeset). Output geometries will be MultiPolygons,
+    * LineStrings, or MultiLineStrings depending on the relation type.
     *
     * @param _relations DataFrame containing relations to reconstruct.
-    * @param geoms      DataFrame containing way geometries to use in reconstruction.
-    * @return Relations geometries.
+    * @param geoms      DataFrame containing geometries to use in reconstruction.
+    * @return Relation geometries.
     */
   def reconstructRelationGeometries(_relations: DataFrame, geoms: DataFrame): DataFrame = {
     val relations = preprocessRelations(_relations)
@@ -472,6 +487,19 @@ object ProcessOSM {
       .union(reconstructRouteRelationGeometries(relations, geoms))
   }
 
+  /**
+    * Reconstruct MultiPolygon relations.
+    *
+    * MultiPolygon relations are made up of way members with "inner" and "outer" roles. When individual way geometries
+    * are not closed (i.e. suitable for use as linear rings), they will be joined together to form closed geometries.
+    *
+    * Boundaries (type=boundary) follow the same construction rules as MultiPolygons when polygonal geometry outputs
+    * are desired.
+    *
+    * @param _relations DataFrame containing relations to reconstruct.
+    * @param geoms      DataFrame containing geometries to use in reconstruction.
+    * @return MultiPolygon relation geometries.
+    */
   def reconstructMultiPolygonRelationGeometries(_relations: DataFrame, geoms: DataFrame): DataFrame = {
     implicit val ss: SparkSession = _relations.sparkSession
     import ss.implicits._
@@ -534,6 +562,17 @@ object ProcessOSM {
         'minorVersion)
   }
 
+  /**
+    * Reconstruct route relations.
+    *
+    * Route relations are made of up linear ways. Where possible, contiguous ways with matching roles will be joined to
+    * form longer segments. As multiple directions may be included in the relation (and segments may be discontiguous),
+    * this produces MultiLineStrings in addition to LineStrings.
+    *
+    * @param _relations DataFrame containing relations to reconstruct.
+    * @param geoms      DataFrame containing geometries to use in reconstruction.
+    * @return LineString or MultiLineString route geometries.
+    */
   def reconstructRouteRelationGeometries(_relations: DataFrame, geoms: DataFrame): DataFrame = {
     implicit val ss: SparkSession = _relations.sparkSession
     import ss.implicits._
@@ -610,6 +649,9 @@ object ProcessOSM {
 
   /**
     * Augment geometries with user metadata.
+    *
+    * When 'changeset is included, user (name and 'uid) metadata is joined from a DataFrame containing changeset
+    * metadata.
     *
     * @param geoms      Geometries to augment.
     * @param changesets Changesets DataFrame with user metadata.

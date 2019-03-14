@@ -1,12 +1,8 @@
 package vectorpipe
 
-import java.io._
 import java.sql.Timestamp
-import scala.util.{Try, Success, Failure}
 
 import geotrellis.vector._
-import geotrellis.vector.io._
-import geotrellis.vector.io.json._
 import org.apache.log4j.Logger
 import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.encoders.RowEncoder
@@ -20,8 +16,6 @@ import com.vividsolutions.jts.{geom => jts}
 import vectorpipe.functions.osm._
 import vectorpipe.relations.MultiPolygons
 import vectorpipe.relations.Routes
-import vectorpipe.util.Resource
-import spray.json._
 
 object ProcessOSM {
   val NodeType: Byte = 1

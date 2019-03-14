@@ -5,7 +5,6 @@ import java.util.zip.{GZIPOutputStream, ZipEntry, ZipOutputStream}
 
 import com.amazonaws.services.s3.model.CannedAccessControlList._
 import geotrellis.spark._
-import geotrellis.spark.io.hadoop._
 import geotrellis.spark.io.index.zcurve.Z2
 import geotrellis.spark.io.s3._
 import geotrellis.spark.tiling._

@@ -4,7 +4,6 @@ import java.sql.Timestamp
 
 import com.vividsolutions.jts.{geom => jts}
 import geotrellis.vector.{Feature, Geometry => GTGeometry}
-import vectorpipe.ProcessOSM
 
 case class AugmentedDiff(sequence: Int,
                          `type`: Byte,

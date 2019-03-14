@@ -5,7 +5,6 @@ import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{Column, Row}
-import vectorpipe.ProcessOSM._
 import vectorpipe.model.Member
 
 import scala.util.{Try, Success, Failure}

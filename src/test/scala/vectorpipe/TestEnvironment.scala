@@ -28,7 +28,7 @@ object TestEnvironment {
  * It uses commons-io in at least one case (recursive directory deletion)
  */
 trait TestEnvironment extends BeforeAndAfterAll { self: Suite with BeforeAndAfterAll =>
-  implicit val ss = SparkSession.builder
+  implicit val ss: SparkSession = SparkSession.builder
     .master("local[*]")
     .appName("OSMesa Test")
     .config("spark.ui.enabled", "false")

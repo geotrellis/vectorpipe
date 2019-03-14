@@ -5,7 +5,6 @@ import org.scalatest._
 
 
 class ProcessOSMTest extends FunSpec with TestEnvironment with Matchers {
-  import ss.implicits._
   ss.withJTS
 
   val orcFile = getClass.getResource("/isle-of-man-latest.osm.orc").getPath

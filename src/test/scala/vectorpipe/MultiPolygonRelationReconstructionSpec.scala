@@ -1,4 +1,4 @@
-package common
+package vectorpipe
 
 import java.sql.Timestamp
 
@@ -115,7 +115,7 @@ class MultiPolygonRelationReconstructionSpec extends PropSpec with TableDrivenPr
             case ((changeset, id, version, minorVersion, updated, validUntil), rows) =>
               val members = rows.toVector
               // TODO store Bytes as the type in fixtures
-              val types = members.map{ x => Member.typeFromString(x.getAs[String]("type")) }
+              val types = members.map { x => Member.typeFromString(x.getAs[String]("type")) }
               val roles = members.map(_.getAs[String]("role"))
               val geoms = members.map(_.getAs[jts.Geometry]("geometry"))
               val mp = build(id, version, updated, types, roles, geoms).orNull
@@ -123,7 +123,7 @@ class MultiPolygonRelationReconstructionSpec extends PropSpec with TableDrivenPr
               new GenericRowWithSchema(Array(changeset, id, version, minorVersion, updated, validUntil, mp),
                 VersionedElementSchema): Row
           }
-        ).map(Option.apply(_)).flatten
+        ).flatMap(Option.apply(_))
 
         val expected = fixture.wkt.map(wktReader.read)
 

@@ -182,7 +182,7 @@ package object osm {
 
   case class StrMember(`type`: String, ref: Long, role: String)
 
-  private val convertMembers = org.apache.spark.sql.functions.udf { member: Seq[Row] =>
+  private val elaborateMembers = org.apache.spark.sql.functions.udf { member: Seq[Row] =>
     if (member == null)
       null
     else {
@@ -194,21 +194,19 @@ package object osm {
     }
   }
 
-  def elaborateMemberTypes(input: DataFrame): DataFrame = {
-    // The following type conversion needed in case input comes from Change source
+  /**
+   * Checks if members have byte-encoded types
+   */
+  def hasCompressedMemberTypes(input: DataFrame): Boolean = {
     Try(input.schema("members")
              .dataType
              .asInstanceOf[ArrayType]
              .elementType
              .asInstanceOf[StructType]
              .apply("type")) match {
-      case Failure(_) => throw new IllegalArgumentException(s"Could not get type of 'members' in schema ${input.schema}")
-      case Success(field) =>
-        if (field.dataType == ByteType)
-            input.withColumn("members", convertMembers(col("members")))
-          else
-            input
-      }
+      case Failure(_) => false
+      case Success(field) => field.dataType == ByteType
+    }
   }
 
   // matches letters or emoji (no numbers or punctuation)

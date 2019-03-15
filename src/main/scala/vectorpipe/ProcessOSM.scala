@@ -189,6 +189,13 @@ object ProcessOSM {
     } else {
       @transient val idByUpdated = Window.partitionBy('id).orderBy('version)
 
+      val frame =
+        if (hasCompressedMemberTypes(history)) {
+          history
+        } else {
+          history.withColumn("members", compressMemberTypes('members))
+        }
+
       // when an element has been deleted, it doesn't include any tags; use a window function to retrieve the last tags
       // present and use those
       history
@@ -199,7 +206,7 @@ object ProcessOSM {
           when(!'visible and (lag('tags, 1) over idByUpdated).isNotNull,
             lag('tags, 1) over idByUpdated)
             .otherwise('tags) as 'tags,
-          compressMemberTypes('members) as 'members,
+          'members,
           'changeset,
           'timestamp,
           (lead('timestamp, 1) over idByUpdated) as 'validUntil,
@@ -220,11 +227,10 @@ object ProcessOSM {
     * @param elements DataFrame containing node, way, and relation elements
     * @return DataFrame containing geometries.
     */
-  def constructGeometries(input: DataFrame): DataFrame = {
-    import input.sparkSession.implicits._
+  def constructGeometries(elements: DataFrame): DataFrame = {
+    import elements.sparkSession.implicits._
     val st_pointToGeom = org.apache.spark.sql.functions.udf { pt: jts.Point => pt.asInstanceOf[jts.Geometry] }
 
-    val elements = elaborateMemberTypes(input)
     val nodes = ProcessOSM.preprocessNodes(elements)
 
     val nodeGeoms = ProcessOSM.constructPointGeometries(nodes)

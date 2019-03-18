@@ -109,6 +109,14 @@ relations, and a subset of the relations from the OSM data.  The resulting
 dataframe will represent these entities with JTS geometries in the `geom`
 column.
 
+The `toGeometry` function keeps elements that fit one of the following
+descriptions:
+- points from tagged nodes (including tags that really ought to be dropped—e.g. source=*);
+- polygons derived from ways with tags that cause them to be considered as areas;
+- lines from ways lacking area tags;
+- multipolygons from multipolygon or boundary relations; and
+- multilinestrings from route relations.
+
 It is also possible to filter the results based on information in the tags.
 For instance, all buildings can be found as
 ```scala

@@ -11,9 +11,10 @@ import org.apache.spark.sql.functions._
 import org.apache.spark.sql.jts._
 import org.scalatest.prop.{TableDrivenPropertyChecks, Tables}
 import org.scalatest.{Matchers, PropSpec}
-import vectorpipe.ProcessOSM._
+import vectorpipe._
 import vectorpipe.functions._
 import vectorpipe.functions.osm._
+import vectorpipe.internal.{VersionedElementEncoder, VersionedElementSchema}
 import vectorpipe.model.Member
 import com.vividsolutions.jts.{geom => jts}
 import com.vividsolutions.jts.io.WKTReader

@@ -111,7 +111,7 @@ column.
 
 The `toGeometry` function keeps elements that fit one of the following
 descriptions:
-- points from tagged nodes (including tags that really ought to be dropped—e.g. source=*);
+- points from tagged nodes (including tags that really ought to be dropped—e.g. `source=*`);
 - polygons derived from ways with tags that cause them to be considered as areas;
 - lines from ways lacking area tags;
 - multipolygons from multipolygon or boundary relations; and

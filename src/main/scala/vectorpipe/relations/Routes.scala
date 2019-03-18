@@ -3,7 +3,7 @@ import java.sql.Timestamp
 
 import com.vividsolutions.jts.geom.{Geometry, TopologyException}
 import org.apache.log4j.Logger
-import vectorpipe.ProcessOSM.WayType
+import vectorpipe.internal.WayType
 
 object Routes {
   private lazy val logger = Logger.getLogger(getClass)

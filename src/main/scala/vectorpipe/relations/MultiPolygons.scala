@@ -4,7 +4,7 @@ import java.sql.Timestamp
 import com.vividsolutions.jts.geom.prep.PreparedGeometryFactory
 import com.vividsolutions.jts.geom.{Geometry, LineString, Polygon, TopologyException}
 import org.apache.log4j.Logger
-import vectorpipe.ProcessOSM.WayType
+import vectorpipe.internal.WayType
 
 object MultiPolygons {
   private lazy val logger = Logger.getLogger(getClass)

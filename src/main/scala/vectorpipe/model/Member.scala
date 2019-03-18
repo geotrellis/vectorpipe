@@ -1,6 +1,6 @@
 package vectorpipe.model
 
-import vectorpipe.ProcessOSM.{NodeType, RelationType, WayType}
+import vectorpipe.internal.{NodeType, RelationType, WayType}
 
 import scala.xml.Node
 

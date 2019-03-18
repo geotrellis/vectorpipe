@@ -88,9 +88,10 @@ val df = spark.read
               .load
               .persist // recommended to avoid rereading
 ```
-This may issue errors (including reads timing out), but should complete.  This
-is much slower than using ORC files and is much touchier, but it stands as an
-option.
+(Note that the start and end sequence will shift over time for Geofabrik.
+Please navigate to the base URI to determine these values, otherwise timeouts
+may occur.)  This may issue errors, but should complete.  This is much slower
+than using ORC files and is much touchier, but it stands as an option.
 
 [It is also possible to build a dataframe from a stream of changesets in a
 similar manner as above.  Changesets carry additional metadata regarding the
@@ -100,7 +101,7 @@ can be joined on `changeset`.]
 In either case, a useful place to start is to convert the incoming dataframe
 into a more usable format.  We recommend calling
 ```scala
-val geoms = ProcessOSM.constructGeometries(df)
+val geoms = OSM.toGeometry(df)
 ```
 which will produce a frame consisting of "top-level" entities, which is to say
 nodes that don't participate in a way, ways that don't participate in

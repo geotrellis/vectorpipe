@@ -2,7 +2,7 @@ package vectorpipe
 
 import java.sql.Timestamp
 
-import com.vividsolutions.jts.{geom => jts}
+import org.locationtech.jts.{geom => jts}
 import geotrellis.vector._
 import org.apache.log4j.Logger
 import org.apache.spark.sql._

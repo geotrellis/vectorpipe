@@ -1,6 +1,6 @@
 package vectorpipe.relations.utils
 import com.google.common.collect.{Range, RangeMap, TreeRangeMap}
-import com.vividsolutions.jts.geom.{Coordinate, CoordinateSequence, Envelope}
+import org.locationtech.jts.geom.{Coordinate, CoordinateSequence, Envelope}
 
 // rather than being a nested set of CoordinateSequences, this is a mutable wrapper to avoid deep call stacks
 class VirtualCoordinateSequence(sequences: Seq[CoordinateSequence]) extends CoordinateSequence {
@@ -111,4 +111,6 @@ class VirtualCoordinateSequence(sequences: Seq[CoordinateSequence]) extends Coor
     // we're already playing fast and loose
     this
   }
+
+  override def copy(): VirtualCoordinateSequence = new VirtualCoordinateSequence(sequences)
 }

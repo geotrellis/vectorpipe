@@ -2,7 +2,7 @@ package vectorpipe.model
 
 import java.sql.Timestamp
 
-import com.vividsolutions.jts.{geom => jts}
+import org.locationtech.jts.{geom => jts}
 import geotrellis.vector.{Feature, Geometry => GTGeometry}
 
 case class AugmentedDiff(sequence: Int,

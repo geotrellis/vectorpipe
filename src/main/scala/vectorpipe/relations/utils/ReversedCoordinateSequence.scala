@@ -1,5 +1,5 @@
 package vectorpipe.relations.utils
-import com.vividsolutions.jts.geom.{Coordinate, CoordinateSequence, Envelope}
+import org.locationtech.jts.geom.{Coordinate, CoordinateSequence, Envelope}
 
 class ReversedCoordinateSequence(sequence: CoordinateSequence) extends CoordinateSequence {
   private lazy val coordinates: Array[Coordinate] = {
@@ -40,4 +40,6 @@ class ReversedCoordinateSequence(sequence: CoordinateSequence) extends Coordinat
   override def expandEnvelope(env: Envelope): Envelope = sequence.expandEnvelope(env)
 
   override def clone(): AnyRef = new ReversedCoordinateSequence(sequence)
+
+  override def copy(): ReversedCoordinateSequence = new ReversedCoordinateSequence(sequence)
 }

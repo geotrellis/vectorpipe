@@ -1,5 +1,5 @@
 package vectorpipe.relations.utils
-import com.vividsolutions.jts.geom.{Coordinate, CoordinateSequence, Envelope}
+import org.locationtech.jts.geom.{Coordinate, CoordinateSequence, Envelope}
 
 class PartialCoordinateSequence(sequence: CoordinateSequence, offset: Int)
     extends CoordinateSequence {
@@ -47,4 +47,6 @@ class PartialCoordinateSequence(sequence: CoordinateSequence, offset: Int)
   override def size(): Int = _size
 
   override def clone(): AnyRef = new PartialCoordinateSequence(sequence, offset)
+
+  override def copy(): PartialCoordinateSequence = new PartialCoordinateSequence(sequence, offset)
 }

@@ -1,6 +1,6 @@
 package vectorpipe
 
-import com.vividsolutions.jts.geom._
+import org.locationtech.jts.geom._
 import vectorpipe.relations.utils.{
   PartialCoordinateSequence,
   ReversedCoordinateSequence,

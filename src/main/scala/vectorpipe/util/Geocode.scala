@@ -1,6 +1,6 @@
 package vectorpipe.util
 
-import com.vividsolutions.jts.{geom => jts}
+import org.locationtech.jts.{geom => jts}
 import geotrellis.vector._
 import geotrellis.vector.io._
 import geotrellis.vector.io.json._
@@ -69,7 +69,7 @@ object Geocode {
         new Traversable[(geotrellis.vector.prepared.PreparedGeometry[geotrellis.vector.MultiPolygon], CountryId)] {
           override def foreach[U](f: ((geotrellis.vector.prepared.PreparedGeometry[geotrellis.vector.MultiPolygon],
             CountryId)) => U): Unit = {
-            val visitor = new com.vividsolutions.jts.index.ItemVisitor {
+            val visitor = new org.locationtech.jts.index.ItemVisitor {
               override def visitItem(obj: AnyRef): Unit = f(obj.asInstanceOf[(geotrellis.vector.prepared
               .PreparedGeometry[geotrellis.vector.MultiPolygon], CountryId)])
             }

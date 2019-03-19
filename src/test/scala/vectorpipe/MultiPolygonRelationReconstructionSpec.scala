@@ -16,8 +16,8 @@ import vectorpipe.functions._
 import vectorpipe.functions.osm._
 import vectorpipe.internal.{VersionedElementEncoder, VersionedElementSchema}
 import vectorpipe.model.Member
-import com.vividsolutions.jts.{geom => jts}
-import com.vividsolutions.jts.io.WKTReader
+import org.locationtech.jts.{geom => jts}
+import org.locationtech.jts.io.WKTReader
 import org.locationtech.geomesa.spark.jts._
 import vectorpipe.relations.MultiPolygons.build
 

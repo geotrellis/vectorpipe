@@ -1,8 +1,8 @@
 package vectorpipe.relations
 import java.sql.Timestamp
 
-import com.vividsolutions.jts.geom.prep.PreparedGeometryFactory
-import com.vividsolutions.jts.geom.{Geometry, LineString, Polygon, TopologyException}
+import org.locationtech.jts.geom.prep.PreparedGeometryFactory
+import org.locationtech.jts.geom.{Geometry, LineString, Polygon, TopologyException}
 import org.apache.log4j.Logger
 import vectorpipe.internal.WayType
 

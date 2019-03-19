@@ -1,5 +1,5 @@
 package vectorpipe.relations
-import com.vividsolutions.jts.geom.CoordinateSequence
+import org.locationtech.jts.geom.CoordinateSequence
 
 package object utils {
 

@@ -1,7 +1,7 @@
 package vectorpipe.relations
 import java.sql.Timestamp
 
-import com.vividsolutions.jts.geom.{Geometry, TopologyException}
+import org.locationtech.jts.geom.{Geometry, TopologyException}
 import org.apache.log4j.Logger
 import vectorpipe.internal.WayType
 

@@ -3,6 +3,7 @@ package vectorpipe
 import org.locationtech.geomesa.spark.jts._
 import org.scalatest._
 import vectorpipe.{internal => ProcessOSM}
+import vectorpipe.functions.osm.ensureCompressedMembers
 
 class ProcessOSMTest extends FunSpec with TestEnvironment with Matchers {
   ss.withJTS
@@ -13,7 +14,7 @@ class ProcessOSMTest extends FunSpec with TestEnvironment with Matchers {
   val nodes = ProcessOSM.preprocessNodes(elements).cache
   val nodeGeoms = ProcessOSM.constructPointGeometries(nodes).cache
   val wayGeoms = ProcessOSM.reconstructWayGeometries(elements, nodes).cache
-  val relationGeoms = ProcessOSM.reconstructRelationGeometries(elements, wayGeoms).cache
+  val relationGeoms = ProcessOSM.reconstructRelationGeometries(ensureCompressedMembers(elements), wayGeoms).cache
 
   it("parses isle of man nodes") {
     info(s"Nodes: ${nodeGeoms.count}")

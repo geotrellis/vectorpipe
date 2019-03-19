@@ -180,20 +180,6 @@ package object osm {
 
   lazy val compressMemberTypes: UserDefinedFunction = udf(_compressMemberTypes, MemberSchema)
 
-  case class StrMember(`type`: String, ref: Long, role: String)
-
-  private val elaborateMembers = org.apache.spark.sql.functions.udf { member: Seq[Row] =>
-    if (member == null)
-      null
-    else {
-      member.map { row: Row =>
-        StrMember(vectorpipe.model.Member.stringFromByte(row.getAs[Byte]("type")),
-                  row.getAs[Long]("ref"),
-                  row.getAs[String]("role"))
-      }
-    }
-  }
-
   /**
    * Checks if members have byte-encoded types
    */
@@ -206,6 +192,28 @@ package object osm {
              .apply("type")) match {
       case Failure(_) => false
       case Success(field) => field.dataType == ByteType
+    }
+  }
+
+  def ensureCompressedMembers(input: DataFrame): DataFrame = {
+    if (hasCompressedMemberTypes(input))
+      input
+    else {
+      input.withColumn("members", compressMemberTypes(col("members")))
+    }
+  }
+
+  case class StrMember(`type`: String, ref: Long, role: String)
+
+  private val elaborateMembers = org.apache.spark.sql.functions.udf { member: Seq[Row] =>
+    if (member == null)
+      null
+    else {
+      member.map { row: Row =>
+        StrMember(vectorpipe.model.Member.stringFromByte(row.getAs[Byte]("type")),
+                  row.getAs[Long]("ref"),
+                  row.getAs[String]("role"))
+      }
     }
   }
 

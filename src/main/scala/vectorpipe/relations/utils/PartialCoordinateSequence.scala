@@ -48,5 +48,5 @@ class PartialCoordinateSequence(sequence: CoordinateSequence, offset: Int)
 
   override def clone(): AnyRef = new PartialCoordinateSequence(sequence, offset)
 
-  override def copy(): PartialCoordinateSequence = new PartialCoordinateSequence(sequence, offset)
+  override def copy(): PartialCoordinateSequence = new PartialCoordinateSequence(sequence.copy, offset)
 }

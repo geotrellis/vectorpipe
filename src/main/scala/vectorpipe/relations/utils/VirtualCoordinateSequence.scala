@@ -112,5 +112,5 @@ class VirtualCoordinateSequence(sequences: Seq[CoordinateSequence]) extends Coor
     this
   }
 
-  override def copy(): VirtualCoordinateSequence = new VirtualCoordinateSequence(sequences)
+  override def copy(): VirtualCoordinateSequence = new VirtualCoordinateSequence(sequences.map(_.copy))
 }

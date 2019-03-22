@@ -41,5 +41,5 @@ class ReversedCoordinateSequence(sequence: CoordinateSequence) extends Coordinat
 
   override def clone(): AnyRef = new ReversedCoordinateSequence(sequence)
 
-  override def copy(): ReversedCoordinateSequence = new ReversedCoordinateSequence(sequence)
+  override def copy(): ReversedCoordinateSequence = new ReversedCoordinateSequence(sequence.copy)
 }

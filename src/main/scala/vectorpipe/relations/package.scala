@@ -91,9 +91,12 @@ package object relations {
   }
 
   def formRings(segments: GenTraversable[LineString])(
-      implicit geometryFactory: GeometryFactory): GenTraversable[Polygon] =
+      implicit geometryFactory: GeometryFactory): GenTraversable[Polygon] = {
+    val csf = geometryFactory.getCoordinateSequenceFactory
     formRings(segments.map(_.getCoordinateSequence).map(s => new VirtualCoordinateSequence(Seq(s))))
+      .map(csf.create(_))
       .map(geometryFactory.createPolygon)
+  }
 
   def dissolveRings(rings: Array[Polygon]): (Seq[Polygon], Seq[Polygon]) = {
     Option(geometryFactory.createGeometryCollection(rings.asInstanceOf[Array[Geometry]]).union) match {

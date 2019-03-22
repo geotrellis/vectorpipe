@@ -2,7 +2,7 @@ package vectorpipe
 
 import java.util.concurrent.TimeUnit
 
-import geotrellis.vector.{ Extent, MultiLine, Point, Line }
+import geotrellis.vector.{Extent, Line, Point}
 import org.openjdk.jmh.annotations._
 
 // --- //
@@ -21,11 +21,4 @@ class LineBench {
       List.range(4, -100, -2).map(n => Point(n, 1)) ++ List(Point(-3,4), Point(-1,4), Point(2,4), Point(4,4))
     )
   }
-
-  // @Benchmark
-  // def java: MultiLine = Clip.toNearestPointJava(extent, line)
-
-  @Benchmark
-  def tailrec: MultiLine = Clip.toNearestPoint(extent, line)
-
 }

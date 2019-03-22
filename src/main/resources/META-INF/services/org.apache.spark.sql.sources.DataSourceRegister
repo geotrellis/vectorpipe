@@ -1,0 +1,3 @@
+vectorpipe.sources.AugmentedDiffProvider
+vectorpipe.sources.ChangeProvider
+vectorpipe.sources.ChangesetProvider

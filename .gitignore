@@ -13,6 +13,8 @@
 .ensime_cache/*
 clipping/*
 osmosis/*
+.idea
+target
 
 derby.log
 metastore_db/*

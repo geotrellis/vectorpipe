@@ -1,5 +1,5 @@
 object Version {
-  val vectorpipe = "0.3.0"
+  val vectorpipe = "0.3.1"
   val geotrellis = "2.0.0-RC1"
   val geomesa    = "2.0.1"
   val spark      = "2.2.0"

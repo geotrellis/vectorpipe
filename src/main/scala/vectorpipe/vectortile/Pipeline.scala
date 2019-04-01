@@ -64,24 +64,38 @@ trait Pipeline {
    *
    * While moving from finer to coarser levels of the pyramid, it may not be
    * necessary to maintain the full level of detail of available geometries.
-   * This function is used to reduce the complexity of geometries.
+   * This function is used to reduce the complexity of geometries.  The
+   * [[LayoutDefinition]] will be for the target zoom level.
    */
   def simplify(g: jts.Geometry, layout: LayoutDefinition): jts.Geometry
 
   /**
    * Select geometries for display at a given zoom level.
    *
-   * (prominence)
+   * VectorPipe allows geometries to be carried up the pyramid for display at a
+   * later time.  This function is used to choose the elements that will be
+   * displayed at the target zoom level.  This is useful for implementing a
+   * display schema, or for example, selection based on prominence (relying on
+   * the array of spatial keys added to the data frame in the column with the
+   * longest name fitting the regular expression '[_]+keys').
    */
   def select(input: DataFrame, targetZoom: Int): DataFrame
 
   /**
    * Clip geometries prior to writing to vector tiles.
+   *
+   * It may be desirable to carry only the portion of a geometry that intersects
+   * a given vector tile to keep down memory usage.  This function can be used
+   * to implement such schemes.
    */
   def clip(geom: jts.Geometry, key: SpatialKey, layoutLevel: LayoutLevel): jts.Geometry
 
   /**
    * Convert table rows to output features.
+   *
+   * A straightforward conversion from a table row to a geometric feature.  The
+   * data carried by the feature are stored as entries in a Map[String, Value].
+   * See [[geotrellis.vectortile.Value]] for details.
    */
   def pack[G <: Geometry](row: Row, zoom: Int): VectorTileFeature[G]
 }

@@ -48,7 +48,7 @@ object VectorPipe {
 
     // Prefilter data for first iteration and key geometries to initial layout
     val keyColumn = {
-      var prepend = ""
+      var prepend = "_"
       while (input.columns.contains(prepend ++ "keys")) { prepend = "_" ++ prepend }
       prepend ++ "keys"
     }
@@ -76,8 +76,9 @@ object VectorPipe {
     // 2.   Clip
     // 3.   Pack
     // 4.   Generate vector tiles
-    // 5. Reduce
-    // 6. Simplify
+    // 5. TODO Re-key
+    // 6.   Reduce
+    // 7.   Simplify
 
     Range.Int(maxZoom, minZoom, -1).inclusive.foldLeft(reprojected){ (df, zoom) =>
       val level = zls.levelForZoom(zoom)

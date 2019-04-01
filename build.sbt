@@ -100,7 +100,7 @@ val vpExtraSettings = Seq(
     gtSpark exclude ("com.google.protobuf", "protobuf-java"),
     gtVectorTile exclude ("com.google.protobuf", "protobuf-java"),
     decline,
-    jaiCore,
+    //jaiCore,
     gtVector,
     cats,
     scalactic,

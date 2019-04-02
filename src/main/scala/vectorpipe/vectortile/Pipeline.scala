@@ -5,6 +5,7 @@ import geotrellis.spark.SpatialKey
 import geotrellis.spark.tiling._
 import org.apache.spark.sql.{DataFrame, Row}
 import org.locationtech.jts.{geom => jts}
+import org.locationtech.jts.simplify
 
 /**
  * The interface governing the transformation from processed OSM dataframes to
@@ -17,7 +18,14 @@ import org.locationtech.jts.{geom => jts}
  * into a set of vector tiles and how to pass information to subsequent zoom
  * levels.
  *
- * This API treats vector tile generation as an inherently heirarchical process.
+ * [It is worth noting that nothing in this interface restricts the input data
+ * to having originated from OSM.  Any DataFrame containing a column of JTS
+ * geometry is a valid target.]
+ *
+ * This API treats vector tile generation as an inherently hierarchical process
+ * governed by a series of operations.  Every zoom level will be addressed in
+ * the same way, and the sequence of operations can be depicted schematically as
+ * below:
  *
  *     ┌──────────┐
  *     │ Zoom z-1 │
@@ -30,12 +38,16 @@ import org.locationtech.jts.{geom => jts}
  *     ╔══════════╗                          ┌─────────────┐
  *     ║  Zoom z  ║ → select → clip → pack → │ VECTOR TILE │
  *     ╚══════════╝                          └─────────────┘
+ *
+ * Each of these operations is documented below.  The only extra note is that [[
+ * reduce]] and [[simplify]] will be called prior to processing the initial zoom
+ * level.
  */
 trait Pipeline {
   /**
    * The root URI for output.
    */
-  val baseURI: java.net.URI
+  val baseOutputURI: java.net.URI
 
   /**
    * Reduce the input data between zoom levels.
@@ -66,8 +78,12 @@ trait Pipeline {
    * necessary to maintain the full level of detail of available geometries.
    * This function is used to reduce the complexity of geometries.  The
    * [[LayoutDefinition]] will be for the target zoom level.
+   *
+   * By default, we return the input geometry without simplification, but there
+   * is a simplifier using JTS's topology-preserving simplifier available in
+   * [[vectorpipe.vectortile.Simplify]].
    */
-  def simplify(g: jts.Geometry, layout: LayoutDefinition): jts.Geometry
+  def simplify(g: jts.Geometry, layout: LayoutDefinition): jts.Geometry = g
 
   /**
    * Select geometries for display at a given zoom level.

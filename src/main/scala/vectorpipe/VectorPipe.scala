@@ -3,7 +3,7 @@ package vectorpipe
 import vectorpipe.vectortile._
 import vectorpipe.vectortile.export._
 
-import geotrellis.proj4.{CRS, LatLng}
+import geotrellis.proj4.{CRS, LatLng, WebMercator}
 import geotrellis.spark.SpatialKey
 import geotrellis.spark.tiling.{ZoomedLayoutScheme, LayoutLevel}
 import geotrellis.vector.Geometry
@@ -35,7 +35,7 @@ object VectorPipe {
     // TODO check the type of the geometry column
 
     val srcCRS = options.srcCRS
-    val destCRS = options.destCRS.getOrElse(srcCRS)
+    val destCRS = options.destCRS.getOrElse(WebMercator)
     val maxZoom = options.maxZoom
     val minZoom = math.min(math.max(0, options.minZoom.getOrElse(options.maxZoom)), options.maxZoom)
     val zls = ZoomedLayoutScheme(destCRS, options.tileResolution)
@@ -94,7 +94,7 @@ object VectorPipe {
         .reduce(working, level)
         .withColumn(geomColumn, simplify(col(geomColumn)))
       val vts = generateVectorTiles(prepared, level)
-      saveVectorTiles(vts, zoom, pipeline.baseURI)
+      saveVectorTiles(vts, zoom, pipeline.baseOutputURI)
       prepared
     }
 

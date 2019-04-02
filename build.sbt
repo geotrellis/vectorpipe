@@ -100,7 +100,7 @@ val vpExtraSettings = Seq(
     gtSpark exclude ("com.google.protobuf", "protobuf-java"),
     gtVectorTile exclude ("com.google.protobuf", "protobuf-java"),
     decline,
-    //jaiCore,
+    jaiCore from "http://download.osgeo.org/webdav/geotools/javax/media/jai_core/1.1.3/jai_core-1.1.3.jar",
     gtVector,
     cats,
     scalactic,

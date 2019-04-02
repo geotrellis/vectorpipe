@@ -61,37 +61,4 @@ package object export {
       .saveToHadoop({ sk: SpatialKey => s"${uri}/${zoom}/${sk.col}/${sk.row}.mvt" })
   }
 
-  def saveInZips(vectorTiles: RDD[(SpatialKey, VectorTile)], zoom: Int, bucket: String, prefix: String) = {
-    val offset = zoom % 8
-
-    val s3PathFromKey: SpatialKey => String =
-    { sk =>
-      s"s3://${bucket}/${prefix}/${zoom - offset}/${sk.col}/${sk.row}.zip"
-    }
-
-    vectorTiles
-      .mapValues(_.toBytes)
-      .map { case (sk, data) => (SpatialKey(sk._1 / Math.pow(2, offset).intValue, sk._2 / Math.pow(2, offset).intValue), (sk, data)) }
-      .groupByKey
-      .mapValues { data =>
-        val out = new ByteArrayOutputStream
-        val zip = new ZipOutputStream(out)
-
-        data
-          .toSeq
-          .sortBy { case (sk, _) => Z2(sk.col, sk.row).z }
-          .foreach { case (sk, entry)  =>
-            zip.putNextEntry(new ZipEntry(s"${zoom}/${sk.col}/${sk.row}.mvt"))
-            zip.write(entry)
-            zip.closeEntry()
-          }
-
-        zip.close()
-
-        out.toByteArray
-      }
-      .saveToS3(s3PathFromKey, putObjectModifier = { o => o.withCannedAcl(PublicRead) })
-  }
-
-
 }

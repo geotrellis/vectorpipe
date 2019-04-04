@@ -20,8 +20,7 @@ object VectorPipe {
     minZoom: Option[Int],            // Smallest (least resolute) zoom level to generate
     srcCRS: CRS,                     // projection of the original geometry
     destCRS: Option[CRS],            // projection for generated vectortiles
-    tileResolution: Int = 4096,      // "pixel" resolution of output vectortiles
-    geometryColumn: String = "geom"  // name of the dataframe column containing geometries
+    tileResolution: Int = 4096       // "pixel" resolution of output vectortiles
   )
   object Options {
     def forZoom(zoom: Int) = Options(zoom, None, LatLng, None)
@@ -30,7 +29,7 @@ object VectorPipe {
   }
 
   def apply(input: DataFrame, pipeline: vectortile.Pipeline, layerName: String, options: Options): Unit = {
-    val geomColumn = options.geometryColumn
+    val geomColumn = pipeline.geometryColumn
     assert(input.columns.contains(geomColumn), s"Input DataFrame must contain a column `${geomColumn}` of JTS Geometry")
     // TODO check the type of the geometry column
 
@@ -41,8 +40,8 @@ object VectorPipe {
     val zls = ZoomedLayoutScheme(destCRS, options.tileResolution)
 
     // Reproject geometries if needed
-    val reprojected = input.withColumn(options.geometryColumn,
-                                       st_reprojectGeom(col(options.geometryColumn),
+    val reprojected = input.withColumn(geomColumn,
+                                       st_reprojectGeom(col(geomColumn),
                                                         lit(srcCRS.toProj4String),
                                                         lit(destCRS.toProj4String)))
 
@@ -52,6 +51,8 @@ object VectorPipe {
       while (input.columns.contains(prepend ++ "keys")) { prepend = "_" ++ prepend }
       prepend ++ "keys"
     }
+
+    def reduceKeys = udf { arr: Array[SpatialKey] => arr.map{ case SpatialKey(x, y) => SpatialKey(x / 2, y / 2) }.toSet.toArray }
 
     def generateVectorTiles[G <: Geometry](df: DataFrame, level: LayoutLevel): RDD[(SpatialKey, VectorTile)] = {
       val zoom = level.zoom
@@ -76,9 +77,9 @@ object VectorPipe {
     // 2.   Clip
     // 3.   Pack
     // 4.   Generate vector tiles
-    // 5. TODO Re-key
-    // 6.   Reduce
-    // 7.   Simplify
+    // 5.   Reduce
+    // 6.   Simplify
+    // 7.   Re-key
 
     Range.Int(maxZoom, minZoom, -1).inclusive.foldLeft(reprojected){ (df, zoom) =>
       val level = zls.levelForZoom(zoom)
@@ -91,11 +92,11 @@ object VectorPipe {
         }
       val simplify = udf { g: jts.Geometry => pipeline.simplify(g, level.layout) }
       val prepared = pipeline
-        .reduce(working, level)
+        .reduce(working, level, keyColumn)
         .withColumn(geomColumn, simplify(col(geomColumn)))
       val vts = generateVectorTiles(prepared, level)
       saveVectorTiles(vts, zoom, pipeline.baseOutputURI)
-      prepared
+      prepared.withColumn(keyColumn, reduceKeys(col(keyColumn)))
     }
 
   }

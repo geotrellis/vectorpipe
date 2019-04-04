@@ -1,8 +1,9 @@
 package vectorpipe.vectortile
 
-import geotrellis.vector.Geometry
 import geotrellis.spark.SpatialKey
 import geotrellis.spark.tiling._
+import geotrellis.vector.{Feature, Geometry}
+import geotrellis.vectortile.Value
 import org.apache.spark.sql.{DataFrame, Row}
 import org.locationtech.jts.{geom => jts}
 import org.locationtech.jts.simplify
@@ -50,6 +51,11 @@ trait Pipeline {
   val baseOutputURI: java.net.URI
 
   /**
+   * Name of the column containing the JTS geometry.
+   */
+  val geometryColumn: String
+
+  /**
    * Reduce the input data between zoom levels.
    *
    * Not all data is useful in all levels of the vector tile pyramid.  When a
@@ -65,11 +71,14 @@ trait Pipeline {
    * "keys" field.
    *
    * @param   input           A DataFrame minimally containing a "geom" field of
-   *                          JTS [[Geometry]], a "keys" field of
-   *                          Array[SpatialKey], and a "tags" field
-   * @param   layoutLevel     The layout level
+   *                          JTS [[Geometry]] and a field of Array[SpatialKey]
+   *                          with the name given by the keyColumn param, below
+   * @param   layoutLevel     The layout level for the target zoom
+   * @param   keyColumn       The name of the column containting
+   *                          Array[SpatialKey] giving the list of keys that the
+   *                          geometry interacts with
    */
-  def reduce(input: DataFrame, layoutLevel: LayoutLevel): DataFrame
+  def reduce(input: DataFrame, layoutLevel: LayoutLevel, keyColumn: String): DataFrame = input
 
   /*
    * Lower complexity of geometry while moving to less resolute zoom levels.
@@ -95,7 +104,7 @@ trait Pipeline {
    * the array of spatial keys added to the data frame in the column with the
    * longest name fitting the regular expression '[_]+keys').
    */
-  def select(input: DataFrame, targetZoom: Int): DataFrame
+  def select(input: DataFrame, targetZoom: Int): DataFrame = input
 
   /**
    * Clip geometries prior to writing to vector tiles.
@@ -104,7 +113,7 @@ trait Pipeline {
    * a given vector tile to keep down memory usage.  This function can be used
    * to implement such schemes.
    */
-  def clip(geom: jts.Geometry, key: SpatialKey, layoutLevel: LayoutLevel): jts.Geometry
+  def clip(geom: jts.Geometry, key: SpatialKey, layoutLevel: LayoutLevel): jts.Geometry = geom
 
   /**
    * Convert table rows to output features.
@@ -113,5 +122,5 @@ trait Pipeline {
    * data carried by the feature are stored as entries in a Map[String, Value].
    * See [[geotrellis.vectortile.Value]] for details.
    */
-  def pack[G <: Geometry](row: Row, zoom: Int): VectorTileFeature[G]
+  def pack(row: Row, zoom: Int): VectorTileFeature[Geometry]
 }

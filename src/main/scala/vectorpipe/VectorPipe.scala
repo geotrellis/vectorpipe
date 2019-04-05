@@ -10,6 +10,7 @@ import geotrellis.vector.Geometry
 import geotrellis.vectortile._
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql._
+import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema
 import org.apache.spark.sql.functions._
 import org.locationtech.jts.{geom => jts}
 
@@ -30,7 +31,7 @@ object VectorPipe {
 
   def apply(input: DataFrame, pipeline: vectortile.Pipeline, layerName: String, options: Options): Unit = {
     val geomColumn = pipeline.geometryColumn
-    assert(input.columns.contains(geomColumn), s"Input DataFrame must contain a column `${geomColumn}` of JTS Geometry")
+    //assert(input.columns.contains(geomColumn), s"Input DataFrame must contain a column `${geomColumn}` of JTS Geometry")
     // TODO check the type of the geometry column
 
     val srcCRS = options.srcCRS
@@ -40,10 +41,7 @@ object VectorPipe {
     val zls = ZoomedLayoutScheme(destCRS, options.tileResolution)
 
     // Reproject geometries if needed
-    val reprojected = input.withColumn(geomColumn,
-                                       st_reprojectGeom(col(geomColumn),
-                                                        lit(srcCRS.toProj4String),
-                                                        lit(destCRS.toProj4String)))
+    val reprojected = input.withColumn(geomColumn, st_reprojectGeom(col(geomColumn), lit(srcCRS.toProj4String), lit(destCRS.toProj4String)))
 
     // Prefilter data for first iteration and key geometries to initial layout
     val keyColumn = {
@@ -56,17 +54,21 @@ object VectorPipe {
 
     def generateVectorTiles[G <: Geometry](df: DataFrame, level: LayoutLevel): RDD[(SpatialKey, VectorTile)] = {
       val zoom = level.zoom
-      val clip = udf { (g: jts.Geometry, k: SpatialKey) => pipeline.clip(g, k, level) }
+      val clip = udf { (g: jts.Geometry, key: GenericRowWithSchema) =>
+        val k = SpatialKey(key.getInt(0), key.getInt(1))
+        pipeline.clip(g, k, level)
+      }
 
       pipeline
         .select(df, zoom)
         .withColumn(keyColumn, explode(col(keyColumn)))
         .repartition(col(keyColumn)) // spread copies of possibly ill-tempered geometries around cluster
-        .withColumn(geomColumn, clip(col(geomColumn)))
+        .withColumn(geomColumn, clip(col(geomColumn), col(keyColumn)))
         .rdd
-        .map { r => (r.getAs[SpatialKey](keyColumn), pipeline.pack(r, zoom)) }
+        .map { r => (r.getAs[GenericRowWithSchema](keyColumn), pipeline.pack(r, zoom)) }
         .groupByKey
-        .map { case (k, feats) =>
+        .map { case (r, feats) =>
+          val k = SpatialKey(r.getInt(0), r.getInt(1))
           val ex = level.layout.mapTransform.keyToExtent(k)
           (k, buildVectorTile(feats, ex, layerName, options.tileResolution))
         }
@@ -85,15 +87,17 @@ object VectorPipe {
       val level = zls.levelForZoom(zoom)
       val working =
         if (zoom == maxZoom) {
-          val keyToBase = udf { g: jts.Geometry => level.layout.mapTransform.keysForGeometry(geotrellis.vector.Geometry(g)).toArray }
-          df.withColumn(keyColumn, keyToBase(col(geomColumn)))
+          df.withColumn(keyColumn, keyTo(level.layout)(col(geomColumn)))
         } else {
           df
         }
+      working.show
       val simplify = udf { g: jts.Geometry => pipeline.simplify(g, level.layout) }
-      val prepared = pipeline
+      val reduced = pipeline
         .reduce(working, level, keyColumn)
+      val prepared = reduced
         .withColumn(geomColumn, simplify(col(geomColumn)))
+      prepared.show
       val vts = generateVectorTiles(prepared, level)
       saveVectorTiles(vts, zoom, pipeline.baseOutputURI)
       prepared.withColumn(keyColumn, reduceKeys(col(keyColumn)))

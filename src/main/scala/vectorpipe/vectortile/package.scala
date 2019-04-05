@@ -1,6 +1,7 @@
 package vectorpipe
 
 import geotrellis.proj4._
+import geotrellis.spark.tiling.LayoutDefinition
 import geotrellis.vector._
 import geotrellis.vector.reproject._
 import geotrellis.vectortile._
@@ -18,9 +19,13 @@ package object vectortile {
   val logger = org.apache.log4j.Logger.getRootLogger
 
   val st_reprojectGeom = udf { (g: jts.Geometry, srcProj: String, destProj: String) =>
-    val gt = Geometry(g)
     val trans = Proj4Transform(CRS.fromString(srcProj), CRS.fromString(destProj))
+    val gt = Geometry(g)
     gt.reproject(trans).jtsGeom
+  }
+
+  def keyTo(layout: LayoutDefinition) = udf { g: jts.Geometry =>
+    layout.mapTransform.keysForGeometry(geotrellis.vector.Geometry(g)).toArray
   }
 
   // case class IdFeature[+G <: Geometry, +D](geom: Geometry, data: D, id: Int) extends Feature[G, D](geom, data) {

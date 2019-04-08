@@ -25,14 +25,16 @@ object VectorPipe {
   )
   object Options {
     def forZoom(zoom: Int) = Options(zoom, None, LatLng, None)
+    def forZoomRange(maxZoom: Int, minZoom: Int) = Options(maxZoom, Some(minZoom), LatLng, None)
     def forAllZoomsFrom(zoom: Int) = Options(zoom, Some(0), LatLng, None)
     def forAllZoomsWithSrcProjection(zoom: Int, crs: CRS) = Options(zoom, Some(0), crs, None)
   }
 
   def apply(input: DataFrame, pipeline: vectortile.Pipeline, layerName: String, options: Options): Unit = {
     val geomColumn = pipeline.geometryColumn
-    //assert(input.columns.contains(geomColumn), s"Input DataFrame must contain a column `${geomColumn}` of JTS Geometry")
-    // TODO check the type of the geometry column
+    assert(input.columns.contains(geomColumn) &&
+           input.schema(geomColumn).dataType.isInstanceOf[org.apache.spark.sql.jts.AbstractGeometryUDT[jts.Geometry]],
+           s"Input DataFrame must contain a column `${geomColumn}` of JTS Geometry")
 
     val srcCRS = options.srcCRS
     val destCRS = options.destCRS.getOrElse(WebMercator)
@@ -50,7 +52,9 @@ object VectorPipe {
       prepend ++ "keys"
     }
 
-    def reduceKeys = udf { arr: Array[SpatialKey] => arr.map{ case SpatialKey(x, y) => SpatialKey(x / 2, y / 2) }.toSet.toArray }
+    def reduceKeys = udf { seq: Seq[Row] =>
+      seq.toSet.map{ r: Row => SpatialKey(r.getAs[Int]("col") / 2, r.getAs[Int]("row") / 2) }.toSeq
+    }
 
     def generateVectorTiles[G <: Geometry](df: DataFrame, level: LayoutLevel): RDD[(SpatialKey, VectorTile)] = {
       val zoom = level.zoom
@@ -91,13 +95,11 @@ object VectorPipe {
         } else {
           df
         }
-      working.show
       val simplify = udf { g: jts.Geometry => pipeline.simplify(g, level.layout) }
       val reduced = pipeline
         .reduce(working, level, keyColumn)
       val prepared = reduced
         .withColumn(geomColumn, simplify(col(geomColumn)))
-      prepared.show
       val vts = generateVectorTiles(prepared, level)
       saveVectorTiles(vts, zoom, pipeline.baseOutputURI)
       prepared.withColumn(keyColumn, reduceKeys(col(keyColumn)))

@@ -74,7 +74,7 @@ trait Pipeline {
    *                          JTS [[Geometry]] and a field of Array[SpatialKey]
    *                          with the name given by the keyColumn param, below
    * @param   layoutLevel     The layout level for the target zoom
-   * @param   keyColumn       The name of the column containting
+   * @param   keyColumn       The name of the column containing
    *                          Array[SpatialKey] giving the list of keys that the
    *                          geometry interacts with
    */

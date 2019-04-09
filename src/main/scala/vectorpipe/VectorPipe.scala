@@ -25,7 +25,7 @@ object VectorPipe {
   )
   object Options {
     def forZoom(zoom: Int) = Options(zoom, None, LatLng, None)
-    def forZoomRange(maxZoom: Int, minZoom: Int) = Options(maxZoom, Some(minZoom), LatLng, None)
+    def forZoomRange(minZoom: Int, maxZoom: Int) = Options(maxZoom, Some(minZoom), LatLng, None)
     def forAllZoomsFrom(zoom: Int) = Options(zoom, Some(0), LatLng, None)
     def forAllZoomsWithSrcProjection(zoom: Int, crs: CRS) = Options(zoom, Some(0), crs, None)
   }

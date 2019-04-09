@@ -60,11 +60,11 @@ package object vectortile {
                                           multipolygons ++ other.multipolygons)
     def +[G <: Geometry](other: VectorTileFeature[G]) = other.geom match {
       case p : Point        => copy(points=other.asInstanceOf[VectorTileFeature[Point]] :: points)
-      case mp: MultiPoint   => copy(multipoints=mp.asInstanceOf[VectorTileFeature[MultiPoint]] :: multipoints)
-      case l : Line         => copy(lines=l.asInstanceOf[VectorTileFeature[Line]] :: lines)
-      case ml: MultiLine    => copy(multilines=ml.asInstanceOf[VectorTileFeature[MultiLine]] :: multilines)
-      case p : Polygon      => copy(polygons=p.asInstanceOf[VectorTileFeature[Polygon]] :: polygons)
-      case mp: MultiPolygon => copy(multipolygons=mp.asInstanceOf[VectorTileFeature[MultiPolygon]] :: multipolygons)
+      case mp: MultiPoint   => copy(multipoints=other.asInstanceOf[VectorTileFeature[MultiPoint]] :: multipoints)
+      case l : Line         => copy(lines=other.asInstanceOf[VectorTileFeature[Line]] :: lines)
+      case ml: MultiLine    => copy(multilines=other.asInstanceOf[VectorTileFeature[MultiLine]] :: multilines)
+      case p : Polygon      => copy(polygons=other.asInstanceOf[VectorTileFeature[Polygon]] :: polygons)
+      case mp: MultiPolygon => copy(multipolygons=other.asInstanceOf[VectorTileFeature[MultiPolygon]] :: multipolygons)
     }
   }
   object VTContents {

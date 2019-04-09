@@ -66,9 +66,10 @@ trait Pipeline {
    * possible by the [[reduce]] function.
    *
    * This function will be called once before tile generation begins at the
-   * initial zoom level.  All participating geometries will already have been
-   * keyed to the given layout, with the list of relevant keys available in the
-   * "keys" field.
+   * initial zoom level.  Before this initial call, the geometry in each row
+   * will have been automatically keyed to the given layout—that is, the list of
+   * spatial keys that the geometry intersects will have been constructed and
+   * made available in the column labeled `keyColumn`.
    *
    * @param   input           A DataFrame minimally containing a "geom" field of
    *                          JTS [[Geometry]] and a field of Array[SpatialKey]

@@ -24,7 +24,7 @@ object Bin {
 case class TestPipeline(geometryColumn: String, baseOutputURI: java.net.URI, gridResolution: Int) extends Pipeline {
   val weightedCentroid = new WeightedCentroid
 
-  val layerName = "points"
+  val layerMultiplicity = SingleLayer("points")
 
   override def reduce(input: DataFrame, layoutLevel: LayoutLevel, keyColumn: String): DataFrame = {
     import input.sparkSession.implicits._
@@ -32,7 +32,7 @@ case class TestPipeline(geometryColumn: String, baseOutputURI: java.net.URI, gri
     val layout = layoutLevel.layout
     val binOfTile = functions.udf { (g: jts.Geometry, key: GenericRowWithSchema) =>
       val pt = g.asInstanceOf[jts.Point]
-      val k = SpatialKey(key.getInt(0), key.getInt(1))
+      val k = getSpatialKey(key)
       val re = RasterExtent(layout.mapTransform.keyToExtent(k), gridResolution, gridResolution)
       val c = pt.getCoordinate
       Bin(re.mapToGrid(c.x, c.y))

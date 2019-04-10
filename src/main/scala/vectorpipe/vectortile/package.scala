@@ -18,6 +18,10 @@ import scala.util.{Try, Success, Failure}
 package object vectortile {
   type VectorTileFeature[+G <: Geometry] = Feature[G, Map[String, Value]]
 
+  sealed trait LayerMultiplicity { val name: String }
+  case class SingleLayer(val name: String) extends LayerMultiplicity
+  case class LayerNamesInColumn(val name: String) extends LayerMultiplicity
+
   val logger = org.apache.log4j.Logger.getRootLogger
 
   val st_reprojectGeom = udf { (g: jts.Geometry, srcProj: String, destProj: String) =>

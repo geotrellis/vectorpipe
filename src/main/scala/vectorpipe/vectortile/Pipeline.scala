@@ -56,22 +56,22 @@ trait Pipeline {
   val geometryColumn: String
 
   /**
-   * Name of the vectortile layer to generate, or name of the column giving
-   * layer names.
+   * Declaration of layer generation style.
    *
-   * See [[layerNameIsColumn]].
+   * Some pipelines are simple and require a single layer in the output vector
+   * tile, while others require multiple layers.  This value is used by
+   * pipelines to declare how layers are generated.  In the simplest case,
+   * derived pipelines should declare
+   * `val layerMultiplicity = SingleLayer(layerName)` in their definition.  This
+   * will cause all geometries to be written out to the layer `layerName`.  For
+   * more complex vectortile sets, one may set
+   * `val layerMultiplicity = LayerNameInColumn(colName)`; this will require
+   * that the custom pipeline create a column of name `colName` containing
+   * [[String]] layer names where the different classes of geometries will be
+   * found.  Each named layer will be collected separately and aggregated per
+   * spatial key into a vectortile.
    */
-  val layerName: String
-
-  /*
-   * Flag to select single/multiple layer generation.
-   *
-   * Flag to indicate if [[layerName]] specifies the name of the output layer
-   * (layerNameIsColumn=false) or the name of a String column produced by
-   * [[select]] which will be grouped over and each grouping used to
-   * generate a layer in the output vector tiles.
-   */
-  val layerNameIsColumn: Boolean = false
+  val layerMultiplicity: LayerMultiplicity
 
   /**
    * Reduce the input data between zoom levels.

@@ -89,29 +89,30 @@ object VectorPipe {
         .repartition(col(keyColumn)) // spread copies of possibly ill-tempered geometries around cluster prior to clipping
         .withColumn(geomColumn, clip(col(geomColumn), col(keyColumn)))
 
-      if (pipeline.layerNameIsColumn) {
-        assert(selectedGeometry.schema(pipeline.layerName).dataType == StringType,
-               s"layerNameIsColumn=true implies select must produce a String-type column of name ${pipeline.layerName}")
-        clipped
-          .rdd
-          .map { r => (getSpatialKey(r, keyColumn), r.getAs[String](pipeline.layerName) -> pipeline.pack(r, zoom)) }
-          .groupByKey
-          .mapPartitions{ iter: Iterator[(SpatialKey, Iterable[(String, VectorTileFeature[Geometry])])] =>
-            iter.map{ case (key, groupedFeatures) => {
-              val layerFeatures: Map[String, Iterable[VectorTileFeature[Geometry]]] =
-                groupedFeatures.groupBy(_._1).mapValues(_.map(_._2))
-              val ex = level.layout.mapTransform.keyToExtent(key)
-              key -> buildVectorTile(layerFeatures, ex, options.tileResolution, options.orderAreas)
-            }}
-          }
-      } else {
-        clipped
-          .rdd
-          .map { r => (getSpatialKey(r, keyColumn), pipeline.pack(r, zoom)) }
-          .groupByKey
-          .map { case (key, feats) =>
-            val ex = level.layout.mapTransform.keyToExtent(key)
-            key -> buildVectorTile(feats, pipeline.layerName, ex, options.tileResolution, options.orderAreas)
+      pipeline.layerMultiplicity match {
+        case SingleLayer(layerName) =>
+          clipped
+            .rdd
+            .map { r => (getSpatialKey(r, keyColumn), pipeline.pack(r, zoom)) }
+            .groupByKey
+            .map { case (key, feats) =>
+               val ex = level.layout.mapTransform.keyToExtent(key)
+               key -> buildVectorTile(feats, layerName, ex, options.tileResolution, options.orderAreas)
+            }
+        case LayerNamesInColumn(layerNameCol) =>
+          assert(selectedGeometry.schema(layerNameCol).dataType == StringType,
+                 s"layerMultiplicity=${pipeline.layerMultiplicity} requires String-type column of name ${layerNameCol}")
+          clipped
+            .rdd
+            .map { r => (getSpatialKey(r, keyColumn), r.getAs[String](layerNameCol) -> pipeline.pack(r, zoom)) }
+            .groupByKey
+            .mapPartitions{ iter: Iterator[(SpatialKey, Iterable[(String, VectorTileFeature[Geometry])])] =>
+              iter.map{ case (key, groupedFeatures) => {
+                val layerFeatures: Map[String, Iterable[VectorTileFeature[Geometry]]] =
+                  groupedFeatures.groupBy(_._1).mapValues(_.map(_._2))
+                val ex = level.layout.mapTransform.keyToExtent(key)
+                key -> buildVectorTile(layerFeatures, ex, options.tileResolution, options.orderAreas)
+              }}
           }
       }
     }

@@ -64,7 +64,7 @@ object VectorPipe {
       }
 
       pipeline
-        .select(df, zoom)
+        .select(df, zoom, keyColumn)
         .withColumn(keyColumn, explode(col(keyColumn)))
         .repartition(col(keyColumn)) // spread copies of possibly ill-tempered geometries around cluster
         .withColumn(geomColumn, clip(col(geomColumn), col(keyColumn)))

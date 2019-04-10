@@ -46,7 +46,7 @@ case class TestPipeline(geometryColumn: String, baseOutputURI: java.net.URI, gri
       .withColumn(keyColumn, array(col(keyColumn)))
   }
 
-  def pack(row: Row, zoom: Int): VectorTileFeature[Point] = {
+  override def pack(row: Row, zoom: Int): VectorTileFeature[Point] = {
     val g = new Point(row.getAs[jts.Point](geometryColumn))
     val weight = row.getAs[Long]("weight")
 

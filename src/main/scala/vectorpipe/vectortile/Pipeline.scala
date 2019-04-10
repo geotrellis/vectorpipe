@@ -101,11 +101,13 @@ trait Pipeline {
    * VectorPipe allows geometries to be carried up the pyramid for display at a
    * later time.  This function is used to choose the elements that will be
    * displayed at the target zoom level.  This is useful for implementing a
-   * display schema, or for example, selection based on prominence (relying on
-   * the array of spatial keys added to the data frame in the column with the
-   * longest name fitting the regular expression '[_]+keys').
+   * display schema, or for example, selection based on prominence.  VectorPipe
+   * will add a column of Array[SpatialKey] in the column with the name given by
+   * `keyColumn`.  These keys identify the layout tiles which intersect each
+   * geometry at the current zoom level.  This information may be useful when
+   * deciding which geometries to display.
    */
-  def select(input: DataFrame, targetZoom: Int): DataFrame = input
+  def select(input: DataFrame, targetZoom: Int, keyColumn: String): DataFrame = input
 
   /**
    * Clip geometries prior to writing to vector tiles.
@@ -113,6 +115,8 @@ trait Pipeline {
    * It may be desirable to carry only the portion of a geometry that intersects
    * a given vector tile to keep down memory usage.  This function can be used
    * to implement such schemes.
+   *
+   * Basic (non-no-op) clipping functions can be found in [[Clipping]].
    */
   def clip(geom: jts.Geometry, key: SpatialKey, layoutLevel: LayoutLevel): jts.Geometry = geom
 
@@ -123,5 +127,6 @@ trait Pipeline {
    * data carried by the feature are stored as entries in a Map[String, Value].
    * See [[geotrellis.vectortile.Value]] for details.
    */
-  def pack(row: Row, zoom: Int): VectorTileFeature[Geometry]
+  def pack(row: Row, zoom: Int): VectorTileFeature[Geometry] =
+    Feature(Geometry(row.getAs[jts.Geometry](geometryColumn)), Map.empty)
 }

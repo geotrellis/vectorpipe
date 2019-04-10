@@ -36,12 +36,12 @@ package object vectortile {
   //     IdFeature(geom, f(data), id)
   // }
 
-  def timedIntersect(geom: Geometry, ex: Extent, id: String)(implicit ec: ExecutionContext) = {
+  def timedIntersect[G <: Geometry](geom: G, ex: Extent)(implicit ec: ExecutionContext) = {
     val future = Future { geom.intersection(ex) }
     Try(Await.result(future, 5000 milliseconds)) match {
       case Success(res) => res
       case Failure(_) =>
-        logger.warn(s"Could not intersect $geom with $ex [feature id=$id] in 5000 milliseconds")
+        logger.warn(s"Could not intersect $geom with $ex in 5000 milliseconds")
         NoResult
     }
   }

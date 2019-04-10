@@ -28,12 +28,12 @@ class PipelineSpec extends FunSpec with TestEnvironment with Matchers {
 
     it("should generate a single zoom level") {
       val pipeline = TestPipeline("geometry", new java.net.URI("file:///tmp/iom-tiles"), 16)
-      VectorPipe(nodes, pipeline, "points", VectorPipe.Options.forZoom(8))
+      VectorPipe(nodes, pipeline, VectorPipe.Options.forZoom(8))
     }
 
     it("should generate multiple zoom levels") {
       val pipeline = TestPipeline("geometry", new java.net.URI("file:///tmp/iom-tiles-pyramid"), 16)
-      VectorPipe(nodes, pipeline, "points", VectorPipe.Options.forZoomRange(6, 8))
+      VectorPipe(nodes, pipeline, VectorPipe.Options.forZoomRange(6, 8))
     }
 
   }

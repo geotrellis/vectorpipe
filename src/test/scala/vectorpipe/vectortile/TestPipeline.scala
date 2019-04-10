@@ -24,6 +24,8 @@ object Bin {
 case class TestPipeline(geometryColumn: String, baseOutputURI: java.net.URI, gridResolution: Int) extends Pipeline {
   val weightedCentroid = new WeightedCentroid
 
+  val layerName = "points"
+
   override def reduce(input: DataFrame, layoutLevel: LayoutLevel, keyColumn: String): DataFrame = {
     import input.sparkSession.implicits._
 

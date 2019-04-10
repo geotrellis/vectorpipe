@@ -1,11 +1,13 @@
 package vectorpipe
 
 import geotrellis.proj4._
+import geotrellis.spark.SpatialKey
 import geotrellis.spark.tiling.LayoutDefinition
 import geotrellis.vector._
 import geotrellis.vector.reproject._
 import geotrellis.vectortile._
 import org.apache.spark.sql._
+import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema
 import org.apache.spark.sql.functions._
 import org.locationtech.jts.{geom => jts}
 
@@ -26,6 +28,13 @@ package object vectortile {
 
   def keyTo(layout: LayoutDefinition) = udf { g: jts.Geometry =>
     layout.mapTransform.keysForGeometry(geotrellis.vector.Geometry(g)).toArray
+  }
+
+  def getSpatialKey(k: GenericRowWithSchema): SpatialKey = SpatialKey(k.getInt(0), k.getInt(1))
+
+  def getSpatialKey(row: Row, field: String): SpatialKey = {
+    val k = row.getAs[Row](field)
+    SpatialKey(k.getInt(0), k.getInt(1))
   }
 
   // case class IdFeature[+G <: Geometry, +D](geom: Geometry, data: D, id: Int) extends Feature[G, D](geom, data) {
@@ -71,10 +80,10 @@ package object vectortile {
     def empty() = VTContents()
   }
 
-  def buildVectorTile[G <: Geometry](geoms: Iterable[VectorTileFeature[G]], ex: Extent, layerName: String, tileWidth: Int): VectorTile = {
-    val contents = geoms.foldLeft(VTContents.empty){ (accum, feature) => accum + feature }
+  def buildLayer[G <: Geometry](features: Iterable[VectorTileFeature[G]], layerName: String, ex: Extent, tileWidth: Int): Layer = {
+    val contents = features.foldLeft(VTContents.empty){ (accum, feature) => accum + feature }
     val VTContents(pts, mpts, ls, mls, ps, mps) = contents
-    val layer = StrictLayer(
+    StrictLayer(
       name=layerName,
       tileWidth=tileWidth,
       version=2,
@@ -83,12 +92,55 @@ package object vectortile {
       multiPoints=mpts,
       lines=ls,
       multiLines=mls,
-      polygons=ps, //.sortWith(_.area > _.area),
-      multiPolygons=mps //.sortWith(_.area > _.area)
+      polygons=ps,
+      multiPolygons=mps
     )
+  }
 
+  def buildSortedLayer[G <: Geometry](features: Iterable[VectorTileFeature[G]], layerName: String, ex: Extent, tileWidth: Int): Layer = {
+    val contents = features.foldLeft(VTContents.empty){ (accum, feature) => accum + feature }
+    val VTContents(pts, mpts, ls, mls, ps, mps) = contents
+    StrictLayer(
+      name=layerName,
+      tileWidth=tileWidth,
+      version=2,
+      tileExtent=ex,
+      points=pts,
+      multiPoints=mpts,
+      lines=ls,
+      multiLines=mls,
+      polygons=ps.sortWith(_.area > _.area),
+      multiPolygons=mps.sortWith(_.area > _.area)
+    )
+  }
+
+  def buildVectorTile[G <: Geometry](
+    features: Iterable[VectorTileFeature[G]],
+    layerName: String,
+    ex: Extent,
+    tileWidth: Int,
+    sorted: Boolean
+  ): VectorTile = {
+    val layer =
+      if (sorted)
+        buildSortedLayer(features, layerName, ex, tileWidth)
+      else
+        buildLayer(features, layerName, ex, tileWidth)
     VectorTile(Map(layerName -> layer), ex)
   }
 
+  def buildVectorTile[G <: Geometry](
+    layerFeatures: Map[String, Iterable[VectorTileFeature[G]]],
+    ex: Extent,
+    tileWidth: Int,
+    sorted: Boolean
+  ): VectorTile = {
+    VectorTile(layerFeatures.map{ case (layerName, features) => (layerName,
+      if (sorted)
+        buildSortedLayer(features, layerName, ex, tileWidth)
+      else
+        buildLayer(features, layerName, ex, tileWidth))
+    }, ex)
+  }
 
 }

@@ -12,16 +12,32 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema
 import org.apache.spark.sql.functions._
+import org.apache.spark.sql.types.StringType
 import org.locationtech.jts.{geom => jts}
 
 object VectorPipe {
 
+  /** Vectortile conversion options.
+    *
+    * @param  maxZoom             Largest (most resolute) zoom level to generate.
+    * @param  minZoom             (optional) Smallest (least resolute) zoom level to generate.  When
+    *                             omitted, only generate the single level for maxZoom.
+    * @param  srcCRS              CRS of the original geometry
+    * @param  destCRS             (optional) The CRS to produce vectortiles into.  When omitted,
+    *                             defaults to [[WebMercator]].
+    * @param  orderAreas          Sorts polygonal geometries in vectortiles.  In case of overlaps,
+    *                             smaller geometries will draw on top of larger ones.
+    * @param  tileResolution      Resolution of output tiles; i.e., the number of discretized bins
+    *                             (along each axis) to quantize coordinates to for display.
+    *
+    */
   case class Options(
-    maxZoom: Int,                    // Largest (most resolute) zoom level to generate
-    minZoom: Option[Int],            // Smallest (least resolute) zoom level to generate
-    srcCRS: CRS,                     // projection of the original geometry
-    destCRS: Option[CRS],            // projection for generated vectortiles
-    tileResolution: Int = 4096       // "pixel" resolution of output vectortiles
+    maxZoom: Int,
+    minZoom: Option[Int],
+    srcCRS: CRS,
+    destCRS: Option[CRS],
+    orderAreas: Boolean = false,
+    tileResolution: Int = 4096
   )
   object Options {
     def forZoom(zoom: Int) = Options(zoom, None, LatLng, None)
@@ -30,7 +46,7 @@ object VectorPipe {
     def forAllZoomsWithSrcProjection(zoom: Int, crs: CRS) = Options(zoom, Some(0), crs, None)
   }
 
-  def apply(input: DataFrame, pipeline: vectortile.Pipeline, layerName: String, options: Options): Unit = {
+  def apply(input: DataFrame, pipeline: vectortile.Pipeline, options: Options): Unit = {
     val geomColumn = pipeline.geometryColumn
     assert(input.columns.contains(geomColumn) &&
            input.schema(geomColumn).dataType.isInstanceOf[org.apache.spark.sql.jts.AbstractGeometryUDT[jts.Geometry]],
@@ -52,30 +68,52 @@ object VectorPipe {
       prepend ++ "keys"
     }
 
-    def reduceKeys = udf { seq: Seq[Row] =>
-      seq.toSet.map{ r: Row => SpatialKey(r.getAs[Int]("col") / 2, r.getAs[Int]("row") / 2) }.toSeq
+    def reduceKeys = udf { seq: Seq[GenericRowWithSchema] =>
+      seq.toSet.map{ r: GenericRowWithSchema =>
+        val k = getSpatialKey(r)
+        SpatialKey(k.col / 2, k.row / 2) }.toSeq
     }
 
     def generateVectorTiles[G <: Geometry](df: DataFrame, level: LayoutLevel): RDD[(SpatialKey, VectorTile)] = {
       val zoom = level.zoom
       val clip = udf { (g: jts.Geometry, key: GenericRowWithSchema) =>
-        val k = SpatialKey(key.getInt(0), key.getInt(1))
+        val k = getSpatialKey(key)
         pipeline.clip(g, k, level)
       }
 
-      pipeline
+      val selectedGeometry = pipeline
         .select(df, zoom, keyColumn)
+
+      val clipped = selectedGeometry
         .withColumn(keyColumn, explode(col(keyColumn)))
-        .repartition(col(keyColumn)) // spread copies of possibly ill-tempered geometries around cluster
+        .repartition(col(keyColumn)) // spread copies of possibly ill-tempered geometries around cluster prior to clipping
         .withColumn(geomColumn, clip(col(geomColumn), col(keyColumn)))
-        .rdd
-        .map { r => (r.getAs[GenericRowWithSchema](keyColumn), pipeline.pack(r, zoom)) }
-        .groupByKey
-        .map { case (r, feats) =>
-          val k = SpatialKey(r.getInt(0), r.getInt(1))
-          val ex = level.layout.mapTransform.keyToExtent(k)
-          (k, buildVectorTile(feats, ex, layerName, options.tileResolution))
-        }
+
+      if (pipeline.layerNameIsColumn) {
+        assert(selectedGeometry.schema(pipeline.layerName).dataType == StringType,
+               s"layerNameIsColumn=true implies select must produce a String-type column of name ${pipeline.layerName}")
+        clipped
+          .rdd
+          .map { r => (getSpatialKey(r, keyColumn), r.getAs[String](pipeline.layerName) -> pipeline.pack(r, zoom)) }
+          .groupByKey
+          .mapPartitions{ iter: Iterator[(SpatialKey, Iterable[(String, VectorTileFeature[Geometry])])] =>
+            iter.map{ case (key, groupedFeatures) => {
+              val layerFeatures: Map[String, Iterable[VectorTileFeature[Geometry]]] =
+                groupedFeatures.groupBy(_._1).mapValues(_.map(_._2))
+              val ex = level.layout.mapTransform.keyToExtent(key)
+              key -> buildVectorTile(layerFeatures, ex, options.tileResolution, options.orderAreas)
+            }}
+          }
+      } else {
+        clipped
+          .rdd
+          .map { r => (getSpatialKey(r, keyColumn), pipeline.pack(r, zoom)) }
+          .groupByKey
+          .map { case (key, feats) =>
+            val ex = level.layout.mapTransform.keyToExtent(key)
+            key -> buildVectorTile(feats, pipeline.layerName, ex, options.tileResolution, options.orderAreas)
+          }
+      }
     }
 
     // ITERATION:

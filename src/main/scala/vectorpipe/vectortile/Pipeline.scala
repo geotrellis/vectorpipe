@@ -56,6 +56,24 @@ trait Pipeline {
   val geometryColumn: String
 
   /**
+   * Name of the vectortile layer to generate, or name of the column giving
+   * layer names.
+   *
+   * See [[layerNameIsColumn]].
+   */
+  val layerName: String
+
+  /*
+   * Flag to select single/multiple layer generation.
+   *
+   * Flag to indicate if [[layerName]] specifies the name of the output layer
+   * (layerNameIsColumn=false) or the name of a String column produced by
+   * [[select]] which will be grouped over and each grouping used to
+   * generate a layer in the output vector tiles.
+   */
+  val layerNameIsColumn: Boolean = false
+
+  /**
    * Reduce the input data between zoom levels.
    *
    * Not all data is useful in all levels of the vector tile pyramid.  When a
@@ -106,6 +124,10 @@ trait Pipeline {
    * `keyColumn`.  These keys identify the layout tiles which intersect each
    * geometry at the current zoom level.  This information may be useful when
    * deciding which geometries to display.
+   *
+   * If [[layerNameIsColumn]] is true, the resulting DataFrame must supply a
+   * String-typed column of the name contained in [[layerName]] to indicate
+   * which layer a geometry belongs in.
    */
   def select(input: DataFrame, targetZoom: Int, keyColumn: String): DataFrame = input
 

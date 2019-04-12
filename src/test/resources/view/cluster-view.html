@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+  <!--
+      A viewer for the vectortiles created by TestPipeline
+
+      Please fill in a valid Mapbox access token at the top of the <script> block before using
+  -->
+<head>
+    <meta charset='utf-8' />
+    <title>Point cluster view</title>
+    <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.44.1/mapbox-gl.js'></script>
+    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.44.1/mapbox-gl.css' rel='stylesheet' />
+    <style>
+        body { margin:0; padding:0; }
+        #map { position:absolute; top:0; bottom:0; width:100%; }
+    </style>
+</head>
+<body>
+
+<div id='map'></div>
+  <script>
+   mapboxgl.accessToken = '';
+   var map = new mapboxgl.Map({
+     container: 'map',
+     <!-- style: 'http://osm-liberty.lukasmartinelli.ch/style.json',-->
+     style: 'mapbox://styles/mapbox/satellite-streets-v9',
+     hash: false,
+     zoom: 8,
+     center: [-4.5, 54.3]
+   });
+
+   map.on('load', function() {
+       map.addSource("nodes", {
+           type: "vector",
+           tiles: ["file:///tmp/iom-tiles-pyramid/{z}/{x}/{y}.mvt"],
+           minzoom: 6,
+           maxzoom: 8,
+           cluster: "true"
+       })
+
+       // Add VecTiles source
+       map.addLayer({
+           "id": "clusters",
+           "type": "circle",
+           "source": "nodes",
+           "source-layer": "points",
+           "paint": {
+               "circle-color": "#ff1818",
+               "circle-radius": [
+                   "step",
+                   ["get", "weight"],
+                   1,
+                   10,
+                   2,
+                   20,
+                   4,
+                   40,
+                   6,
+                   120,
+                   8,
+                   500,
+                   10,
+                   1000,
+                   15,
+                   2000,
+                   20
+               ]
+           }
+       });
+
+       map.on("click", function(e) {
+           console.log(e);
+           console.log(e.target.transform._zoom);
+       });
+   });
+
+   map.addControl(new mapboxgl.NavigationControl());
+</script>
+
+</body>
+</html>

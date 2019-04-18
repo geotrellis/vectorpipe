@@ -144,7 +144,7 @@ package object osm {
         matchingKeys.exists(k => !AreaKeys(k).contains(tags(k)))
     }
 
-  val isAreaUDF: UserDefinedFunction = udf(_isArea)
+  @transient lazy val isAreaUDF: UserDefinedFunction = udf(_isArea)
 
   def isArea(tags: Column): Column =
     when(lower(coalesce(tags.getField("area"), lit(""))).isin(BooleanValues: _*),
@@ -178,7 +178,7 @@ package object osm {
       Row(t, ref, role)
     }
 
-  lazy val compressMemberTypes: UserDefinedFunction = udf(_compressMemberTypes, MemberSchema)
+  @transient lazy val compressMemberTypes: UserDefinedFunction = udf(_compressMemberTypes, MemberSchema)
 
   /**
    * Checks if members have byte-encoded types
@@ -221,7 +221,7 @@ package object osm {
   private val ContentMatcher: Regex = """[\p{L}\uD83C-\uDBFF\uDC00-\uDFFF]""".r
   private val TrailingPunctuationMatcher: Regex = """[:]$""".r
 
-  val extractHashtags: UserDefinedFunction = udf { comment: String =>
+  @transient lazy val extractHashtags: UserDefinedFunction = udf { comment: String =>
     HashtagMatcher
       .findAllMatchIn(comment)
       // fetch the first group (after #)
@@ -242,7 +242,7 @@ package object osm {
   def isBuilding(tags: Column): Column =
     lower(coalesce(tags.getItem("building"), lit("no"))) =!= "no" as 'isBuilding
 
-  val isPOI: UserDefinedFunction = udf {
+  @transient lazy val isPOI: UserDefinedFunction = udf {
     tags: Map[String, String] => POITags.intersect(tags.keySet).nonEmpty
   }
 

@@ -6,7 +6,7 @@ import org.apache.log4j.Logger
 import vectorpipe.internal.WayType
 
 object Routes {
-  private lazy val logger = Logger.getLogger(getClass)
+  @transient private lazy val logger = Logger.getLogger(getClass)
 
   def build(id: Long,
             version: Int,

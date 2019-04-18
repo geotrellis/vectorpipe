@@ -7,7 +7,7 @@ import org.apache.log4j.Logger
 import vectorpipe.internal.WayType
 
 object MultiPolygons {
-  private lazy val logger = Logger.getLogger(getClass)
+  @transient private lazy val logger = Logger.getLogger(getClass)
   val prepGeomFactory = new PreparedGeometryFactory
 
   def build(id: Long,

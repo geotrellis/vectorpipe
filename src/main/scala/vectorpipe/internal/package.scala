@@ -22,7 +22,7 @@ package object internal {
   val RelationType: Byte = 3
   val MultiPolygonRoles: Seq[String] = Set("", "outer", "inner").toSeq
 
-  lazy val logger: Logger = Logger.getLogger(getClass)
+  @transient lazy val logger: Logger = Logger.getLogger(getClass)
 
   lazy val BareElementSchema = StructType(
     StructField("changeset", LongType, nullable = false) ::

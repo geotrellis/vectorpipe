@@ -22,9 +22,9 @@ package object vectortile {
   case class SingleLayer(val name: String) extends LayerMultiplicity
   case class LayerNamesInColumn(val name: String) extends LayerMultiplicity
 
-  val logger = org.apache.log4j.Logger.getRootLogger
+  @transient lazy val logger = org.apache.log4j.Logger.getRootLogger
 
-  val st_reprojectGeom = udf { (g: jts.Geometry, srcProj: String, destProj: String) =>
+  @transient lazy val st_reprojectGeom = udf { (g: jts.Geometry, srcProj: String, destProj: String) =>
     val trans = Proj4Transform(CRS.fromString(srcProj), CRS.fromString(destProj))
     val gt = Geometry(g)
     gt.reproject(trans).jtsGeom

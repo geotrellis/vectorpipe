@@ -11,9 +11,9 @@ package object functions {
   // Spark functions are typically defined using snake_case, therefore so are the UDFs
   // internal helper functions use standard Scala naming conventions
 
-  lazy val merge_counts: UserDefinedFunction = udf(_mergeCounts)
+  @transient lazy val merge_counts: UserDefinedFunction = udf(_mergeCounts)
 
-  lazy val sum_counts: UserDefinedFunction = udf { counts: Iterable[Map[String, Int]] =>
+  @transient lazy val sum_counts: UserDefinedFunction = udf { counts: Iterable[Map[String, Int]] =>
     counts.reduce(_mergeCounts(_, _))
   }
 
@@ -29,23 +29,23 @@ package object functions {
     when(value.isNotNull, value.cast(FloatType))
       .otherwise(lit(Float.NaN)) as s"asFloat($value)"
 
-  val count_values: UserDefinedFunction = udf {
+  @transient lazy val count_values: UserDefinedFunction = udf {
     (_: Seq[String]).groupBy(identity).mapValues(_.size)
   }
 
-  val flatten: UserDefinedFunction = udf {
+  @transient lazy val flatten: UserDefinedFunction = udf {
     (_: Seq[Seq[String]]).flatten
   }
 
-  val flatten_set: UserDefinedFunction = udf {
+  @transient lazy val flatten_set: UserDefinedFunction = udf {
     (_: Seq[Seq[String]]).flatten.distinct
   }
 
-  val merge_sets: UserDefinedFunction = udf { (a: Iterable[String], b: Iterable[String]) =>
+  @transient lazy val merge_sets: UserDefinedFunction = udf { (a: Iterable[String], b: Iterable[String]) =>
     (Option(a).getOrElse(Set.empty).toSet ++ Option(b).getOrElse(Set.empty).toSet).toArray
   }
 
-  val without: UserDefinedFunction = udf { (list: Seq[String], without: String) =>
+  @transient lazy val without: UserDefinedFunction = udf { (list: Seq[String], without: String) =>
     list.filterNot(x => x == without)
   }
 

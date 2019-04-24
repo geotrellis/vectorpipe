@@ -182,20 +182,3 @@ lazy val mainRunner = project.in(file("mainRunner")).dependsOn(RootProject(file(
 )
 ```
 
-## Publishing Releases
-
-To follow the checklist below, you'll need to ensure you have write access 
-to the `azavea` bintray organization.
-
-Then:
-
-- [ ] Create a new release branch, e.g. `release/x.y.z`
-- [ ] Bump version refs in README
-- [ ] Bump version ref in `project/Version.scala`
-- [ ] Push branch and make a PR on GitHub
-- [ ] Ensure CI succeeds
-- [ ] Merge release branch after CI succeeds
-- [ ] `./sbt publish` from up to date master after merge
-- [ ] `git tag -a vx.y.z -m "Release x.y.z"`
-- [ ] `git push --tags`
-

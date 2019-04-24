@@ -17,7 +17,7 @@ package object export {
     uri.getScheme match {
       case "s3" =>
         val path = uri.getPath
-        val prefix = if (path.last == '/') { path.drop(1) } else { path.slice(1, path.length - 1) }
+        val prefix = path.stripPrefix("/").stripSuffix("/")
         saveToS3(vectorTiles, zoom, uri.getAuthority, prefix)
       case _ =>
         saveHadoop(vectorTiles, zoom, uri)

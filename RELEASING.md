@@ -9,6 +9,7 @@ following the prompts after running `./sbt bintrayChangeCredentials`
 1. Create a new release branch from up-to-date master, e.g. `release/x.y.z`
 1. Bump version refs in README
 1. Bump version ref in `project/Version.scala`
+1. Review CHANGELOG.md. Move `[Unreleased]` header to empty section and replace with `[x.y.z]` header plus release date. 
 1. Commit these changes as a single commit, with the message "Release vx.y.z"
 1. Push branch and make a PR on GitHub
 1. Ensure CI succeeds

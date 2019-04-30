@@ -97,8 +97,8 @@ package object internal {
           when(!'visible and (lag('tags, 1) over idByVersion).isNotNull,
             lag('tags, 1) over idByVersion)
             .otherwise('tags) as 'tags,
-          when(!'visible, lit(Double.NaN)).otherwise('lat) as 'lat,
-          when(!'visible, lit(Double.NaN)).otherwise('lon) as 'lon,
+          when(!'visible, lag('lat, 1) over idByVersion).otherwise('lat) as 'lat,
+          when(!'visible, lag('lon, 1) over idByVersion).otherwise('lon) as 'lon,
           'changeset,
           'timestamp,
           (lead('timestamp, 1) over idByVersion) as 'validUntil,

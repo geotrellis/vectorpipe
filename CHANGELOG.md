@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - RELEASING.md - Instructions for releasing new versions of this project
 - Preserve the last-known coordinates of deleted nodes
+- Convert coordinates to Doubles (expected by VP internals) when pre-processing
 
 ## [1.0.0-RC3] - 2019-04-24
 

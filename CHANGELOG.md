@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ### Added
 - RELEASING.md - Instructions for releasing new versions of this project
+- Resolve commons-io deprecation warnings
 
 ## [1.0.0-RC3] - 2019-04-24
 ### Fixed

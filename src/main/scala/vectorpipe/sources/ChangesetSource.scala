@@ -2,6 +2,7 @@ package vectorpipe.sources
 
 import java.io.{ByteArrayInputStream, IOException}
 import java.net.URI
+import java.nio.charset.StandardCharsets
 import java.util.zip.GZIPInputStream
 
 import cats.implicits._
@@ -46,7 +47,7 @@ object ChangesetSource extends Logging {
         val bais = new ByteArrayInputStream(response.body)
         val gzis = new GZIPInputStream(bais)
         try {
-          val data = XML.loadString(IOUtils.toString(gzis))
+          val data = XML.loadString(IOUtils.toString(gzis, StandardCharsets.UTF_8))
 
           val changesets = (data \ "changeset").map(Changeset.fromXML(_, sequence))
 

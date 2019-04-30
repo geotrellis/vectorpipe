@@ -1,16 +1,10 @@
 package vectorpipe.vectortile
 
 import org.apache.spark.sql.functions
-import org.apache.spark.sql.functions.{col, isnull, lit}
-import org.apache.spark.sql.types._
+import org.apache.spark.sql.functions.{isnull, lit}
 import org.locationtech.geomesa.spark.jts._
-import org.locationtech.jts.{geom => jts}
-
-import vectorpipe.TestEnvironment
-import vectorpipe._
-import vectorpipe.{internal => vp}
-
 import org.scalatest._
+import vectorpipe.{TestEnvironment, internal => vp, _}
 
 class PipelineSpec extends FunSpec with TestEnvironment with Matchers {
   import ss.implicits._
@@ -20,7 +14,7 @@ class PipelineSpec extends FunSpec with TestEnvironment with Matchers {
   val df = ss.read.orc(orcFile)
 
   describe("Vectortile Pipelines") {
-    val nodes = vp.preprocessNodes(df, None).cache
+    val nodes = vp.preprocessNodes(df, None)
 
     val nodeGeoms = nodes
       .filter(functions.not(isnull('lat)))

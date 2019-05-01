@@ -1,14 +1,13 @@
 package vectorpipe.functions
 
 import org.apache.spark.sql.expressions.UserDefinedFunction
-import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
-import org.apache.spark.sql.{Column, Row}
+import org.apache.spark.sql.{Column, DataFrame, Row}
 import vectorpipe.model.Member
 
-import scala.util.{Try, Success, Failure}
 import scala.util.matching.Regex
+import scala.util.{Failure, Success, Try}
 
 package object osm {
   // Using tag listings from [id-area-keys](https://github.com/osmlab/id-area-keys) @ v2.13.0.
@@ -142,13 +141,16 @@ package object osm {
 
   private val MultiPolygonTypes = Seq("multipolygon", "boundary")
 
-  private val BooleanValues = Seq("yes", "no", "true", "false", "1", "0")
-
   private val TruthyValues = Seq("yes", "true", "1")
+
+  private val FalsyValues = Seq("no", "false", "0")
+
+  private val BooleanValues = TruthyValues ++ FalsyValues
 
   private val WaterwayValues =
     Seq(
-      "river", "canal", "stream", "brook", "drain", "ditch"
+      "river", "riverbank", "canal", "stream", "stream_end", "brook", "drain", "ditch", "dam", "weir", "waterfall",
+      "pressurised"
     )
 
   private val POITags = Set("amenity", "shop", "craft", "office", "leisure", "aeroway")
@@ -261,7 +263,7 @@ package object osm {
       .otherwise(typedLit(Seq.empty[String])) as 'hashtags
 
   def isBuilding(tags: Column): Column =
-    lower(coalesce(tags.getItem("building"), lit("no"))) =!= "no" as 'isBuilding
+    !lower(coalesce(tags.getItem("building"), lit("no"))).isin(FalsyValues: _*) as 'isBuilding
 
   @transient lazy val isPOI: UserDefinedFunction = udf {
     tags: Map[String, String] => POITags.intersect(tags.keySet).nonEmpty

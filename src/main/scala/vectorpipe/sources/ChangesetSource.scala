@@ -27,9 +27,8 @@ object ChangesetSource extends Logging {
     Decoder.instance(a => a.as[String].map(DateTime.parse(_, formatter)))
 
   def getSequence(baseURI: URI, sequence: Int): Seq[Changeset] = {
-    val s = f"$sequence%09d".toArray
-    val path =
-      s"${s.slice(0, 3).mkString}/${s.slice(3, 6).mkString}/${s.slice(6, 9).mkString}.osm.gz"
+    val s = f"$sequence%09d"
+    val path = s"${s.slice(0, 3)}/${s.slice(3, 6)}/${s.slice(6, 9)}.osm.gz"
 
     logDebug(s"Fetching sequence $sequence")
 

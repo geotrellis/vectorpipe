@@ -157,33 +157,47 @@ package object osm {
 
   private val HashtagMatcher: Regex = """#([^\u2000-\u206F\u2E00-\u2E7F\s\\'!\"#$%()*,.\/;<=>?@\[\]^{|}~]+)""".r
 
+  private def cleanDelimitedValues(values: Column): Column = regexp_replace(trim(values), "\\s*;\\s*", ";")
+
+  def splitDelimitedValues(values: Column, default: Column = lit("")): Column = split(lower(coalesce(cleanDelimitedValues(values), default)), ";")
+
+  def splitDelimitedValues(values: String): Set[String] = values.replaceAll("\\s*;\\s*", ";").toLowerCase().split(";").toSet
+
   private val _isArea = (tags: Map[String, String]) =>
     tags match {
-      case _ if tags.contains("area") && BooleanValues.contains(tags("area").toLowerCase) =>
-        TruthyValues.contains(tags("area").toLowerCase)
+      case _ if tags.contains("area") && BooleanValues.toSet.intersect(splitDelimitedValues(tags("area"))).nonEmpty =>
+
+        TruthyValues.toSet.intersect(splitDelimitedValues(tags("area"))).nonEmpty
       case _ =>
         // see https://github.com/osmlab/id-area-keys (values are inverted)
         val matchingKeys = tags.keySet.intersect(AreaKeys.keySet)
-        matchingKeys.exists(k => !AreaKeys(k).contains(tags(k)))
+
+        matchingKeys.exists(k => {
+          // break out semicolon-delimited values
+          val values = splitDelimitedValues(tags(k))
+
+          // values that should be considered as lines
+          AreaKeys(k).keySet
+            .intersect(values)
+            // at least one key passes the area test
+            .size < values.size
+        })
     }
 
-  @transient lazy val isAreaUDF: UserDefinedFunction = udf(_isArea)
+  val isAreaUDF: UserDefinedFunction = udf(_isArea)
 
-  def isArea(tags: Column): Column =
-    when(lower(coalesce(tags.getField("area"), lit(""))).isin(BooleanValues: _*),
-         lower(tags.getField("area")).isin(TruthyValues: _*))
-      // only call the UDF when necessary
-      .otherwise(isAreaUDF(tags)) as 'isArea
+  def isArea(tags: Column): Column = isAreaUDF(tags) as 'isArea
 
   def isMultiPolygon(tags: Column): Column =
-    lower(coalesce(tags.getItem("type"), lit("")))
-      .isin(MultiPolygonTypes: _*) as 'isMultiPolygon
+    array_intersects(
+      splitDelimitedValues(tags.getItem("type")),
+      lit(MultiPolygonTypes.toArray)) as 'isMultiPolygon
 
   def isNew(version: Column, minorVersion: Column): Column =
     version <=> 1 && minorVersion <=> 0 as 'isNew
 
   def isRoute(tags: Column): Column =
-    lower(tags.getItem("type")) <=> "route" as 'isRoute
+    array_contains(splitDelimitedValues(tags.getItem("type")), "route") as 'isRoute
 
   private lazy val MemberSchema = ArrayType(
     StructType(
@@ -273,13 +287,15 @@ package object osm {
     tags.getItem("highway").isNotNull as 'isRoad
 
   def isCoastline(tags: Column): Column =
-    lower(tags.getItem("natural")) <=> "coastline" as 'isCoastline
+    array_contains(splitDelimitedValues(tags.getItem("natural")), "coastline") as 'isCoastline
 
   def isWaterway(tags: Column): Column =
-    lower(coalesce(tags.getItem("waterway"), lit("")))
-      .isin(WaterwayValues: _*) as 'isWaterway
+    array_intersects(splitDelimitedValues(tags.getItem("waterway")), lit(WaterwayValues.toArray)) as 'isWaterway
 
   def mergeTags: UserDefinedFunction = udf {
     (_: Map[String, String]) ++ (_: Map[String, String])
   }
+
+  val array_intersects: UserDefinedFunction = udf { (a: Seq[_], b: Seq[_]) =>
+    a.intersect(b).nonEmpty}
 }

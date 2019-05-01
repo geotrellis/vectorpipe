@@ -19,7 +19,11 @@ class FunctionSpec extends FunSpec with TestEnvironment with Matchers {
         Map("area" -> "no") -> false,
         Map("area" -> "no") -> false,
         Map("area" -> "0") -> false,
-        Map("area" -> "something") -> false
+        Map("area" -> "something") -> false,
+        Map("area" -> "yes;no") -> true,
+        Map("area" -> "yes; no") -> true,
+        Map("area" -> "yes ; no") -> true,
+        Map("area" -> "yes ;no") -> true
       )
         .toDF("tags", "value")
         .where(isArea('tags) =!= 'value)
@@ -30,7 +34,10 @@ class FunctionSpec extends FunSpec with TestEnvironment with Matchers {
       Seq(
         Map("office" -> "architect") -> true,
         Map("waterway" -> "riverbank") -> true,
-        Map("waterway" -> "canal") -> false
+        Map("waterway" -> "canal") -> false,
+        Map("aeroway" -> "aerodrome;apron") -> true,
+        Map("aeroway" -> "aerodrome ; runway") -> true,
+        Map("aeroway" -> "taxiway;runway") -> false
       )
         .toDF("tags", "value")
         .where(isArea('tags) =!= 'value)
@@ -43,7 +50,9 @@ class FunctionSpec extends FunSpec with TestEnvironment with Matchers {
       Seq(
         Map("type" -> "multipolygon") -> true,
         Map("type" -> "boundary") -> true,
-        Map("type" -> "route") -> false
+        Map("type" -> "route") -> false,
+        Map("type" -> "multipolygon;boundary") -> true,
+        Map("type" -> "multipolygon ; boundary") -> true
       )
         .toDF("tags", "value")
         .where(isMultiPolygon('tags) =!= 'value)
@@ -56,7 +65,9 @@ class FunctionSpec extends FunSpec with TestEnvironment with Matchers {
       Seq(
         Map("type" -> "multipolygon") -> false,
         Map("type" -> "boundary") -> false,
-        Map("type" -> "route") -> true
+        Map("type" -> "route") -> true,
+        Map("type" -> "route;boundary") -> true,
+        Map("type" -> "route ; boundary") -> true
       )
         .toDF("tags", "value")
         .where(isRoute('tags) =!= 'value)
@@ -70,7 +81,8 @@ class FunctionSpec extends FunSpec with TestEnvironment with Matchers {
         Map("building" -> "yes") -> true,
         Map("building" -> "no") -> false,
         Map("building" -> "false") -> false,
-        Map("building" -> "farm") -> true
+        Map("building" -> "farm") -> true,
+        Map("building" -> "farm;apartments") -> true
       )
         .toDF("tags", "value")
         .where(isBuilding('tags) =!= 'value)
@@ -87,7 +99,8 @@ class FunctionSpec extends FunSpec with TestEnvironment with Matchers {
         Map("office" -> "architect") -> true,
         Map("leisure" -> "disc_golf_course") -> true,
         Map("aeroway" -> "aerodrome") -> true,
-        Map("highway" -> "motorway") -> false
+        Map("highway" -> "motorway") -> false,
+        Map("shop" -> "bakery ; dairy") -> true
       )
         .toDF("tags", "value")
         .where(isPOI('tags) =!= 'value)
@@ -100,6 +113,7 @@ class FunctionSpec extends FunSpec with TestEnvironment with Matchers {
       Seq(
         Map("highway" -> "motorway") -> true,
         Map("highway" -> "path") -> true,
+        Map("highway" -> "path ;footway") -> true,
         Map("building" -> "yes") -> false
       )
         .toDF("tags", "value")
@@ -109,10 +123,11 @@ class FunctionSpec extends FunSpec with TestEnvironment with Matchers {
   }
 
   describe("isCoastline") {
-    it("marks roads appropriately") {
+    it("marks coastline appropriately") {
       Seq(
         Map("natural" -> "coastline") -> true,
-        Map("natural" -> "water") -> false
+        Map("natural" -> "water") -> false,
+        Map("natural" -> "coastline ; water") -> true
       )
         .toDF("tags", "value")
         .where(isCoastline('tags) =!= 'value)
@@ -134,7 +149,9 @@ class FunctionSpec extends FunSpec with TestEnvironment with Matchers {
         Map("waterway" -> "weir") -> true,
         Map("waterway" -> "waterfall") -> true,
         Map("waterway" -> "pressurised") -> true,
-        Map("waterway" -> "fuel") -> false
+        Map("waterway" -> "fuel") -> false,
+        Map("waterway" -> "canal ; stream") -> true,
+        Map("waterway" -> "canal ; fuel") -> true
       )
         .toDF("tags", "value")
         .where(isWaterway('tags) =!= 'value)

@@ -6,12 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
 ### Added
 
 - RELEASING.md - Instructions for releasing new versions of this project
+
+### Changed
+
 - Sync with [id-area-keys@2.13.0](https://github.com/osmlab/id-area-keys/blob/v2.13.0/areaKeys.json) for determining area-ness of a way.
 - Fetch gzipped augmented diff JSON (produced by [overpass-diff-publisher](https://github.com/mojodna/overpass-diff-publisher))
 - Preserve the last-known coordinates of deleted nodes
+
+### Fixed
+
+- Resolve commons-io deprecation warnings
 - Convert coordinates to Doubles (expected by VP internals) when pre-processing
 
 ## [1.0.0-RC3] - 2019-04-24

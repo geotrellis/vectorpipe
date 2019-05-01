@@ -13,6 +13,7 @@ import org.apache.spark.sql.functions._
 import org.apache.spark.sql.jts.GeometryUDT
 import org.apache.spark.sql.types._
 import org.locationtech.geomesa.spark.jts._
+import vectorpipe.functions.asDouble
 import vectorpipe.functions.osm._
 import vectorpipe.relations.{MultiPolygons, Routes}
 
@@ -92,13 +93,15 @@ package object internal {
       filteredHistory
         .where('type === "node")
         .repartition('id)
+        .withColumn("lat", asDouble('lat))
+        .withColumn("lon", asDouble('lon))
         .select(
           'id,
           when(!'visible and (lag('tags, 1) over idByVersion).isNotNull,
             lag('tags, 1) over idByVersion)
             .otherwise('tags) as 'tags,
-          when(!'visible, lit(Double.NaN)).otherwise('lat) as 'lat,
-          when(!'visible, lit(Double.NaN)).otherwise('lon) as 'lon,
+          when(!'visible, lag('lat, 1) over idByVersion).otherwise('lat) as 'lat,
+          when(!'visible, lag('lon, 1) over idByVersion).otherwise('lon) as 'lon,
           'changeset,
           'timestamp,
           (lead('timestamp, 1) over idByVersion) as 'validUntil,
@@ -323,7 +326,7 @@ package object internal {
               case coords if coords.length == 1 =>
                 Some(GeomFactory.factory.createPoint(new jts.Coordinate(coords.head.head, coords.head.last)))
               case coords => {
-                val coordinates = coords.map(xy => new jts.Coordinate(xy.head.toDouble, xy.last.toDouble)).toArray
+                val coordinates = coords.map(xy => new jts.Coordinate(xy.head, xy.last)).toArray
                 val line = GeomFactory.factory.createLineString(coordinates)
 
                 if (isArea && line.getNumPoints >= 4 && line.isClosed)

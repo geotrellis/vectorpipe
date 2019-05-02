@@ -10,12 +10,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - RELEASING.md - Instructions for releasing new versions of this project
+- Support for semicolon-delimited tag values in UDFs, e.g. `shop=bakery;dairy`
 
 ### Changed
 
 - Sync with [id-area-keys@2.13.0](https://github.com/osmlab/id-area-keys/blob/v2.13.0/areaKeys.json) for determining area-ness of a way.
 - Fetch gzipped augmented diff JSON (produced by [overpass-diff-publisher](https://github.com/mojodna/overpass-diff-publisher))
 - Preserve the last-known coordinates of deleted nodes
+- Better handling of falsy boolean values in tag UDFs
+- Adds `riverbank`, `stream_end`, `dam`, `weir`, `waterfall`, and `pressurised`
+  to the list of waterway features
 
 ### Fixed
 

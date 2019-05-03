@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - RELEASING.md - Instructions for releasing new versions of this project
 - Support for semicolon-delimited tag values in UDFs, e.g. `shop=bakery;dairy`
+- Support for `nds` in augmented diff GeoJSON (matching
+    [`osm-replication-streams@^0.7.0`](https://github.com/mojodna/osm-replication-streams/tree/v0.7.0)
+    output)
 
 ### Changed
 

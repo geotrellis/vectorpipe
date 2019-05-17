@@ -142,7 +142,8 @@ package object internal {
           when(!'visible and (lag('tags, 1) over idByVersion).isNotNull,
             lag('tags, 1) over idByVersion)
             .otherwise('tags) as 'tags,
-          $"nds.ref" as 'nds,
+          when(!'visible, lag($"nds.ref", 1) over idByVersion)
+            .otherwise($"nds.ref") as 'nds,
           'changeset,
           'timestamp,
           (lead('timestamp, 1) over idByVersion) as 'validUntil,
@@ -190,7 +191,8 @@ package object internal {
           when(!'visible and (lag('tags, 1) over idByUpdated).isNotNull,
             lag('tags, 1) over idByUpdated)
             .otherwise('tags) as 'tags,
-          'members,
+          when(!'visible, lag('members, 1) over idByUpdated)
+            .otherwise('members) as 'members,
           'changeset,
           'timestamp,
           (lead('timestamp, 1) over idByUpdated) as 'validUntil,

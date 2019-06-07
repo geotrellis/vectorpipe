@@ -19,7 +19,8 @@ class PipelineSpec extends FunSpec with TestEnvironment with Matchers {
     val nodeGeoms = nodes
       .filter(functions.not(isnull('lat)))
       .withColumn("geometry", st_makePoint('lon, 'lat))
-      .drop("lat", "lon")
+      .withColumnRenamed("lon", "xw")
+      .withColumnRenamed("lat", "yw")
       .withColumn("weight", lit(1))
       .cache
 

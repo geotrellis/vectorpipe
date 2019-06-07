@@ -147,10 +147,21 @@ val vpExtraSettings = Seq(
 // micrositeBaseUrl := "/vectorpipe"
 // micrositeDocumentationUrl := "/vectorpipe/latest/api/#vectorpipe.package" /* Location of Scaladocs */
 
+lazy val root = project
+  .in(file("."))
+  .aggregate(vectorpipe, examples)
+  .settings(commonSettings, vpExtraSettings)
+
 /* Main project */
 lazy val vectorpipe = project
-  .in(file("."))
+  .in(file("core"))
   .settings(commonSettings, vpExtraSettings, release)
+
+/* Example projects */
+lazy val examples = project
+  .in(file("examples"))
+  .settings(commonSettings, vpExtraSettings)
+  .dependsOn(vectorpipe)
 
 /* Benchmarking suite.
  * Benchmarks can be executed by first switching to the `bench` project and then by running:
@@ -162,7 +173,7 @@ lazy val bench = project
   .dependsOn(vectorpipe)
   .enablePlugins(JmhPlugin)
 
-
+onLoad in Global ~= (_ andThen ("project vectorpipe" :: _))
 
 
 // assemblyShadeRules in assembly := {

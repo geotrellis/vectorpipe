@@ -182,7 +182,7 @@ package object internal {
 
       // when an element has been deleted, it doesn't include any tags; use a window function to retrieve the last tags
       // present and use those
-      history
+      frame
         .where('type === "relation")
         .repartition('id)
         .select(

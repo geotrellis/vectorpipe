@@ -12,7 +12,7 @@ import vectorpipe.vectortile._
 case class LayerTestPipeline(geometryColumn: String, baseOutputURI: java.net.URI) extends Pipeline {
   val layerMultiplicity = LayerNamesInColumn("layers")
 
-  override def select(wayGeoms: DataFrame, targetZoom: Int, keyColumn: String): DataFrame = {
+  override val select: Option[(DataFrame, Int, String) => DataFrame] = Some { (wayGeoms: DataFrame, targetZoom: Int, keyColumn: String) =>
     import wayGeoms.sparkSession.implicits._
 
     wayGeoms
@@ -20,6 +20,6 @@ case class LayerTestPipeline(geometryColumn: String, baseOutputURI: java.net.URI
       .where(functions.not(functions.isnull('layers)))
   }
 
-  override def clip(geom: jts.Geometry, key: geotrellis.spark.SpatialKey, layoutLevel: geotrellis.spark.tiling.LayoutLevel): jts.Geometry =
-    Clipping.byLayoutCell(geom, key, layoutLevel)
+  override val clip: Option[(jts.Geometry, geotrellis.spark.SpatialKey, geotrellis.spark.tiling.LayoutLevel) => jts.Geometry] =
+    Some(Clipping.byLayoutCell)
 }

@@ -4,7 +4,9 @@ import org.apache.spark.sql.expressions.UserDefinedFunction
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{Column, DataFrame, Row}
+import vectorpipe.internal.{NodeType, WayType, RelationType}
 import vectorpipe.model.Member
+import vectorpipe.util._
 
 import scala.util.matching.Regex
 import scala.util.{Failure, Success, Try}
@@ -206,6 +208,13 @@ package object osm {
         StructField("role", StringType, nullable = false) ::
         Nil), containsNull = false)
 
+  private lazy val UncompressedMemberSchema = ArrayType(
+    StructType(
+      StructField("type", StringType, nullable = false) ::
+        StructField("ref", LongType, nullable = false) ::
+        StructField("role", StringType, nullable = false) ::
+        Nil), containsNull = false)
+
   private val _compressMemberTypes = (members: Seq[Row]) =>
     members.map { row =>
       val t = Member.typeFromString(row.getAs[String]("type"))
@@ -216,6 +225,21 @@ package object osm {
     }
 
   @transient lazy val compressMemberTypes: UserDefinedFunction = udf(_compressMemberTypes, MemberSchema)
+
+  private val _uncompressMemberTypes = (members: Seq[Row]) =>
+    members.map { row =>
+      val t = row.getAs[Byte]("type") match {
+        case NodeType => "node"
+        case WayType => "way"
+        case RelationType => "relation"
+      }
+      val ref = row.getAs[Long]("ref")
+      val role = row.getAs[String]("role")
+
+      Row(t, ref, role)
+    }
+
+  lazy val uncompressMemberTypes: UserDefinedFunction = udf(_uncompressMemberTypes, UncompressedMemberSchema)
 
   /**
    * Checks if members have byte-encoded types
@@ -277,7 +301,7 @@ package object osm {
       .otherwise(typedLit(Seq.empty[String])) as 'hashtags
 
   def isBuilding(tags: Column): Column =
-    !lower(coalesce(tags.getItem("building"), lit("no"))).isin(FalsyValues: _*) as 'isBuilding
+    !array_contains(splitDelimitedValues(tags.getItem("building")), "no") as 'isBuilding
 
   @transient lazy val isPOI: UserDefinedFunction = udf {
     tags: Map[String, String] => POITags.intersect(tags.keySet).nonEmpty
@@ -292,8 +316,12 @@ package object osm {
   def isWaterway(tags: Column): Column =
     array_intersects(splitDelimitedValues(tags.getItem("waterway")), lit(WaterwayValues.toArray)) as 'isWaterway
 
-  def mergeTags: UserDefinedFunction = udf {
-    (_: Map[String, String]) ++ (_: Map[String, String])
+  def mergeTags: UserDefinedFunction = udf { (a: Map[String, String], b: Map[String, String]) =>
+    mergeMaps(a.mapValues(Set(_)), b.mapValues(Set(_)))(_ ++ _).mapValues(_.mkString(";"))
+  }
+
+  val reduceTags: UserDefinedFunction = udf { tags: Iterable[Map[String, String]] =>
+    tags.map(x => x.mapValues(Set(_))).reduce((a, b) => mergeMaps(a, b)(_ ++ _)).mapValues(_.mkString(";"))
   }
 
   val array_intersects: UserDefinedFunction = udf { (a: Seq[_], b: Seq[_]) =>

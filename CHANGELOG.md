@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Better handling of falsy boolean values in tag UDFs
 - Adds `riverbank`, `stream_end`, `dam`, `weir`, `waterfall`, and `pressurised`
   to the list of waterway features
+- Reorganized repo to put project code into `core` subproject; introduced `examples` subproject
 
 ### Fixed
 
@@ -35,4 +36,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Mark all logger vals and some UDF vals as @transient lazy to avoid Spark serialization issues
 - Properly strip leading and trailing slashes from S3 URIs when exporting vector tiles
-

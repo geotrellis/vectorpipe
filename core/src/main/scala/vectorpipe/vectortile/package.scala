@@ -7,22 +7,80 @@ import geotrellis.vector._
 import geotrellis.vector.reproject._
 import geotrellis.vectortile._
 import org.apache.spark.sql._
+import org.apache.spark.sql.{Encoder, Encoders}
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema
 import org.apache.spark.sql.functions._
 import org.locationtech.jts.{geom => jts}
 
 import scala.concurrent._
 import scala.concurrent.duration._
+import scala.reflect.{classTag, ClassTag}
 import scala.util.{Try, Success, Failure}
 
 package object vectortile {
-  type VectorTileFeature[+G <: Geometry] = Feature[G, Map[String, Value]]
-
   sealed trait LayerMultiplicity { val name: String }
   case class SingleLayer(val name: String) extends LayerMultiplicity
   case class LayerNamesInColumn(val name: String) extends LayerMultiplicity
 
   @transient lazy val logger = org.apache.log4j.Logger.getRootLogger
+
+  type VectorTileFeature[+G <: Geometry] = Feature[G, Map[String, Value]]
+
+  def caseClassToVTFeature[T: ClassTag]: T => VectorTileFeature[Geometry] = {
+    // val accessors = typeOf[T].members.collect {
+    //   case m: MethodSymbol if m.isCaseAccessor => m
+    // }.toList
+    // val jtsGeomType = typeOf[jts.Geometry]
+    // assert(accessors.exists(_.returnType <:< jtsGeomType), "Automatic case class conversion to Features requires a JTS Geometry type")
+
+    val fields = classTag[T].runtimeClass.getDeclaredFields.filterNot(_.isSynthetic).toList
+    val jtsGeomType = classOf[jts.Geometry]
+    assert(fields.exists{ f => classOf[jts.Geometry].isAssignableFrom(f.getType) },
+           "Automatic case class conversion to Features requires a JTS Geometry type")
+
+    { t: T =>
+      fields.foldLeft( (None: Option[Geometry], Map.empty[String, Value]) ) { (state, field) =>
+        field.getType match {
+          case ty if jtsGeomType.isAssignableFrom(ty) =>
+            field.setAccessible(true)
+            val g = Geometry(field.get(t).asInstanceOf[jts.Geometry])
+            field.setAccessible(false)
+            (Some(g), state._2)
+          case ty if ty == classOf[String] =>
+            field.setAccessible(true)
+            val v = field.get(t).asInstanceOf[String]
+            field.setAccessible(false)
+            (state._1, state._2 + (field.getName -> VString(v)))
+          case ty if ty == classOf[Int] =>
+            field.setAccessible(true)
+            val v = field.getInt(t)
+            field.setAccessible(false)
+            (state._1, state._2 + (field.getName -> VInt64(v.toLong)))
+          case ty if ty == classOf[Long] =>
+            field.setAccessible(true)
+            val v = field.getLong(t)
+            field.setAccessible(false)
+            (state._1, state._2 + (field.getName -> VInt64(v)))
+          case ty if ty == classOf[Float] =>
+            field.setAccessible(true)
+            val v = field.getFloat(t)
+            field.setAccessible(false)
+            (state._1, state._2 + (field.getName -> VFloat(v)))
+          case ty if ty == classOf[Double] =>
+            field.setAccessible(true)
+            val v = field.getDouble(t)
+            field.setAccessible(false)
+            (state._1, state._2 + (field.getName -> VDouble(v)))
+          case _ =>
+            logger.warn(s"Dropped ${field.getName} of incompatible type ${field.getType} from vector tile feature")
+            state
+        }
+      } match {
+        case (None, m) => throw new IllegalStateException("JTS Geometry type not found")
+        case (Some(g), attrs) => Feature(g, attrs)
+      }
+    }
+  }
 
   @transient lazy val st_reprojectGeom = udf { (g: jts.Geometry, srcProj: String, destProj: String) =>
     val trans = Proj4Transform(CRS.fromString(srcProj), CRS.fromString(destProj))

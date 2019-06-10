@@ -15,6 +15,8 @@ import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.StringType
 import org.locationtech.jts.{geom => jts}
 
+import scala.reflect.ClassTag
+
 object VectorPipe {
 
   /** Vectortile conversion options.
@@ -46,7 +48,10 @@ object VectorPipe {
     def forAllZoomsWithSrcProjection(zoom: Int, crs: CRS) = Options(zoom, Some(0), crs, None)
   }
 
-  def apply(input: DataFrame, pipeline: vectortile.Pipeline, options: Options): Unit = {
+  def apply[T: ClassTag](input: DataFrame, pipeline: vectortile.Pipeline, options: Options): Unit = {
+    import input.sparkSession.implicits._
+    import vectorpipe.encoders._
+
     val geomColumn = pipeline.geometryColumn
     assert(input.columns.contains(geomColumn) &&
            input.schema(geomColumn).dataType.isInstanceOf[org.apache.spark.sql.jts.AbstractGeometryUDT[jts.Geometry]],
@@ -74,46 +79,49 @@ object VectorPipe {
         SpatialKey(k.col / 2, k.row / 2) }.toSeq
     }
 
-    def generateVectorTiles[G <: Geometry](df: DataFrame, level: LayoutLevel): RDD[(SpatialKey, VectorTile)] = {
+    def generateVectorTiles[G <: Geometry](df: DataFrame, level: LayoutLevel): Dataset[(SpatialKey, Array[Byte])] = {
       val zoom = level.zoom
-      val clip = udf { (g: jts.Geometry, key: GenericRowWithSchema) =>
-        val k = getSpatialKey(key)
-        pipeline.clip(g, k, level)
+
+      val selectedGeometry = pipeline.select match {
+        case None => df
+        case Some(select) => select(df, zoom, keyColumn)
       }
 
-      val selectedGeometry = pipeline
-        .select(df, zoom, keyColumn)
-
-      val clipped = selectedGeometry
+      val keyed = selectedGeometry
         .withColumn(keyColumn, explode(col(keyColumn)))
-        .repartition(col(keyColumn)) // spread copies of possibly ill-tempered geometries around cluster prior to clipping
-        .withColumn(geomColumn, clip(col(geomColumn), col(keyColumn)))
+
+      val clipped = pipeline.clip match {
+        case None => keyed
+        case Some(clipper) =>
+          val clip = udf { (g: jts.Geometry, key: GenericRowWithSchema) =>
+            val k = getSpatialKey(key)
+            clipper(g, k, level)
+          }
+          val toClip = keyed.repartition(col(keyColumn)) // spread copies of possibly ill-tempered geometries around cluster prior to clipping
+          toClip.withColumn(geomColumn, clip(col(geomColumn), col(keyColumn)))
+      }
 
       pipeline.layerMultiplicity match {
         case SingleLayer(layerName) =>
           clipped
-            .rdd
-            .map { r => (getSpatialKey(r, keyColumn), pipeline.pack(r, zoom)) }
-            .groupByKey
-            .map { case (key, feats) =>
+            .map { r => SingleLayerEntry(getSpatialKey(r, keyColumn), pipeline.pack(r, zoom)) }
+            .groupByKey(_.key)
+            .mapGroups { (key: SpatialKey, sleIter: Iterator[SingleLayerEntry]) =>
                val ex = level.layout.mapTransform.keyToExtent(key)
-               key -> buildVectorTile(feats, layerName, ex, options.tileResolution, options.orderAreas)
+               key -> buildVectorTile(sleIter.map(_.feature).toIterable, layerName, ex, options.tileResolution, options.orderAreas).toBytes
             }
         case LayerNamesInColumn(layerNameCol) =>
           assert(selectedGeometry.schema(layerNameCol).dataType == StringType,
                  s"layerMultiplicity=${pipeline.layerMultiplicity} requires String-type column of name ${layerNameCol}")
+
           clipped
-            .rdd
-            .map { r => (getSpatialKey(r, keyColumn), r.getAs[String](layerNameCol) -> pipeline.pack(r, zoom)) }
-            .groupByKey
-            .mapPartitions{ iter: Iterator[(SpatialKey, Iterable[(String, VectorTileFeature[Geometry])])] =>
-              iter.map{ case (key, groupedFeatures) => {
-                val layerFeatures: Map[String, Iterable[VectorTileFeature[Geometry]]] =
-                  groupedFeatures.groupBy(_._1).mapValues(_.map(_._2))
-                val ex = level.layout.mapTransform.keyToExtent(key)
-                key -> buildVectorTile(layerFeatures, ex, options.tileResolution, options.orderAreas)
-              }}
-          }
+            .map { r => MultipleLayerEntry(getSpatialKey(r, keyColumn), r.getAs[String](layerNameCol), pipeline.pack(r, zoom)) }
+            .groupByKey(_.key)
+            .mapGroups{ (key: SpatialKey, iter: Iterator[MultipleLayerEntry]) =>
+              val ex = level.layout.mapTransform.keyToExtent(key)
+              val layerFeatures = iter.toSeq.groupBy(_.layer).mapValues(_.map(_.feature))
+              key -> buildVectorTile(layerFeatures, ex, options.tileResolution, options.orderAreas).toBytes
+            }
       }
     }
 
@@ -134,16 +142,30 @@ object VectorPipe {
         } else {
           df
         }
-      val simplify = udf { g: jts.Geometry => pipeline.simplify(g, level.layout) }
-      val reduced = pipeline
-        .reduce(working, level, keyColumn)
-      val prepared = reduced
-        .withColumn(geomColumn, simplify(col(geomColumn)))
-      val vts = generateVectorTiles(prepared, level)
+
+      val reduced = pipeline.reduce match {
+        case None => working
+        case Some(reduce) => reduce(working, level, keyColumn)
+      }
+
+      val simplified = pipeline.simplify match {
+        case None => reduced
+        case Some(simplifier) =>
+          val simplify = udf { g: jts.Geometry => simplifier(g, level.layout) }
+          reduced.withColumn(geomColumn, simplify(col(geomColumn)))
+      }
+
+      val vts = generateVectorTiles(simplified, level)
       saveVectorTiles(vts, zoom, pipeline.baseOutputURI)
-      prepared.withColumn(keyColumn, reduceKeys(col(keyColumn)))
+
+      simplified.withColumn(keyColumn, reduceKeys(col(keyColumn)))
     }
 
   }
 
+  private case class SingleLayerEntry(key: SpatialKey, feature: VectorTileFeature[Geometry])
+  private case class MultipleLayerEntry(key: SpatialKey, layer: String, feature: VectorTileFeature[Geometry])
+
+  private implicit def sleEncoder: Encoder[SingleLayerEntry] = Encoders.kryo[SingleLayerEntry]
+  private implicit def mleEncoder: Encoder[MultipleLayerEntry] = Encoders.kryo[MultipleLayerEntry]
 }

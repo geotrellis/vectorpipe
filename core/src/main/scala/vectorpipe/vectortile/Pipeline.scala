@@ -97,7 +97,7 @@ trait Pipeline {
    *                          Array[SpatialKey] giving the list of keys that the
    *                          geometry interacts with
    */
-  def reduce(input: DataFrame, layoutLevel: LayoutLevel, keyColumn: String): DataFrame = input
+  val reduce: Option[(DataFrame, LayoutLevel, String) => DataFrame] = None
 
   /*
    * Lower complexity of geometry while moving to less resolute zoom levels.
@@ -111,7 +111,7 @@ trait Pipeline {
    * is a simplifier using JTS's topology-preserving simplifier available in
    * [[vectorpipe.vectortile.Simplify]].
    */
-  def simplify(g: jts.Geometry, layout: LayoutDefinition): jts.Geometry = g
+  val simplify: Option[(jts.Geometry, LayoutDefinition) => jts.Geometry] = None
 
   /**
    * Select geometries for display at a given zoom level.
@@ -129,7 +129,7 @@ trait Pipeline {
    * String-typed column of the name contained in [[layerName]] to indicate
    * which layer a geometry belongs in.
    */
-  def select(input: DataFrame, targetZoom: Int, keyColumn: String): DataFrame = input
+  val select: Option[(DataFrame, Int, String) => DataFrame] = None
 
   /**
    * Clip geometries prior to writing to vector tiles.
@@ -140,7 +140,7 @@ trait Pipeline {
    *
    * Basic (non-no-op) clipping functions can be found in [[Clipping]].
    */
-  def clip(geom: jts.Geometry, key: SpatialKey, layoutLevel: LayoutLevel): jts.Geometry = geom
+  val clip: Option[(jts.Geometry, SpatialKey, LayoutLevel) => jts.Geometry] = None
 
   /**
    * Convert table rows to output features.

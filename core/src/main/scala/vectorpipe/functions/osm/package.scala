@@ -208,13 +208,6 @@ package object osm {
         StructField("role", StringType, nullable = false) ::
         Nil), containsNull = false)
 
-  private lazy val UncompressedMemberSchema = ArrayType(
-    StructType(
-      StructField("type", StringType, nullable = false) ::
-        StructField("ref", LongType, nullable = false) ::
-        StructField("role", StringType, nullable = false) ::
-        Nil), containsNull = false)
-
   private val _compressMemberTypes = (members: Seq[Row]) =>
     members.map { row =>
       val t = Member.typeFromString(row.getAs[String]("type"))
@@ -238,8 +231,6 @@ package object osm {
 
       Row(t, ref, role)
     }
-
-  lazy val uncompressMemberTypes: UserDefinedFunction = udf(_uncompressMemberTypes, UncompressedMemberSchema)
 
   /**
    * Checks if members have byte-encoded types
@@ -301,7 +292,8 @@ package object osm {
       .otherwise(typedLit(Seq.empty[String])) as 'hashtags
 
   def isBuilding(tags: Column): Column =
-    !array_contains(splitDelimitedValues(tags.getItem("building")), "no") as 'isBuilding
+    !lower(coalesce(tags.getItem("building"), lit("no"))).isin(FalsyValues: _*) as 'isBuilding
+    //!array_contains(splitDelimitedValues(tags.getItem("building")), "no") as 'isBuilding
 
   @transient lazy val isPOI: UserDefinedFunction = udf {
     tags: Map[String, String] => POITags.intersect(tags.keySet).nonEmpty

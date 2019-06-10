@@ -191,8 +191,8 @@ package object internal {
           when(!'visible and (lag('tags, 1) over idByUpdated).isNotNull,
             lag('tags, 1) over idByUpdated)
             .otherwise('tags) as 'tags,
-          when(!'visible, compressMemberTypes(lag('members, 1) over idByUpdated))
-            .otherwise(compressMemberTypes('members)) as 'members,
+          when(!'visible, lag('members, 1) over idByUpdated)
+            .otherwise('members) as 'members,
           'changeset,
           'timestamp,
           (lead('timestamp, 1) over idByUpdated) as 'validUntil,

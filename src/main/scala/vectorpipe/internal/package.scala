@@ -132,8 +132,8 @@ package object internal {
     } else {
       @transient val idByVersion = Window.partitionBy('id).orderBy('version)
 
-      // when a node has been deleted, it doesn't include any tags; use a window function to retrieve the last tags
-      // present and use those
+      // when a node has been deleted, it doesn't include any tags or nds; use a window function to retrieve the last
+      // tags and nds present and use those
       history
         .where('type === "way")
         .repartition('id)
@@ -142,7 +142,8 @@ package object internal {
           when(!'visible and (lag('tags, 1) over idByVersion).isNotNull,
             lag('tags, 1) over idByVersion)
             .otherwise('tags) as 'tags,
-          $"nds.ref" as 'nds,
+          when(!'visible, lag($"nds.ref", 1) over idByVersion)
+            .otherwise($"nds.ref") as 'nds,
           'changeset,
           'timestamp,
           (lead('timestamp, 1) over idByVersion) as 'validUntil,
@@ -173,13 +174,6 @@ package object internal {
     } else {
       @transient val idByUpdated = Window.partitionBy('id).orderBy('version)
 
-      val frame =
-        if (hasCompressedMemberTypes(history)) {
-          history
-        } else {
-          history.withColumn("members", compressMemberTypes('members))
-        }
-
       // when an element has been deleted, it doesn't include any tags; use a window function to retrieve the last tags
       // present and use those
       history
@@ -190,7 +184,8 @@ package object internal {
           when(!'visible and (lag('tags, 1) over idByUpdated).isNotNull,
             lag('tags, 1) over idByUpdated)
             .otherwise('tags) as 'tags,
-          'members,
+          when(!'visible, lag('members, 1) over idByUpdated)
+            .otherwise('members) as 'members,
           'changeset,
           'timestamp,
           (lead('timestamp, 1) over idByUpdated) as 'validUntil,

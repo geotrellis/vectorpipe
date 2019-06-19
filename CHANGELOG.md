@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Better handling of falsy boolean values in tag UDFs
 - Adds `riverbank`, `stream_end`, `dam`, `weir`, `waterfall`, and `pressurised`
   to the list of waterway features
+- Populates `nds` and `members` for deleted elements from the previous version
 
 ### Fixed
 

@@ -3,6 +3,8 @@ language: scala
 scala:
   - 2.11.12
 
+jdk: openjdk8
+
 sbt_args: -J-Xmx6g
 
 sudo: false

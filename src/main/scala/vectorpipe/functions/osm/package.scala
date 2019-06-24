@@ -309,8 +309,6 @@ package object osm {
     "created_by",
     "source",
     "comment",
-    "fixme",
-    "note",
     "_ID",
     "CLC",
     "odbl",
@@ -336,7 +334,6 @@ package object osm {
   val UninterestingPrefixes: Set[String] = Set(
     "CLC",
     "tiger",
-    "source",
     "sby",
     "navibot",
     "nps",

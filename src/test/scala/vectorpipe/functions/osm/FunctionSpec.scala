@@ -200,4 +200,25 @@ class FunctionSpec extends FunSpec with TestEnvironment with Matchers {
         .collect() should equal(Array(Row(Map("highway" -> "motorway")), Row(Map("building" -> "yes"))))
     }
   }
+
+  describe("removeSemiInterestingTags") {
+    it("drops semi-interesting tags") {
+      Seq(
+        Map("building" -> "yes", "source" -> "MassGIS")
+      )
+        .toDF("tags")
+        .withColumn("tags", removeSemiInterestingTags('tags))
+        .collect() should equal(Array(Row(Map("building" -> "yes"))))
+    }
+
+    it("drops semi-interesting prefixed tags") {
+      Seq(
+        Map("highway" -> "motorway", "source:geometry" -> "MassGIS")
+      )
+        .toDF("tags")
+        .withColumn("tags", removeSemiInterestingTags('tags))
+        .collect() should equal(Array(Row(Map("highway" -> "motorway"))))
+    }
+  }
+
 }

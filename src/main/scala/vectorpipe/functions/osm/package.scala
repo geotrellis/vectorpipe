@@ -331,6 +331,8 @@ package object osm {
     "dfg"
   ).map(_.toLowerCase())
 
+  val SemiInterestingTags: Set[String] = Set("source").map(_.toLowerCase())
+
   val UninterestingPrefixes: Set[String] = Set(
     "CLC",
     "tiger",
@@ -340,6 +342,8 @@ package object osm {
     "hoot",
     "error"
   ).map(_.toLowerCase())
+
+  val SemiInterestingPrefixes: Set[String] = Set("source").map(_.toLowerCase())
 
   val UninterestingSingleTags: Set[String] = Set("colour").map(_.toLowerCase())
 
@@ -353,5 +357,14 @@ package object osm {
         !UninterestingPrefixes.exists(p => k.startsWith(s"$p:")) &&
         !k.contains("=") &&
         !k.contains(" ")
+    })
+
+  lazy val removeSemiInterestingTags: UserDefinedFunction = udf(_removeSemiInterestingTags)
+
+  private val _removeSemiInterestingTags = (tags: Map[String, String]) =>
+    tags.filterKeys(key => {
+      val k = key.toLowerCase
+      !SemiInterestingTags.contains(k) &&
+        !SemiInterestingPrefixes.exists(p => k.startsWith(s"$p:"))
     })
 }

@@ -137,6 +137,7 @@ object VectorPipe {
       val simplify = udf { g: jts.Geometry => pipeline.simplify(g, level.layout) }
       val reduced = pipeline
         .reduce(working, level, keyColumn)
+        .localCheckpoint()
       val prepared = reduced
         .withColumn(geomColumn, simplify(col(geomColumn)))
       val vts = generateVectorTiles(prepared, level)

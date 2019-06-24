@@ -76,21 +76,21 @@ object VectorPipe {
 
     def generateVectorTiles[G <: Geometry](df: DataFrame, level: LayoutLevel): RDD[(SpatialKey, VectorTile)] = {
       val zoom = level.zoom
-      val clip = udf { (g: jts.Geometry, key: GenericRowWithSchema) =>
+      val clip = udf { (g: jts.Geometry, key: GenericRowWithSchema, layerName: String) =>
         val k = getSpatialKey(key)
-        pipeline.clip(g, k, level)
+        pipeline.clip(g, k, layerName, level)
       }
 
       val selectedGeometry = pipeline
         .select(df, zoom, keyColumn)
 
-      val clipped = selectedGeometry
-        .withColumn(keyColumn, explode(col(keyColumn)))
-        .repartition(col(keyColumn)) // spread copies of possibly ill-tempered geometries around cluster prior to clipping
-        .withColumn(geomColumn, clip(col(geomColumn), col(keyColumn)))
-
       pipeline.layerMultiplicity match {
         case SingleLayer(layerName) =>
+          val clipped = selectedGeometry
+            .withColumn(keyColumn, explode(col(keyColumn)))
+            .repartition(col(keyColumn)) // spread copies of possibly ill-tempered geometries around cluster prior to clipping
+            .withColumn(geomColumn, clip(col(geomColumn), col(keyColumn), lit(layerName)))
+
           clipped
             .rdd
             .map { r => (getSpatialKey(r, keyColumn), pipeline.pack(r, zoom)) }
@@ -102,6 +102,11 @@ object VectorPipe {
         case LayerNamesInColumn(layerNameCol) =>
           assert(selectedGeometry.schema(layerNameCol).dataType == StringType,
                  s"layerMultiplicity=${pipeline.layerMultiplicity} requires String-type column of name ${layerNameCol}")
+          val clipped = selectedGeometry
+            .withColumn(keyColumn, explode(col(keyColumn)))
+            .repartition(col(keyColumn)) // spread copies of possibly ill-tempered geometries around cluster prior to clipping
+            .withColumn(geomColumn, clip(col(geomColumn), col(keyColumn), col(layerNameCol)))
+
           clipped
             .rdd
             .map { r => (getSpatialKey(r, keyColumn), r.getAs[String](layerNameCol) -> pipeline.pack(r, zoom)) }

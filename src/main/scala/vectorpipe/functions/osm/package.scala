@@ -298,4 +298,63 @@ package object osm {
 
   val array_intersects: UserDefinedFunction = udf { (a: Seq[_], b: Seq[_]) =>
     a.intersect(b).nonEmpty}
+
+  // from the top 200 single-use tags in 20190610's history dump
+  // select k, count(*) from history
+  // cross join unnest(map_keys(tags)) as t (k)
+  // where cardinality(tags) = 1
+  // group by k
+  // order by count(*) desc
+  val UninterestingTags: Set[String] = Set(
+    "created_by",
+    "source",
+    "comment",
+    "fixme",
+    "note",
+    "_ID",
+    "CLC",
+    "odbl",
+    "origen",
+    "converted_by",
+    "todo",
+    "import_tools",
+    "ID",
+    "importuuid",
+    "attribution",
+    "curve_geometry",
+    "memphis_fixup",
+    "importance",
+    "description=ru-mos-325",
+    "stamväg",
+    "_FID_",
+    "1",
+    "_description_",
+    "ccpr",
+    "dfg"
+  ).map(_.toLowerCase())
+
+  val UninterestingPrefixes: Set[String] = Set(
+    "CLC",
+    "tiger",
+    "source",
+    "sby",
+    "navibot",
+    "nps",
+    "hoot",
+    "error"
+  ).map(_.toLowerCase())
+
+  val UninterestingSingleTags: Set[String] = Set("colour").map(_.toLowerCase())
+
+  lazy val removeUninterestingTags: UserDefinedFunction = udf(_removeUninterestingTags)
+
+  private val _removeUninterestingTags = (tags: Map[String, String]) =>
+    tags.filterKeys(key => {
+      val k = key.toLowerCase
+      !UninterestingTags.contains(k) &&
+        !(tags.size == 1 && UninterestingSingleTags.contains(k)) &&
+        !UninterestingPrefixes.exists(p => k.startsWith(s"$p:")) &&
+        !k.contains("=") &&
+        !k.contains(" ")
+    })
 }

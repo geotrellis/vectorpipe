@@ -1,5 +1,7 @@
 package vectorpipe.vectortile
 
+import java.net.URI
+
 import geotrellis.spark.SpatialKey
 import geotrellis.spark.tiling._
 import geotrellis.vector.{Feature, Geometry}
@@ -48,7 +50,7 @@ trait Pipeline {
   /**
    * The root URI for output.
    */
-  val baseOutputURI: java.net.URI
+  val baseOutputURI: Option[URI]
 
   /**
    * Name of the column containing the JTS geometry.

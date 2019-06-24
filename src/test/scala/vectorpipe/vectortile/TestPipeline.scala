@@ -1,18 +1,18 @@
 package vectorpipe.vectortile
 
+import java.net.URI
+
 import geotrellis.raster.RasterExtent
 import geotrellis.spark.SpatialKey
 import geotrellis.spark.tiling._
 import geotrellis.vector._
 import geotrellis.vectortile._
-
 import org.apache.spark.sql.{DataFrame, Row}
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema
 import org.apache.spark.sql.functions
 import org.apache.spark.sql.functions.{array, col, explode, lit, sum}
 import org.apache.spark.sql.types._
 import org.locationtech.jts.{geom => jts}
-
 import vectorpipe._
 import vectorpipe.vectortile._
 
@@ -21,7 +21,7 @@ object Bin {
   def apply(tup: (Int, Int)): Bin = Bin(tup._1, tup._2)
 }
 
-case class TestPipeline(geometryColumn: String, baseOutputURI: java.net.URI, gridResolution: Int) extends Pipeline {
+case class TestPipeline(geometryColumn: String, baseOutputURI: Option[URI], gridResolution: Int) extends Pipeline {
   val weightedCentroid = new WeightedCentroid
 
   val layerMultiplicity = SingleLayer("points")

@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Support for `nds` in augmented diff GeoJSON (matching
     [`osm-replication-streams@^0.7.0`](https://github.com/mojodna/osm-replication-streams/tree/v0.7.0)
     output)
+- `VectorPipe.apply()` now returns `Dataset[BinaryTile]` with `(zoom, x, y,
+    bytes)`, suitable for extracting tiles from
 
 ### Changed
 
@@ -24,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Adds `riverbank`, `stream_end`, `dam`, `weir`, `waterfall`, and `pressurised`
   to the list of waterway features
 - Populates `nds` and `members` for deleted elements from the previous version
+- `baseOutputURI` is now `Option[URI]`; if absent, MVTs won't be written
 
 ### Fixed
 

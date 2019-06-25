@@ -133,48 +133,50 @@ object VectorPipe {
     // 6.   Simplify
     // 7.   Re-key
 
-    var tiles: Dataset[BinaryTile] = spark.emptyDataset[BinaryTile]
+    val (_, renderedTiles) = Range
+      .Int(maxZoom, minZoom, -1)
+      .inclusive
+      .foldLeft((reprojected, spark.emptyDataset[BinaryTile])) {
+        case ((df, tiles), zoom) =>
+          val level = zls.levelForZoom(zoom)
+          val working =
+            if (zoom == maxZoom) {
+              df.withColumn(keyColumn, keyTo(level.layout)(col(geomColumn)))
+            } else {
+              df
+            }
+          val simplify = udf { g: jts.Geometry => pipeline.simplify(g, level.layout) }
+          val reduced = pipeline
+            .reduce(working, level, keyColumn)
+          val prepared = reduced
+            .withColumn(geomColumn, simplify(col(geomColumn)))
+          val vts = generateVectorTiles(prepared, level)
 
-    Range.Int(maxZoom, minZoom, -1).inclusive.foldLeft(reprojected){ (df, zoom) =>
-      val level = zls.levelForZoom(zoom)
-      val working =
-        if (zoom == maxZoom) {
-          df.withColumn(keyColumn, keyTo(level.layout)(col(geomColumn)))
-        } else {
-          df
-        }
-      val simplify = udf { g: jts.Geometry => pipeline.simplify(g, level.layout) }
-      val reduced = pipeline
-        .reduce(working, level, keyColumn)
-      val prepared = reduced
-        .withColumn(geomColumn, simplify(col(geomColumn)))
-      val vts = generateVectorTiles(prepared, level)
+          pipeline.baseOutputURI.foreach(saveVectorTiles(vts, zoom, _))
 
-      pipeline.baseOutputURI.foreach(saveVectorTiles(vts, zoom, _))
+          val unionedTiles = tiles.union(vts.map {
+            tile =>
+            val byteStream = new ByteArrayOutputStream()
 
-      tiles = tiles.union(vts.map {
-        tile =>
-        val byteStream = new ByteArrayOutputStream()
+            try {
+              val gzipStream = new GZIPOutputStream(byteStream)
 
-        try {
-          val gzipStream = new GZIPOutputStream(byteStream)
+              try {
+                gzipStream.write(tile._2.toBytes)
+              } finally {
+                gzipStream.close()
+              }
+            } finally {
+              byteStream.close()
+            }
 
-          try {
-            gzipStream.write(tile._2.toBytes)
-          } finally {
-            gzipStream.close()
-          }
-        } finally {
-          byteStream.close()
-        }
+            BinaryTile(zoom, tile._1.col, tile._1.row, byteStream.toByteArray)
+          }.toDS())
 
-        BinaryTile(zoom, tile._1.col, tile._1.row, byteStream.toByteArray)
-      }.toDS())
-
-      prepared.withColumn(keyColumn, reduceKeys(col(keyColumn)))
+          (prepared.withColumn(keyColumn, reduceKeys(col(keyColumn))), unionedTiles)
     }
 
-    tiles
+    renderedTiles
   }
 
 }

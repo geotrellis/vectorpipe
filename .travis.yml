@@ -4,7 +4,7 @@ jdk:
   - openjdk8
 
 scala:
-  - 2.11.12
+  - "2.11.12"
 
 sbt_args: -J-Xmx6g
 

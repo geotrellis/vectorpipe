@@ -328,7 +328,38 @@ package object osm {
     "1",
     "_description_",
     "ccpr",
-    "dfg"
+    "dfg",
+    // https://github.com/gravitystorm/openstreetmap-carto/blob/master/openstreetmap-carto.lua#L51
+    "source_ref",
+    "ref:UrbIS",
+    "accuracy:meters",
+    "sub_sea:type",
+    "waterway:type",
+    "statscan:rbuid",
+    "ref:ruian:addr",
+    "ref:ruian",
+    "building:ruian:type",
+    "dibavod:id",
+    "uir_adr:ADRESA_KOD",
+    "gst:feat_id",
+    "maaamet:ETAK",
+    "ref:FR:FANTOIR",
+    "3dshapes:ggmodelk",
+    "AND_nosr_r",
+    "OPPDATERIN",
+    "addr:city:simc",
+    "addr:street:sym_ul",
+    "building:usage:pl",
+    "building:use:pl",
+    "teryt:simc",
+    "raba:id",
+    "dcgis:gis_id",
+    "nycdoitt:bin",
+    "chicago:building_id",
+    "lojic:bgnum",
+    "massgis:way_id",
+    "OBJTYPE",
+    "SK53_bulk:load"
   ).map(_.toLowerCase())
 
   val SemiInterestingTags: Set[String] = Set("source").map(_.toLowerCase())
@@ -340,7 +371,24 @@ package object osm {
     "navibot",
     "nps",
     "hoot",
-    "error"
+    "error",
+    "project",
+    // https://github.com/gravitystorm/openstreetmap-carto/blob/master/openstreetmap-carto.lua#L51
+    "geobase",
+    "canvec",
+    "osak",
+    "kms",
+    "ngbe",
+    "it:fvg",
+    "KSJ2",
+    "yh",
+    "LINZ2OSM",
+    "LINZ",
+    "WroclawGIS",
+    "naptap",
+    "gnis",
+    "NHD",
+    "mvdgis"
   ).map(_.toLowerCase())
 
   val SemiInterestingPrefixes: Set[String] = Set("source").map(_.toLowerCase())

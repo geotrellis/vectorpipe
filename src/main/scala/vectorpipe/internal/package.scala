@@ -132,8 +132,8 @@ package object internal {
     } else {
       @transient val idByVersion = Window.partitionBy('id).orderBy('version)
 
-      // when a node has been deleted, it doesn't include any tags; use a window function to retrieve the last tags
-      // present and use those
+      // when a node has been deleted, it doesn't include any tags or nds; use a window function to retrieve the last
+      // tags and nds present and use those
       history
         .where('type === "way")
         .repartition('id)
@@ -173,13 +173,6 @@ package object internal {
       history
     } else {
       @transient val idByUpdated = Window.partitionBy('id).orderBy('version)
-
-      val frame =
-        if (hasCompressedMemberTypes(history)) {
-          history
-        } else {
-          history.withColumn("members", compressMemberTypes('members))
-        }
 
       // when an element has been deleted, it doesn't include any tags; use a window function to retrieve the last tags
       // present and use those

@@ -205,7 +205,9 @@ package object internal {
     * @return Nodes as Point geometries
     */
   def constructPointGeometries(nodes: DataFrame): DataFrame = {
-    import nodes.sparkSession.implicits._
+    val spark = nodes.sparkSession
+    import spark.implicits._
+    spark.withJTS
 
     val ns = preprocessNodes(nodes)
       .where(size('tags) > 0)

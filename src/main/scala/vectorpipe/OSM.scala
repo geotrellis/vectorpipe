@@ -29,7 +29,10 @@ object OSM {
     * @return DataFrame containing geometries.
     */
   def toGeometry(elements: DataFrame): DataFrame = {
-    import elements.sparkSession.implicits._
+    val spark = elements.sparkSession
+    import spark.implicits._
+    spark.withJTS
+
     val st_pointToGeom = org.apache.spark.sql.functions.udf { pt: jts.Point => pt.asInstanceOf[jts.Geometry] }
 
     val nodes = preprocessNodes(elements)

@@ -5,6 +5,7 @@ import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{Column, DataFrame, Row}
 import vectorpipe.model.Member
+import vectorpipe.util._
 
 import scala.util.matching.Regex
 import scala.util.{Failure, Success, Try}
@@ -292,8 +293,12 @@ package object osm {
   def isWaterway(tags: Column): Column =
     array_intersects(splitDelimitedValues(tags.getItem("waterway")), lit(WaterwayValues.toArray)) as 'isWaterway
 
-  def mergeTags: UserDefinedFunction = udf {
-    (_: Map[String, String]) ++ (_: Map[String, String])
+  def mergeTags: UserDefinedFunction = udf { (a: Map[String, String], b: Map[String, String]) =>
+    mergeMaps(a.mapValues(Set(_)), b.mapValues(Set(_)))(_ ++ _).mapValues(_.mkString(";"))
+  }
+
+  val reduceTags: UserDefinedFunction = udf { tags: Iterable[Map[String, String]] =>
+    tags.map(x => x.mapValues(Set(_))).reduce((a, b) => mergeMaps(a, b)(_ ++ _)).mapValues(_.mkString(";"))
   }
 
   val array_intersects: UserDefinedFunction = udf { (a: Seq[_], b: Seq[_]) =>

@@ -208,7 +208,7 @@ package object internal {
     import nodes.sparkSession.implicits._
 
     val ns = preprocessNodes(nodes)
-      .where(size('tags) > 0)
+      .where(size(removeSemiInterestingTags('tags)) > 0)
 
     ns
       // fetch the last version of a node within a single changeset

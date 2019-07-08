@@ -3,19 +3,10 @@ package vectorpipe
 import java.sql.Timestamp
 
 import org.locationtech.jts.{geom => jts}
-import geotrellis.vector._
-import org.apache.log4j.Logger
 import org.apache.spark.sql._
-import org.apache.spark.sql.catalyst.encoders.RowEncoder
-import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema
-import org.apache.spark.sql.expressions.Window
 import org.apache.spark.sql.functions._
-import org.apache.spark.sql.jts.GeometryUDT
-import org.apache.spark.sql.types._
-import org.locationtech.geomesa.spark.jts._
-import vectorpipe.functions.osm._
+import vectorpipe.functions.osm.removeUninterestingTags
 import vectorpipe.internal._
-import vectorpipe.relations.{MultiPolygons, Routes}
 
 object OSM {
   /**
@@ -25,12 +16,15 @@ object OSM {
     * (according to OSM rules for defining areas), MultiPolygons for multipolygon and boundary relations, and
     * LineStrings / MultiLineStrings for route relations.
     *
-    * @param elements DataFrame containing node, way, and relation elements
+    * @param input DataFrame containing node, way, and relation elements
     * @return DataFrame containing geometries.
     */
-  def toGeometry(elements: DataFrame): DataFrame = {
-    import elements.sparkSession.implicits._
+  def toGeometry(input: DataFrame): DataFrame = {
+    import input.sparkSession.implicits._
     val st_pointToGeom = org.apache.spark.sql.functions.udf { pt: jts.Point => pt.asInstanceOf[jts.Geometry] }
+
+    val elements = input
+      .withColumn("tags", removeUninterestingTags('tags))
 
     val nodes = preprocessNodes(elements)
 

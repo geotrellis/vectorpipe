@@ -26,12 +26,20 @@ package object vectortile {
 
   @transient lazy val st_reprojectGeom = udf { (g: jts.Geometry, srcProj: String, destProj: String) =>
     val trans = Proj4Transform(CRS.fromString(srcProj), CRS.fromString(destProj))
-    val gt = Geometry(g)
-    gt.reproject(trans).jtsGeom
+    if (Option(g).isDefined) {
+      val gt = Geometry(g)
+      gt.reproject(trans).jtsGeom
+    } else {
+      null
+    }
   }
 
   def keyTo(layout: LayoutDefinition) = udf { g: jts.Geometry =>
-    layout.mapTransform.keysForGeometry(geotrellis.vector.Geometry(g)).toArray
+    if (Option(g).isDefined) {
+      layout.mapTransform.keysForGeometry(geotrellis.vector.Geometry(g)).toArray
+    } else {
+      Array.empty[SpatialKey]
+    }
   }
 
   def getSpatialKey(k: GenericRowWithSchema): SpatialKey = SpatialKey(k.getInt(0), k.getInt(1))

@@ -28,7 +28,8 @@ lazy val commonSettings = Seq(
     "-feature",
     "-Ywarn-dead-code",
     "-Ypartial-unification",
-    "-Ypatmat-exhaust-depth", "100"
+    "-Ypatmat-exhaust-depth", "100",
+    "-Ywarn-unused-import"
   ),
 
   scalacOptions in (Compile, doc) += "-groups",

@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [1.0.0] - 2019-07-09
+
+### Added
+
 - RELEASING.md - Instructions for releasing new versions of this project
 - Support for semicolon-delimited tag values in UDFs, e.g. `shop=bakery;dairy`
 - Support for `nds` in augmented diff GeoJSON (matching
@@ -39,4 +47,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Mark all logger vals and some UDF vals as @transient lazy to avoid Spark serialization issues
 - Properly strip leading and trailing slashes from S3 URIs when exporting vector tiles
-

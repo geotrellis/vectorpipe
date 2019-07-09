@@ -1,13 +1,10 @@
 package vectorpipe
 
-import org.locationtech.geomesa.spark.jts._
 import org.scalatest._
 import vectorpipe.{internal => ProcessOSM}
 import vectorpipe.functions.osm.ensureCompressedMembers
 
 class ProcessOSMTest extends FunSpec with TestEnvironment with Matchers {
-  ss.withJTS
-
   val orcFile = getClass.getResource("/isle-of-man-latest.osm.orc").getPath
 
   val elements = ss.read.orc(orcFile)

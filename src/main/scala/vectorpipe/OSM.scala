@@ -21,6 +21,7 @@ object OSM {
     */
   def toGeometry(input: DataFrame): DataFrame = {
     import input.sparkSession.implicits._
+
     val st_pointToGeom = org.apache.spark.sql.functions.udf { pt: jts.Point => pt.asInstanceOf[jts.Geometry] }
 
     val elements = input

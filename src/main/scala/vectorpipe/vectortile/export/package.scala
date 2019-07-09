@@ -3,14 +3,13 @@ package vectorpipe.vectortile
 import com.amazonaws.services.s3.model.CannedAccessControlList._
 import geotrellis.spark.SpatialKey
 import geotrellis.spark.io.hadoop._
-import geotrellis.spark.io.index.zcurve.Z2
 import geotrellis.spark.io.s3._
 import geotrellis.vectortile._
 import org.apache.spark.rdd.RDD
 
 import java.net.URI
 import java.io.ByteArrayOutputStream
-import java.util.zip.{GZIPOutputStream, ZipEntry, ZipOutputStream}
+import java.util.zip.GZIPOutputStream
 
 package object export {
   def saveVectorTiles(vectorTiles: RDD[(SpatialKey, VectorTile)], zoom: Int, uri: URI): Unit = {

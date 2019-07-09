@@ -210,7 +210,7 @@ package object internal {
     spark.withJTS
 
     val ns = preprocessNodes(nodes)
-      .where(size('tags) > 0)
+      .where(size(removeSemiInterestingTags('tags)) > 0)
 
     ns
       // fetch the last version of a node within a single changeset

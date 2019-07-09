@@ -14,6 +14,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Support for `nds` in augmented diff GeoJSON (matching
     [`osm-replication-streams@^0.7.0`](https://github.com/mojodna/osm-replication-streams/tree/v0.7.0)
     output)
+- "Uninteresting" tags are dropped when processing OSM inputs; this will result
+    in fewer point features being generated (as those nodes previously had tags
+    applied).
 
 ### Changed
 

@@ -6,20 +6,26 @@ import geotrellis.spark.io.hadoop._
 import geotrellis.spark.io.s3._
 import geotrellis.vectortile._
 import org.apache.spark.rdd.RDD
-
 import java.net.URI
 import java.io.ByteArrayOutputStream
 import java.util.zip.GZIPOutputStream
 
+import org.apache.spark.sql.Dataset
+import vectorpipe.Tile
+
 package object export {
-  def saveVectorTiles(vectorTiles: RDD[(SpatialKey, VectorTile)], zoom: Int, uri: URI): Unit = {
+  def saveVectorTiles(vectorTiles: Dataset[Tile], zoom: Int, uri: URI): Unit = {
+    import vectorTiles.sparkSession.implicits._
+
+    val vts = vectorTiles.map(x => (x.sk, x.tile)).rdd
+
     uri.getScheme match {
       case "s3" =>
         val path = uri.getPath
         val prefix = path.stripPrefix("/").stripSuffix("/")
-        saveToS3(vectorTiles, zoom, uri.getAuthority, prefix)
+        saveToS3(vts, zoom, uri.getAuthority, prefix)
       case _ =>
-        saveHadoop(vectorTiles, zoom, uri)
+        saveHadoop(vts, zoom, uri)
     }
   }
 

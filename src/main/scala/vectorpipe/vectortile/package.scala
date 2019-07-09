@@ -127,21 +127,6 @@ package object vectortile {
   }
 
   def buildVectorTile[G <: Geometry](
-    features: Iterable[VectorTileFeature[G]],
-    layerName: String,
-    ex: Extent,
-    tileWidth: Int,
-    sorted: Boolean
-  ): VectorTile = {
-    val layer =
-      if (sorted)
-        buildSortedLayer(features, layerName, ex, tileWidth)
-      else
-        buildLayer(features, layerName, ex, tileWidth)
-    VectorTile(Map(layerName -> layer), ex)
-  }
-
-  def buildVectorTile[G <: Geometry](
     layerFeatures: Map[String, Iterable[VectorTileFeature[G]]],
     ex: Extent,
     tileWidth: Int,

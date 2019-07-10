@@ -140,7 +140,7 @@ trait Pipeline {
    *
    * Basic (non-no-op) clipping functions can be found in [[Clipping]].
    */
-  def clip(geom: jts.Geometry, key: SpatialKey, layoutLevel: LayoutLevel): jts.Geometry = geom
+  def clip(geom: jts.Geometry, key: SpatialKey, layer: String, layoutLevel: LayoutLevel): jts.Geometry = geom
 
   /**
    * Convert table rows to output features.

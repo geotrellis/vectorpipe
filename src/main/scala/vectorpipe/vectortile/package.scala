@@ -39,7 +39,7 @@ package object vectortile {
   }
 
   def keyTo(layout: LayoutDefinition) = udf { g: jts.Geometry =>
-    if (Option(g).isDefined) {
+    if (Option(g).isDefined && !g.isEmpty) {
       layout.mapTransform.keysForGeometry(geotrellis.vector.Geometry(g)).toArray
     } else {
       Array.empty[SpatialKey]

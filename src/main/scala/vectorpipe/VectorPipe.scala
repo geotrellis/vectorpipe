@@ -59,7 +59,11 @@ object VectorPipe {
     val zls = ZoomedLayoutScheme(destCRS, options.tileResolution)
 
     // Reproject geometries if needed
-    val reprojected = input.withColumn(geomColumn, st_reprojectGeom(col(geomColumn), lit(srcCRS.toProj4String), lit(destCRS.toProj4String)))
+    val reprojected = if (srcCRS != destCRS) {
+      input.withColumn(geomColumn, st_reprojectGeom(col(geomColumn), lit(srcCRS.toProj4String), lit(destCRS.toProj4String)))
+    } else {
+      input
+    }
 
     // Prefilter data for first iteration and key geometries to initial layout
     val keyColumn = {
@@ -137,6 +141,7 @@ object VectorPipe {
       val simplify = udf { g: jts.Geometry => pipeline.simplify(g, level.layout) }
       val reduced = pipeline
         .reduce(working, level, keyColumn)
+        .localCheckpoint()
       val prepared = reduced
         .withColumn(geomColumn, simplify(col(geomColumn)))
       val vts = generateVectorTiles(prepared, level)

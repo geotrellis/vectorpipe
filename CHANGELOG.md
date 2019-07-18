@@ -9,11 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [1.0.0] - 2019-07-09
+
+### Added
+
 - RELEASING.md - Instructions for releasing new versions of this project
 - Support for semicolon-delimited tag values in UDFs, e.g. `shop=bakery;dairy`
 - Support for `nds` in augmented diff GeoJSON (matching
     [`osm-replication-streams@^0.7.0`](https://github.com/mojodna/osm-replication-streams/tree/v0.7.0)
     output)
+- "Uninteresting" tags are dropped when processing OSM inputs; this will result
+    in fewer point features being generated (as those nodes previously had tags
+    applied).
 
 ### Changed
 
@@ -38,4 +49,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Mark all logger vals and some UDF vals as @transient lazy to avoid Spark serialization issues
 - Properly strip leading and trailing slashes from S3 URIs when exporting vector tiles
-

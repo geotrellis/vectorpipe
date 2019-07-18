@@ -6,15 +6,9 @@ import geotrellis.spark.io.kryo.KryoRegistrator
 import org.apache.spark.SparkConf
 import org.apache.spark.serializer.KryoSerializer
 import org.apache.spark.sql._
-import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema
 import org.apache.spark.sql.functions._
-import org.apache.spark.sql.jts._
 import org.scalatest.prop.{TableDrivenPropertyChecks, Tables}
 import org.scalatest.{Matchers, PropSpec}
-import vectorpipe._
-import vectorpipe.functions._
-import vectorpipe.functions.osm._
-import vectorpipe.internal.{VersionedElementEncoder, VersionedElementSchema}
 import vectorpipe.model.Member
 import org.locationtech.jts.{geom => jts}
 import org.locationtech.jts.io.WKTReader
@@ -100,8 +94,6 @@ class MultiPolygonRelationReconstructionSpec extends PropSpec with TableDrivenPr
       forAll(examples) { fixture =>
         import fixture.members.sparkSession.implicits._
 
-        implicit val encoder: Encoder[Row] = VersionedElementEncoder
-
         // TODO rewrite fixtures with additional columns added below
         val actual: Seq[jts.Geometry] = asGeoms(fixture.members
           .withColumn("version", lit(1))
@@ -122,9 +114,9 @@ class MultiPolygonRelationReconstructionSpec extends PropSpec with TableDrivenPr
               val geoms = members.map(_.getAs[jts.Geometry]("geometry"))
               val mp = build(id, version, updated, types, roles, geoms).orNull
 
-              new GenericRowWithSchema(Array(changeset, id, version, minorVersion, updated, validUntil, mp),
-                VersionedElementSchema): Row
+              (changeset, id, version, minorVersion, updated, validUntil, mp)
           }
+          .toDF("changeset", "id", "version", "minorVersion", "updated", "validUntil", "geom")
         ).flatMap(Option.apply(_))
 
         val expected = fixture.wkt.map(wktReader.read)

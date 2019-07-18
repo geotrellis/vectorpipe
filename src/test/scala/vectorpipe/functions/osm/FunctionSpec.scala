@@ -1,5 +1,6 @@
 package vectorpipe.functions.osm
 
+import org.apache.spark.sql.Row
 import org.scalatest.{FunSpec, Matchers}
 import vectorpipe.TestEnvironment
 
@@ -158,4 +159,66 @@ class FunctionSpec extends FunSpec with TestEnvironment with Matchers {
         .count should equal(0)
     }
   }
+
+  describe("removeUninterestingTags") {
+    it("drops uninteresting tags") {
+      Seq(
+        Map("building" -> "yes", "created_by" -> "JOSM")
+      )
+        .toDF("tags")
+        .withColumn("tags", removeUninterestingTags('tags))
+        .collect() should equal(Array(Row(Map("building" -> "yes"))))
+    }
+
+    it("drops uninteresting single tags") {
+      Seq(
+        Map("building" -> "yes", "colour" -> "grey"),
+        Map("colour" -> "grey")
+      )
+        .toDF("tags")
+        .withColumn("tags", removeUninterestingTags('tags))
+        .collect() should equal(Array(Row(Map("building" -> "yes", "colour" -> "grey")), Row(Map.empty)))
+    }
+
+    it("drops uninteresting prefixed tags") {
+      Seq(
+        Map("highway" -> "motorway", "tiger:reviewed" -> "no"),
+        Map("building" -> "yes", "CLC:something" -> "something")
+      )
+        .toDF("tags")
+        .withColumn("tags", removeUninterestingTags('tags))
+        .collect() should equal(Array(Row(Map("highway" -> "motorway")), Row(Map("building" -> "yes"))))
+    }
+
+    it("drops tags with invalid keys") {
+      Seq(
+        Map("highway" -> "motorway", "k=v" -> "value"),
+        Map("building" -> "yes", "land use" -> "something")
+      )
+        .toDF("tags")
+        .withColumn("tags", removeUninterestingTags('tags))
+        .collect() should equal(Array(Row(Map("highway" -> "motorway")), Row(Map("building" -> "yes"))))
+    }
+  }
+
+  describe("removeSemiInterestingTags") {
+    it("drops semi-interesting tags") {
+      Seq(
+        Map("building" -> "yes", "source" -> "MassGIS")
+      )
+        .toDF("tags")
+        .withColumn("tags", removeSemiInterestingTags('tags))
+        .collect() should equal(Array(Row(Map("building" -> "yes"))))
+    }
+
+    it("drops semi-interesting prefixed tags") {
+      Seq(
+        Map("highway" -> "motorway", "source:geometry" -> "MassGIS")
+      )
+        .toDF("tags")
+        .withColumn("tags", removeSemiInterestingTags('tags))
+        .collect() should equal(Array(Row(Map("highway" -> "motorway"))))
+    }
+  }
+
 }

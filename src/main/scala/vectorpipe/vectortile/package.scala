@@ -27,8 +27,12 @@ package object vectortile {
   @transient lazy val st_reprojectGeom = udf { (g: jts.Geometry, srcProj: String, destProj: String) =>
     val trans = Proj4Transform(CRS.fromString(srcProj), CRS.fromString(destProj))
     if (Option(g).isDefined) {
-      val gt = Geometry(g)
-      gt.reproject(trans).jtsGeom
+      if (g.isEmpty)
+        g
+      else {
+        val gt = Geometry(g)
+        gt.reproject(trans).jtsGeom
+      }
     } else {
       null
     }

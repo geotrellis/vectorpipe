@@ -13,6 +13,7 @@ import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.StringType
+import org.apache.spark.storage.StorageLevel
 import org.locationtech.jts.{geom => jts}
 
 object VectorPipe {
@@ -141,7 +142,7 @@ object VectorPipe {
       val simplify = udf { g: jts.Geometry => pipeline.simplify(g, level.layout) }
       val reduced = pipeline
         .reduce(working, level, keyColumn)
-        .localCheckpoint()
+        .persist(StorageLevel.MEMORY_AND_DISK_SER)
       val prepared = reduced
         .withColumn(geomColumn, simplify(col(geomColumn)))
       val vts = generateVectorTiles(prepared, level)

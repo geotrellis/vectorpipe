@@ -277,6 +277,8 @@ package object osm {
     when(comment.isNotNull and length(comment) > 0, extractHashtags(comment))
       .otherwise(typedLit(Seq.empty[String])) as 'hashtags
 
+  def isTagged(tags: Column): Column = size(map_keys(tags)) > 0 as 'isTagged
+
   def isBuilding(tags: Column): Column =
     !lower(coalesce(tags.getItem("building"), lit("no"))).isin(FalsyValues: _*) as 'isBuilding
 

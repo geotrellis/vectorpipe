@@ -4,7 +4,6 @@ import geotrellis.proj4._
 import geotrellis.spark.SpatialKey
 import geotrellis.spark.tiling.LayoutDefinition
 import geotrellis.vector._
-import geotrellis.vector.reproject._
 import geotrellis.vectortile._
 import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema

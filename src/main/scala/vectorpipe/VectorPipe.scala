@@ -26,6 +26,8 @@ object VectorPipe {
     * @param  srcCRS              CRS of the original geometry
     * @param  destCRS             (optional) The CRS to produce vectortiles into.  When omitted,
     *                             defaults to [[WebMercator]].
+    * @param  useCaching          Allows intermediate results to be cached to disk.  May require
+    *                             additional disk space on executor nodes.
     * @param  orderAreas          Sorts polygonal geometries in vectortiles.  In case of overlaps,
     *                             smaller geometries will draw on top of larger ones.
     * @param  tileResolution      Resolution of output tiles; i.e., the number of discretized bins
@@ -37,6 +39,7 @@ object VectorPipe {
     minZoom: Option[Int],
     srcCRS: CRS,
     destCRS: Option[CRS],
+    useCaching: Boolean = false,
     orderAreas: Boolean = false,
     tileResolution: Int = 4096
   )
@@ -142,8 +145,8 @@ object VectorPipe {
       val simplify = udf { g: jts.Geometry => pipeline.simplify(g, level.layout) }
       val reduced = pipeline
         .reduce(working, level, keyColumn)
-        .persist(StorageLevel.MEMORY_AND_DISK_SER)
-      val prepared = reduced
+      val persisted = if (options.useCaching) reduced.persist(StorageLevel.DISK_ONLY) else reduced
+      val prepared = persisted
         .withColumn(geomColumn, simplify(col(geomColumn)))
       val vts = generateVectorTiles(prepared, level)
       saveVectorTiles(vts, zoom, pipeline.baseOutputURI)

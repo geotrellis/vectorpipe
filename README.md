@@ -129,6 +129,26 @@ calculation from geometric types.  See
 [here](https://www.geomesa.org/documentation/user/spark/sparksql_functions.html)
 for a list of functions that operate on geometries.
 
+#### A Note on Geocoding ####
+
+VectorPipe provides the means to tag geometries with the country codes of the
+countries they interact with, but it does not provide the boundaries used to
+do the coding.  That gives the user the option to select geometries
+appropriate to the task at hand—low resolution geometries for less fussy
+applications, high resolution when precision is important.
+
+In order for an application to make use of `vectorpipe.util.Geocode`, it must
+supply a `countries.geojson` in in the root of its project's `resources`
+directory.  That GeoJSON file must contain a `FeatureCollection`, with each
+entry having an `ADM0_A3` entry in its `properties` list.
+
+One may employ the [Natural Earth Admin
+0](https://www.naturalearthdata.com/downloads/10m-cultural-vectors/10m-admin-0-boundary-lines/)
+resource for low-precision tasks, or use something like the [Global LSIB
+Polygons](http://geonode.state.gov/layers/geonode%3AGlobal_LSIB_Polygons_Detailed)
+for more precise tasks (though the latter resource does not tag its elements
+with the `ADM0_A3` three-letter codes, so some preprocessing would be required).
+
 ## The `internal` package ##
 
 While most users will rely solely on the features exposed by the `OSM` object,

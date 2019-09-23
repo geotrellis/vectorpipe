@@ -20,7 +20,7 @@ class ChangesetStreamBatchReader(baseURI: URI, sequences: Seq[Int])
     extends ReplicationStreamBatchReader[Changeset](baseURI, sequences) {
 
   override def getSequence(baseURI: URI, sequence: Int): Seq[Changeset] =
-    ChangesetSource.getSequence(baseURI, sequence)
+    ChangesetSource.getChangeset(baseURI, sequence)
 }
 
 class ChangesetMicroBatchReader(options: DataSourceOptions, checkpointLocation: String)
@@ -32,7 +32,7 @@ class ChangesetMicroBatchReader(options: DataSourceOptions, checkpointLocation: 
   )
 
   override def getCurrentSequence: Option[Int] =
-    ChangesetSource.getCurrentSequence(baseURI)
+    ChangesetSource.getCurrentSequence(baseURI).map(_.sequence.toInt)
 
   override def createDataReaderFactories(): util.List[DataReaderFactory[Row]] =
     sequenceRange

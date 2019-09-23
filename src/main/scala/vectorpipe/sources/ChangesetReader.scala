@@ -28,7 +28,7 @@ case class ChangesetReader(options: DataSourceOptions)
   }
 
   override protected def getCurrentSequence: Option[Int] =
-    ChangesetSource.getCurrentSequence(baseURI)
+    ChangesetSource.getCurrentSequence(baseURI).map(_.sequence.toInt)
 
   private def baseURI =
     new URI(

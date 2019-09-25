@@ -3,6 +3,8 @@ package vectorpipe.sources
 import java.io.{ByteArrayInputStream, File}
 import java.net.URI
 import java.nio.charset.StandardCharsets
+import java.sql.Timestamp
+import java.time.Instant
 import java.util.zip.GZIPInputStream
 
 import cats.implicits._
@@ -16,6 +18,8 @@ import io.circe.generic.auto._
 import io.circe.{yaml, _}
 import org.apache.commons.io.IOUtils
 import org.apache.spark.internal.Logging
+import org.apache.spark.sql.Column
+import org.apache.spark.sql.functions.{floor, from_unixtime, to_timestamp, unix_timestamp}
 import org.joda.time.DateTime
 import vectorpipe.model.{AugmentedDiff, ElementWithSequence}
 
@@ -104,6 +108,18 @@ object AugmentedDiffSource extends Logging {
         None
     }
   }
+
+  def timestampToSequence(timestamp: Timestamp): Int =
+    ((timestamp.toInstant.getEpochSecond - 1347432900) / 60).toInt
+
+  def timestampToSequence(timestamp: Column): Column =
+    floor((unix_timestamp(timestamp) - 1347432900) / 60)
+
+  def sequenceToTimestamp(sequence: Int): Timestamp =
+    Timestamp.from(Instant.ofEpochSecond(sequence.toLong * 60 + 1347432900L))
+
+  def sequenceToTimestamp(sequence: Column): Column =
+    to_timestamp(from_unixtime(sequence * 60 + 1347432900))
 
   case class State(last_run: DateTime, sequence: Int)
 }

@@ -13,6 +13,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+## [1.1.0] - 2019-09-26
+
+### Added
+
+- `useCaching` option to VectorPipe.Options allows for persisting to disk.
+  Helps avoid repeated computations.
+- Functions for converting sequence numbers to timestamps and back for both
+  changeset replications and augmented diff replications.  See `ChangesetSource`
+  and `AugmentedDiffSource` in `vectorpipe.sources`.
+
+### Changed
+
+- Improved empty geometry handling in UDFs
+
+### Fixed
+
 ## [1.0.0] - 2019-07-09
 
 ### Added

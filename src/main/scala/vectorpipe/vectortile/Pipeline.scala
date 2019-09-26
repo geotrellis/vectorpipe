@@ -3,10 +3,8 @@ package vectorpipe.vectortile
 import geotrellis.spark.SpatialKey
 import geotrellis.spark.tiling._
 import geotrellis.vector.{Feature, Geometry}
-import geotrellis.vectortile.Value
 import org.apache.spark.sql.{DataFrame, Row}
 import org.locationtech.jts.{geom => jts}
-import org.locationtech.jts.simplify
 
 /**
  * The interface governing the transformation from processed OSM dataframes to

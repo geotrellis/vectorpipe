@@ -4,7 +4,6 @@ import geotrellis.proj4._
 import geotrellis.spark.SpatialKey
 import geotrellis.spark.tiling.LayoutDefinition
 import geotrellis.vector._
-import geotrellis.vector.reproject._
 import geotrellis.vectortile._
 import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema
@@ -27,15 +26,19 @@ package object vectortile {
   @transient lazy val st_reprojectGeom = udf { (g: jts.Geometry, srcProj: String, destProj: String) =>
     val trans = Proj4Transform(CRS.fromString(srcProj), CRS.fromString(destProj))
     if (Option(g).isDefined) {
-      val gt = Geometry(g)
-      gt.reproject(trans).jtsGeom
+      if (g.isEmpty)
+        g
+      else {
+        val gt = Geometry(g)
+        gt.reproject(trans).jtsGeom
+      }
     } else {
       null
     }
   }
 
   def keyTo(layout: LayoutDefinition) = udf { g: jts.Geometry =>
-    if (Option(g).isDefined) {
+    if (Option(g).isDefined && !g.isEmpty) {
       layout.mapTransform.keysForGeometry(geotrellis.vector.Geometry(g)).toArray
     } else {
       Array.empty[SpatialKey]

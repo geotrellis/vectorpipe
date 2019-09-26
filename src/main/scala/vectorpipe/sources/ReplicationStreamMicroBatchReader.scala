@@ -43,7 +43,8 @@ abstract class ReplicationStreamMicroBatchReader[T <: Product: TypeTag](options:
     val startSequenceOption = options.get(Source.StartSequence).asScala.map(_.toInt)
     val start = databaseUri.flatMap { uri =>
       recoverSequence(uri, procName)
-    } orElse startSequenceOption
+    } orElse startSequenceOption.orElse(getCurrentSequence)
+
     logInfo(s"Starting with sequence: $start")
     start
   }

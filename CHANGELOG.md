@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Streaming sources now fallback to the current remote sequence if no database
+  checkpoint or option can be found
+
 ### Fixed
 
 ## [1.1.0] - 2019-09-26

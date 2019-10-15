@@ -4,10 +4,10 @@ import vectorpipe.vectortile._
 import vectorpipe.vectortile.export._
 
 import geotrellis.proj4.{CRS, LatLng, WebMercator}
-import geotrellis.spark.SpatialKey
-import geotrellis.spark.tiling.{ZoomedLayoutScheme, LayoutLevel}
-import geotrellis.vector.Geometry
+import geotrellis.layer._
+import geotrellis.vector._
 import geotrellis.vectortile._
+
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema

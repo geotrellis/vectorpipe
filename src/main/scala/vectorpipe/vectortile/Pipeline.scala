@@ -1,8 +1,8 @@
 package vectorpipe.vectortile
 
-import geotrellis.spark.SpatialKey
-import geotrellis.spark.tiling._
 import geotrellis.vector.{Feature, Geometry}
+import geotrellis.layer._
+
 import org.apache.spark.sql.{DataFrame, Row}
 import org.locationtech.jts.{geom => jts}
 
@@ -148,5 +148,5 @@ trait Pipeline {
    * See [[geotrellis.vectortile.Value]] for details.
    */
   def pack(row: Row, zoom: Int): VectorTileFeature[Geometry] =
-    Feature(Geometry(row.getAs[jts.Geometry](geometryColumn)), Map.empty)
+    Feature(row.getAs[jts.Geometry](geometryColumn), Map.empty)
 }

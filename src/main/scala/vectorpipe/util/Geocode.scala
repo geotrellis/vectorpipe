@@ -1,37 +1,40 @@
 package vectorpipe.util
 
-import org.locationtech.jts.{geom => jts}
 import geotrellis.vector._
-import geotrellis.vector.io._
 import geotrellis.vector.io.json._
+
 import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.encoders.RowEncoder
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
-import spray.json._
+
+import org.locationtech.jts.geom.prep._
+import org.locationtech.jts.index.ItemVisitor
+
+import _root_.io.circe.{Encoder => CirceEncoder, Decoder => CirceDecoder, _}
+import cats.syntax.either._
 
 object Geocode {
 
   case class CountryId(code: String)
 
-  object MyJsonProtocol extends DefaultJsonProtocol {
-    implicit object CountryIdJsonFormat extends RootJsonFormat[CountryId] {
-      def read(value: JsValue): CountryId =
-        value.asJsObject.getFields("ADM0_A3") match {
-          case Seq(JsString(code)) =>
-            CountryId(code)
-          case v =>
-            throw DeserializationException(s"CountryId expected, got $v")
+  object CountryIdCodecs {
+    implicit val encodeCountryId: CirceEncoder[CountryId] = new CirceEncoder[CountryId] {
+      final def apply(a: CountryId): Json = Json.obj(
+        ("code", Json.fromString(a.code))
+      )
+    }
+    implicit val decodeCountryId: CirceDecoder[CountryId] = new CirceDecoder[CountryId] {
+      final def apply(c: HCursor): CirceDecoder.Result[CountryId] =
+        for {
+          code <- c.downField("ADM0_A3").as[String]
+        } yield {
+          CountryId(code)
         }
-
-      def write(v: CountryId): JsValue =
-        JsObject(
-          "code" -> JsString(v.code)
-        )
     }
   }
 
-  import MyJsonProtocol._
+  import CountryIdCodecs._
 
   object Countries {
     lazy val all: Vector[MultiPolygonFeature[CountryId]] = {
@@ -52,7 +55,7 @@ object Geocode {
     }
 
     def indexed: SpatialIndex[MultiPolygonFeature[CountryId]] =
-      SpatialIndex.fromExtents(all) { mpf => mpf.geom.envelope }
+      SpatialIndex.fromExtents(all) { mpf => mpf.geom.extent }
   }
 
   class CountryLookup() extends Serializable {
@@ -60,20 +63,19 @@ object Geocode {
       geotrellis.vector.SpatialIndex.fromExtents(
         Countries.all.
           map { mpf =>
-            (mpf.geom.prepare, mpf.data)
+            (PreparedGeometryFactory.prepare(mpf.geom), mpf.data)
           }
-      ) { case (pg, _) => pg.geom.envelope }
+      ) { case (pg, _) => pg.getGeometry().extent }
 
     def lookup(geom: geotrellis.vector.Geometry): Traversable[CountryId] = {
       val t =
-        new Traversable[(geotrellis.vector.prepared.PreparedGeometry[geotrellis.vector.MultiPolygon], CountryId)] {
-          override def foreach[U](f: ((geotrellis.vector.prepared.PreparedGeometry[geotrellis.vector.MultiPolygon],
-            CountryId)) => U): Unit = {
-            val visitor = new org.locationtech.jts.index.ItemVisitor {
-              override def visitItem(obj: AnyRef): Unit = f(obj.asInstanceOf[(geotrellis.vector.prepared
-              .PreparedGeometry[geotrellis.vector.MultiPolygon], CountryId)])
+        new Traversable[(PreparedGeometry, CountryId)] {
+          override def foreach[U](f: ((PreparedGeometry, CountryId)) => U): Unit = {
+            val visitor = new ItemVisitor {
+              override def visitItem(obj: AnyRef): Unit =
+                f(obj.asInstanceOf[(PreparedGeometry, CountryId)])
             }
-            index.rtree.query(geom.jtsGeom.getEnvelopeInternal, visitor)
+            index.rtree.query(geom.getEnvelopeInternal, visitor)
           }
         }
 
@@ -93,7 +95,7 @@ object Geocode {
         val countryLookup = new CountryLookup()
 
         partition.map { row =>
-          val countryCodes = Option(row.getAs[jts.Geometry]("geom")).map(Geometry(_)) match {
+          val countryCodes = Option(row.getAs[Geometry]("geom")) match {
             case Some(geom) => countryLookup.lookup(geom).map(x => x.code)
             case None => Seq.empty[String]
           }

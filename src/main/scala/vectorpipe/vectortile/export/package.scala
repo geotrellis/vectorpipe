@@ -1,11 +1,12 @@
 package vectorpipe.vectortile
 
-import com.amazonaws.services.s3.model.CannedAccessControlList._
-import geotrellis.spark.SpatialKey
-import geotrellis.spark.io.hadoop._
-import geotrellis.spark.io.s3._
+import geotrellis.layer.SpatialKey
+import geotrellis.spark.store.hadoop._
+import geotrellis.spark.store.s3._
 import geotrellis.vectortile._
 import org.apache.spark.rdd.RDD
+
+import software.amazon.awssdk.services.s3.model.ObjectCannedACL
 
 import java.net.URI
 import java.io.ByteArrayOutputStream
@@ -43,14 +44,12 @@ package object export {
       }
       .saveToS3(
         { sk: SpatialKey => s"s3://${bucket}/${prefix}/${zoom}/${sk.col}/${sk.row}.mvt" },
-        putObjectModifier = { o =>
-          val md = o.getMetadata
-
-          md.setContentEncoding("gzip")
-
-          o
-            .withMetadata(md)
-            .withCannedAcl(PublicRead)
+        putObjectModifier = { request =>
+          request
+            .toBuilder()
+            .contentEncoding("gzip")
+            .acl(ObjectCannedACL.PUBLIC_READ)
+            .build()
         })
   }
 

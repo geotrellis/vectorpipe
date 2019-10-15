@@ -3,7 +3,8 @@ package vectorpipe.model
 import java.sql.Timestamp
 
 import org.locationtech.jts.{geom => jts}
-import geotrellis.vector.{Feature, Geometry => GTGeometry}
+
+import geotrellis.vector._
 
 case class AugmentedDiff(sequence: Int,
                          `type`: Byte,
@@ -30,8 +31,8 @@ case class AugmentedDiff(sequence: Int,
 
 object AugmentedDiff {
   def apply(sequence: Int,
-            prev: Option[Feature[GTGeometry, ElementWithSequence]],
-            curr: Feature[GTGeometry, ElementWithSequence]): AugmentedDiff = {
+            prev: Option[Feature[jts.Geometry, ElementWithSequence]],
+            curr: Feature[jts.Geometry, ElementWithSequence]): AugmentedDiff = {
     val `type` = Member.typeFromString(curr.data.`type`)
     val minorVersion = prev.map(_.data.version).getOrElse(Int.MinValue) == curr.data.version
 
@@ -39,8 +40,8 @@ object AugmentedDiff {
       sequence,
       `type`,
       curr.data.id,
-      prev.map(_.geom.jtsGeom),
-      curr.geom.jtsGeom,
+      prev.map(_.geom),
+      curr.geom,
       prev.map(_.data.tags),
       curr.data.tags,
       prev.map(_.data.nds),

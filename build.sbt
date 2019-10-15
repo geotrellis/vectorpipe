@@ -98,6 +98,7 @@ val vpExtraSettings = Seq(
     sparkSql % Provided,
     sparkJts,
     gtS3 exclude ("com.google.protobuf", "protobuf-java") exclude ("com.amazonaws", "aws-java-sdk-s3"),
+    gtS3Spark exclude ("com.google.protobuf", "protobuf-java") exclude ("com.amazonaws", "aws-java-sdk-s3"),
     gtSpark exclude ("com.google.protobuf", "protobuf-java"),
     gtVectorTile exclude ("com.google.protobuf", "protobuf-java"),
     decline,

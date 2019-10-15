@@ -118,6 +118,19 @@ val vpExtraSettings = Seq(
     "com.amazonaws" % "aws-java-sdk-s3" % "1.11.518" % Provided
   ),
 
+  dependencyOverrides ++= {
+    val deps = Seq(
+      "com.fasterxml.jackson.core" % "jackson-core" % "2.6.7",
+      "com.fasterxml.jackson.core" % "jackson-databind" % "2.6.7",
+      "com.fasterxml.jackson.core" % "jackson-annotations" % "2.6.7"
+    )
+    CrossVersion.partialVersion(scalaVersion.value) match {
+      // if Scala 2.12+ is used
+      case Some((2, scalaMajor)) if scalaMajor >= 12 => deps
+      case _ => deps :+ "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.6.7"
+    }
+  },
+
   test in assembly := {},
   assemblyJarName in assembly := "vectorpipe.jar",
 

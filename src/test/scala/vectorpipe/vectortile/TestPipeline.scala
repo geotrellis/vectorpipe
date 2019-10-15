@@ -1,8 +1,7 @@
 package vectorpipe.vectortile
 
 import geotrellis.raster.RasterExtent
-import geotrellis.spark.SpatialKey
-import geotrellis.spark.tiling._
+import geotrellis.layer._
 import geotrellis.vector._
 import geotrellis.vectortile._
 
@@ -10,11 +9,9 @@ import org.apache.spark.sql.{DataFrame, Row}
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema
 import org.apache.spark.sql.functions
 import org.apache.spark.sql.functions.{array, col, explode, lit, sum}
-import org.apache.spark.sql.types._
 import org.locationtech.jts.{geom => jts}
 
 import vectorpipe._
-import vectorpipe.vectortile._
 
 case class Bin(x: Int, y: Int)
 object Bin {
@@ -49,7 +46,7 @@ case class TestPipeline(geometryColumn: String, baseOutputURI: java.net.URI, gri
   }
 
   override def pack(row: Row, zoom: Int): VectorTileFeature[Point] = {
-    val g = new Point(row.getAs[jts.Point](geometryColumn))
+    val g = row.getAs[jts.Point](geometryColumn)
     val weight = row.getAs[Long]("weight")
 
     Feature(g, Map( "weight" -> VInt64(weight) ))

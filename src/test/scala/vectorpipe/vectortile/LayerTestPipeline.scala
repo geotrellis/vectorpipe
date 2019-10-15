@@ -20,6 +20,6 @@ case class LayerTestPipeline(geometryColumn: String, baseOutputURI: java.net.URI
       .where(functions.not(functions.isnull('layers)))
   }
 
-  override def clip(geom: jts.Geometry, key: geotrellis.spark.SpatialKey, layoutLevel: geotrellis.spark.tiling.LayoutLevel): jts.Geometry =
+  override def clip(geom: jts.Geometry, key: geotrellis.layer.SpatialKey, layoutLevel: geotrellis.layer.LayoutLevel): jts.Geometry =
     Clipping.byLayoutCell(geom, key, layoutLevel)
 }

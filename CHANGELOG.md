@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+This is the first release to depend on GeoTrellis 3.0.
+
 ### Added
 
 ### Changed
@@ -23,7 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `useCaching` option to VectorPipe.Options allows for persisting to disk.
   Helps avoid repeated computations.
 - Functions for converting sequence numbers to timestamps and back for both
-  changeset replications and augmented diff replications.  See `ChangesetSource`
+  changeset replications and augmented diff replications. See `ChangesetSource`
   and `AugmentedDiffSource` in `vectorpipe.sources`.
 
 ### Changed
@@ -39,11 +41,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - RELEASING.md - Instructions for releasing new versions of this project
 - Support for semicolon-delimited tag values in UDFs, e.g. `shop=bakery;dairy`
 - Support for `nds` in augmented diff GeoJSON (matching
-    [`osm-replication-streams@^0.7.0`](https://github.com/mojodna/osm-replication-streams/tree/v0.7.0)
-    output)
+  [`osm-replication-streams@^0.7.0`](https://github.com/mojodna/osm-replication-streams/tree/v0.7.0)
+  output)
 - "Uninteresting" tags are dropped when processing OSM inputs; this will result
-    in fewer point features being generated (as those nodes previously had tags
-    applied).
+  in fewer point features being generated (as those nodes previously had tags
+  applied).
 
 ### Changed
 

@@ -1,6 +1,6 @@
 object Version {
   val awscala = "0.8.1"
-  val vectorpipe = "1.2.0-SNAPSHOT"
+  val vectorpipe = "2.0.0-SNAPSHOT"
   val scala = "2.11.12"
   val geotrellis = "3.0.0-SNAPSHOT"
   val geomesa = "2.2.1"

@@ -32,7 +32,7 @@ package.
 The fastest way to get started with VectorPipe is to invoke `spark-shell` and
 load the package jars from the Bintray repository:
 ```bash
-spark-shell --packages com.azavea:vectorpipe_2.11:1.1.0 --repositories http://dl.bintray.com/azavea/maven
+spark-shell --packages com.azavea:vectorpipe_2.11:2.0.0-M1 --repositories http://dl.bintray.com/azavea/maven
 ```
 
 This will download the required components and set up a REPL with VectorPipe

@@ -2,9 +2,9 @@ package vectorpipe
 
 import java.sql.Timestamp
 
-import org.locationtech.jts.{geom => jts}
 import org.apache.spark.sql._
 import org.apache.spark.sql.functions._
+import geotrellis.vector._
 import vectorpipe.functions.osm.removeUninterestingTags
 import vectorpipe.internal._
 
@@ -22,7 +22,7 @@ object OSM {
   def toGeometry(input: DataFrame): DataFrame = {
     import input.sparkSession.implicits._
 
-    val st_pointToGeom = org.apache.spark.sql.functions.udf { pt: jts.Point => pt.asInstanceOf[jts.Geometry] }
+    val st_pointToGeom = org.apache.spark.sql.functions.udf { pt: Point => pt.asInstanceOf[Geometry] }
 
     val elements = input
       .withColumn("tags", removeUninterestingTags('tags))

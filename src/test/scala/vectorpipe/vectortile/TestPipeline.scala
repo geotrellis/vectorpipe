@@ -8,8 +8,7 @@ import geotrellis.vectortile._
 import org.apache.spark.sql.{DataFrame, Row}
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema
 import org.apache.spark.sql.functions
-import org.apache.spark.sql.functions.{array, col, explode, lit, sum}
-import org.locationtech.jts.{geom => jts}
+import org.apache.spark.sql.functions.{array, col, explode, sum}
 
 import vectorpipe._
 
@@ -27,15 +26,15 @@ case class TestPipeline(geometryColumn: String, baseOutputURI: java.net.URI, gri
     import input.sparkSession.implicits._
 
     val layout = layoutLevel.layout
-    val binOfTile = functions.udf { (g: jts.Geometry, key: GenericRowWithSchema) =>
-      val pt = g.asInstanceOf[jts.Point]
+    val binOfTile = functions.udf { (g: Geometry, key: GenericRowWithSchema) =>
+      val pt = g.asInstanceOf[Point]
       val k = getSpatialKey(key)
       val re = RasterExtent(layout.mapTransform.keyToExtent(k), gridResolution, gridResolution)
       val c = pt.getCoordinate
       Bin(re.mapToGrid(c.x, c.y))
     }
 
-    val st_geomToPoint = functions.udf { g: jts.Geometry => g.asInstanceOf[jts.Point] }
+    val st_geomToPoint = functions.udf { g: Geometry => g.asInstanceOf[Point] }
 
     input.withColumn(keyColumn, explode(col(keyColumn)))
       .withColumn("bin", binOfTile(col(geometryColumn), col(keyColumn)))
@@ -46,7 +45,7 @@ case class TestPipeline(geometryColumn: String, baseOutputURI: java.net.URI, gri
   }
 
   override def pack(row: Row, zoom: Int): VectorTileFeature[Point] = {
-    val g = row.getAs[jts.Point](geometryColumn)
+    val g = row.getAs[Point](geometryColumn)
     val weight = row.getAs[Long]("weight")
 
     Feature(g, Map( "weight" -> VInt64(weight) ))

@@ -1,10 +1,9 @@
 package vectorpipe.vectortile
 
-import geotrellis.vector.{Feature, Geometry}
 import geotrellis.layer._
+import geotrellis.vector._
 
 import org.apache.spark.sql.{DataFrame, Row}
-import org.locationtech.jts.{geom => jts}
 
 /**
  * The interface governing the transformation from processed OSM dataframes to
@@ -109,7 +108,7 @@ trait Pipeline {
    * is a simplifier using JTS's topology-preserving simplifier available in
    * [[vectorpipe.vectortile.Simplify]].
    */
-  def simplify(g: jts.Geometry, layout: LayoutDefinition): jts.Geometry = g
+  def simplify(g: Geometry, layout: LayoutDefinition): Geometry = g
 
   /**
    * Select geometries for display at a given zoom level.
@@ -138,7 +137,7 @@ trait Pipeline {
    *
    * Basic (non-no-op) clipping functions can be found in [[Clipping]].
    */
-  def clip(geom: jts.Geometry, key: SpatialKey, layoutLevel: LayoutLevel): jts.Geometry = geom
+  def clip(geom: Geometry, key: SpatialKey, layoutLevel: LayoutLevel): Geometry = geom
 
   /**
    * Convert table rows to output features.
@@ -148,5 +147,5 @@ trait Pipeline {
    * See [[geotrellis.vectortile.Value]] for details.
    */
   def pack(row: Row, zoom: Int): VectorTileFeature[Geometry] =
-    Feature(row.getAs[jts.Geometry](geometryColumn), Map.empty)
+    Feature(row.getAs[Geometry](geometryColumn), Map.empty)
 }

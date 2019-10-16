@@ -1,11 +1,12 @@
 package vectorpipe.vectortile
 
-import org.apache.spark.sql.{DataFrame, Row}
-import org.apache.spark.sql.functions._
+import geotrellis.vector._
+import org.apache.spark.sql.Row
 import org.apache.spark.sql.expressions.MutableAggregationBuffer
 import org.apache.spark.sql.expressions.UserDefinedAggregateFunction
 import org.apache.spark.sql.jts.PointUDT
 import org.apache.spark.sql.types._
+import org.locationtech.jts.geom.{Coordinate, GeometryFactory}
 
 class WeightedCentroid extends UserDefinedAggregateFunction {
 
@@ -33,7 +34,7 @@ class WeightedCentroid extends UserDefinedAggregateFunction {
 
   // Combine a new input with an existing buffer
   override def update(buffer: MutableAggregationBuffer, input: Row): Unit = {
-    val c = input.getAs[org.locationtech.jts.geom.Point](0).getCoordinate
+    val c = input.getAs[Point](0).getCoordinate
     val wt = input.getAs[Double](1)
     buffer(0) = buffer.getAs[Double](0) + c.x * wt
     buffer(1) = buffer.getAs[Double](1) + c.y * wt
@@ -52,6 +53,6 @@ class WeightedCentroid extends UserDefinedAggregateFunction {
     val wx = buffer.getDouble(0)
     val wy = buffer.getDouble(1)
     val wt = buffer.getDouble(2)
-    (new org.locationtech.jts.geom.GeometryFactory).createPoint(new org.locationtech.jts.geom.Coordinate(wx/wt, wy/wt))
+    (new GeometryFactory).createPoint(new Coordinate(wx/wt, wy/wt))
   }
 }

@@ -3,6 +3,7 @@ package vectorpipe
 import java.sql.Timestamp
 
 import geotrellis.spark.store.kryo.KryoRegistrator
+import geotrellis.vector._
 import org.apache.spark.SparkConf
 import org.apache.spark.serializer.KryoSerializer
 import org.apache.spark.sql._
@@ -10,7 +11,6 @@ import org.apache.spark.sql.functions._
 import org.scalatest.prop.{TableDrivenPropertyChecks, Tables}
 import org.scalatest.{Matchers, PropSpec}
 import vectorpipe.model.Member
-import org.locationtech.jts.{geom => jts}
 import org.locationtech.jts.io.WKTReader
 import org.locationtech.geomesa.spark.jts._
 import vectorpipe.relations.MultiPolygons.build
@@ -54,11 +54,11 @@ trait SparkPoweredTables extends Tables {
       case _: Exception => Seq("[not provided]")
     }
 
-  def asGeoms(relations: DataFrame): Seq[jts.Geometry] = {
+  def asGeoms(relations: DataFrame): Seq[Geometry] = {
     import relations.sparkSession.implicits._
 
     relations.select('geom).collect.map { row =>
-      row.getAs[jts.Geometry]("geom")
+      row.getAs[Geometry]("geom")
     }
   }
 }
@@ -95,7 +95,7 @@ class MultiPolygonRelationReconstructionSpec extends PropSpec with TableDrivenPr
         import fixture.members.sparkSession.implicits._
 
         // TODO rewrite fixtures with additional columns added below
-        val actual: Seq[jts.Geometry] = asGeoms(fixture.members
+        val actual: Seq[Geometry] = asGeoms(fixture.members
           .withColumn("version", lit(1))
           .withColumn("minorVersion", lit(0))
           .withColumn("updated", lit(Timestamp.valueOf("2001-01-01 00:00:00")))
@@ -111,7 +111,7 @@ class MultiPolygonRelationReconstructionSpec extends PropSpec with TableDrivenPr
               // TODO store Bytes as the type in fixtures
               val types = members.map { x => Member.typeFromString(x.getAs[String]("type")) }
               val roles = members.map(_.getAs[String]("role"))
-              val geoms = members.map(_.getAs[jts.Geometry]("geometry"))
+              val geoms = members.map(_.getAs[Geometry]("geometry"))
               val mp = build(id, version, updated, types, roles, geoms).orNull
 
               (changeset, id, version, minorVersion, updated, validUntil, mp)

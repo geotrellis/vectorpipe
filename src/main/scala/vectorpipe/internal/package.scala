@@ -9,7 +9,7 @@ import org.apache.spark.sql.expressions.Window
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 import org.locationtech.geomesa.spark.jts._
-import org.locationtech.jts.{geom => jts}
+import org.locationtech.jts.geom.Coordinate
 import vectorpipe.functions.asDouble
 import vectorpipe.functions.osm._
 import vectorpipe.relations.{MultiPolygons, Routes}
@@ -274,16 +274,16 @@ package object internal {
                   Option(row.get(row.fieldIndex("lat"))).map(_.asInstanceOf[Double]).getOrElse(Double.NaN))
             } match {
               // no coordinates provided
-              case coords if coords.isEmpty => Some(GeomFactory.factory.createLineString(Array.empty[jts.Coordinate]))
+              case coords if coords.isEmpty => Some(GeomFactory.factory.createLineString(Array.empty[Coordinate]))
               // some of the coordinates are empty; this is invalid
               case coords if coords.exists(Option(_).isEmpty) => None
               // some of the coordinates are invalid
               case coords if coords.exists(_.exists(_.isNaN)) => None
               // 1 pair of coordinates provided
               case coords if coords.length == 1 =>
-                Some(GeomFactory.factory.createPoint(new jts.Coordinate(coords.head.head, coords.head.last)))
+                Some(GeomFactory.factory.createPoint(new Coordinate(coords.head.head, coords.head.last)))
               case coords =>
-                val coordinates = coords.map(xy => new jts.Coordinate(xy.head, xy.last)).toArray
+                val coordinates = coords.map(xy => new Coordinate(xy.head, xy.last)).toArray
                 val line = GeomFactory.factory.createLineString(coordinates)
 
                 if (isArea && line.getNumPoints >= 4 && line.isClosed)
@@ -454,7 +454,7 @@ package object internal {
             val members = rows.toVector
             val types = members.map(_.getAs[Byte]("type"))
             val roles = members.map(_.getAs[String]("role"))
-            val geoms = members.map(_.getAs[jts.Geometry]("geom"))
+            val geoms = members.map(_.getAs[Geometry]("geom"))
 
             val geom = MultiPolygons.build(id, version, updated, types, roles, geoms).orNull
 
@@ -525,7 +525,7 @@ package object internal {
           val members = rows.toVector
           val types = members.map(_.getAs[Byte]("type"))
           val roles = members.map(_.getAs[String]("role"))
-          val geoms = members.map(_.getAs[jts.Geometry]("geom"))
+          val geoms = members.map(_.getAs[Geometry]("geom"))
 
           Routes.build(id, version, updated, types, roles, geoms) match {
             case Some(components) =>

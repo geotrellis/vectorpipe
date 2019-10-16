@@ -14,7 +14,6 @@ import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.StringType
 import org.apache.spark.storage.StorageLevel
-import org.locationtech.jts.{geom => jts}
 
 object VectorPipe {
 
@@ -53,7 +52,7 @@ object VectorPipe {
   def apply(input: DataFrame, pipeline: vectortile.Pipeline, options: Options): Unit = {
     val geomColumn = pipeline.geometryColumn
     assert(input.columns.contains(geomColumn) &&
-           input.schema(geomColumn).dataType.isInstanceOf[org.apache.spark.sql.jts.AbstractGeometryUDT[jts.Geometry]],
+           input.schema(geomColumn).dataType.isInstanceOf[org.apache.spark.sql.jts.AbstractGeometryUDT[Geometry]],
            s"Input DataFrame must contain a column `${geomColumn}` of JTS Geometry")
 
     val srcCRS = options.srcCRS
@@ -84,7 +83,7 @@ object VectorPipe {
 
     def generateVectorTiles[G <: Geometry](df: DataFrame, level: LayoutLevel): RDD[(SpatialKey, VectorTile)] = {
       val zoom = level.zoom
-      val clip = udf { (g: jts.Geometry, key: GenericRowWithSchema) =>
+      val clip = udf { (g: Geometry, key: GenericRowWithSchema) =>
         val k = getSpatialKey(key)
         pipeline.clip(g, k, level)
       }
@@ -142,7 +141,7 @@ object VectorPipe {
         } else {
           df
         }
-      val simplify = udf { g: jts.Geometry => pipeline.simplify(g, level.layout) }
+      val simplify = udf { g: Geometry => pipeline.simplify(g, level.layout) }
       val reduced = pipeline
         .reduce(working, level, keyColumn)
       val persisted = if (options.useCaching) reduced.persist(StorageLevel.DISK_ONLY) else reduced

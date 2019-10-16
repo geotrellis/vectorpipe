@@ -1,13 +1,12 @@
 package vectorpipe.vectortile
 
+import geotrellis.vector._
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions
 import org.apache.spark.sql.functions.when
-import org.locationtech.jts.{geom => jts}
 
 import vectorpipe._
 import vectorpipe.functions.osm._
-import vectorpipe.vectortile._
 
 case class LayerTestPipeline(geometryColumn: String, baseOutputURI: java.net.URI) extends Pipeline {
   val layerMultiplicity = LayerNamesInColumn("layers")
@@ -20,6 +19,6 @@ case class LayerTestPipeline(geometryColumn: String, baseOutputURI: java.net.URI
       .where(functions.not(functions.isnull('layers)))
   }
 
-  override def clip(geom: jts.Geometry, key: geotrellis.layer.SpatialKey, layoutLevel: geotrellis.layer.LayoutLevel): jts.Geometry =
+  override def clip(geom: Geometry, key: geotrellis.layer.SpatialKey, layoutLevel: geotrellis.layer.LayoutLevel): Geometry =
     Clipping.byLayoutCell(geom, key, layoutLevel)
 }

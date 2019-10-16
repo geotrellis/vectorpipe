@@ -11,6 +11,8 @@ object Dependencies {
   val gtGeomesa      = "org.locationtech.geotrellis" %% "geotrellis-geomesa"          % Version.geotrellis
   val gtGeotools     = "org.locationtech.geotrellis" %% "geotrellis-geotools"         % Version.geotrellis
   val gtS3           = "org.locationtech.geotrellis" %% "geotrellis-s3"               % Version.geotrellis
+
+  val gtS3Spark      = "org.locationtech.geotrellis" %% "geotrellis-s3-spark"         % Version.geotrellis
   val gtSpark        = "org.locationtech.geotrellis" %% "geotrellis-spark"            % Version.geotrellis
   val gtSparkTestKit = "org.locationtech.geotrellis" %% "geotrellis-spark-testkit"    % Version.geotrellis % "test"
   val gtVector       = "org.locationtech.geotrellis" %% "geotrellis-vector"           % Version.geotrellis

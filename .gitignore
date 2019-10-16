@@ -15,6 +15,7 @@ clipping/*
 osmosis/*
 .idea
 target
+.metals
 \#*
 .\#*
 

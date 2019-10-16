@@ -1,14 +1,13 @@
 package vectorpipe
 
 import geotrellis.proj4._
-import geotrellis.spark.SpatialKey
-import geotrellis.spark.tiling.LayoutDefinition
+import geotrellis.layer.SpatialKey
+import geotrellis.layer.LayoutDefinition
 import geotrellis.vector._
 import geotrellis.vectortile._
 import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema
 import org.apache.spark.sql.functions._
-import org.locationtech.jts.{geom => jts}
 
 import scala.concurrent._
 import scala.concurrent.duration._
@@ -17,29 +16,31 @@ import scala.util.{Try, Success, Failure}
 package object vectortile {
   type VectorTileFeature[+G <: Geometry] = Feature[G, Map[String, Value]]
 
+  def vtf2mvtf[G <: Geometry](vtf: VectorTileFeature[G]): MVTFeature[G] =
+    MVTFeature(vtf.geom, vtf.data)
+
   sealed trait LayerMultiplicity { val name: String }
   case class SingleLayer(val name: String) extends LayerMultiplicity
   case class LayerNamesInColumn(val name: String) extends LayerMultiplicity
 
   @transient lazy val logger = org.apache.log4j.Logger.getRootLogger
 
-  @transient lazy val st_reprojectGeom = udf { (g: jts.Geometry, srcProj: String, destProj: String) =>
+  @transient lazy val st_reprojectGeom = udf { (g: Geometry, srcProj: String, destProj: String) =>
     val trans = Proj4Transform(CRS.fromString(srcProj), CRS.fromString(destProj))
     if (Option(g).isDefined) {
       if (g.isEmpty)
         g
       else {
-        val gt = Geometry(g)
-        gt.reproject(trans).jtsGeom
+        g.reproject(trans)
       }
     } else {
       null
     }
   }
 
-  def keyTo(layout: LayoutDefinition) = udf { g: jts.Geometry =>
+  def keyTo(layout: LayoutDefinition) = udf { g: Geometry =>
     if (Option(g).isDefined && !g.isEmpty) {
-      layout.mapTransform.keysForGeometry(geotrellis.vector.Geometry(g)).toArray
+      layout.mapTransform.keysForGeometry(g).toArray
     } else {
       Array.empty[SpatialKey]
     }
@@ -61,7 +62,7 @@ package object vectortile {
   // }
 
   def timedIntersect[G <: Geometry](geom: G, ex: Extent)(implicit ec: ExecutionContext) = {
-    val future = Future { geom.intersection(ex) }
+    val future = Future { geom.&(ex) }
     Try(Await.result(future, 5000 milliseconds)) match {
       case Success(res) => res
       case Failure(_) =>
@@ -72,8 +73,8 @@ package object vectortile {
 
   case class VTContents(points: List[VectorTileFeature[Point]] = Nil,
                         multipoints: List[VectorTileFeature[MultiPoint]] = Nil,
-                        lines: List[VectorTileFeature[Line]] = Nil,
-                        multilines: List[VectorTileFeature[MultiLine]] = Nil,
+                        lines: List[VectorTileFeature[LineString]] = Nil,
+                        multilines: List[VectorTileFeature[MultiLineString]] = Nil,
                         polygons: List[VectorTileFeature[Polygon]] = Nil,
                         multipolygons: List[VectorTileFeature[MultiPolygon]] = Nil) {
     def +(other: VTContents) = VTContents(points ++ other.points,
@@ -85,8 +86,8 @@ package object vectortile {
     def +[G <: Geometry](other: VectorTileFeature[G]) = other.geom match {
       case p : Point        => copy(points=other.asInstanceOf[VectorTileFeature[Point]] :: points)
       case mp: MultiPoint   => copy(multipoints=other.asInstanceOf[VectorTileFeature[MultiPoint]] :: multipoints)
-      case l : Line         => copy(lines=other.asInstanceOf[VectorTileFeature[Line]] :: lines)
-      case ml: MultiLine    => copy(multilines=other.asInstanceOf[VectorTileFeature[MultiLine]] :: multilines)
+      case l : LineString         => copy(lines=other.asInstanceOf[VectorTileFeature[LineString]] :: lines)
+      case ml: MultiLineString    => copy(multilines=other.asInstanceOf[VectorTileFeature[MultiLineString]] :: multilines)
       case p : Polygon      => copy(polygons=other.asInstanceOf[VectorTileFeature[Polygon]] :: polygons)
       case mp: MultiPolygon => copy(multipolygons=other.asInstanceOf[VectorTileFeature[MultiPolygon]] :: multipolygons)
     }
@@ -103,12 +104,12 @@ package object vectortile {
       tileWidth=tileWidth,
       version=2,
       tileExtent=ex,
-      points=pts,
-      multiPoints=mpts,
-      lines=ls,
-      multiLines=mls,
-      polygons=ps,
-      multiPolygons=mps
+      points=pts.map(vtf2mvtf),
+      multiPoints=mpts.map(vtf2mvtf),
+      lines=ls.map(vtf2mvtf),
+      multiLines=mls.map(vtf2mvtf),
+      polygons=ps.map(vtf2mvtf),
+      multiPolygons=mps.map(vtf2mvtf)
     )
   }
 
@@ -120,12 +121,12 @@ package object vectortile {
       tileWidth=tileWidth,
       version=2,
       tileExtent=ex,
-      points=pts,
-      multiPoints=mpts,
-      lines=ls,
-      multiLines=mls,
-      polygons=ps.sortWith(_.area > _.area),
-      multiPolygons=mps.sortWith(_.area > _.area)
+      points=pts.map(vtf2mvtf),
+      multiPoints=mpts.map(vtf2mvtf),
+      lines=ls.map(vtf2mvtf),
+      multiLines=mls.map(vtf2mvtf),
+      polygons=ps.sortWith(_.getArea > _.getArea).map(vtf2mvtf),
+      multiPolygons=mps.sortWith(_.getArea > _.getArea).map(vtf2mvtf)
     )
   }
 

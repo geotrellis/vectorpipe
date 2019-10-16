@@ -1,32 +1,39 @@
 package vectorpipe.sources
 
-import java.io.{ByteArrayInputStream, File}
+import java.io.File
 import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.sql.Timestamp
 import java.time.Instant
 import java.util.zip.GZIPInputStream
 
-import cats.implicits._
-import com.amazonaws.services.s3.model.AmazonS3Exception
-import com.softwaremill.macmemo.memoize
-import geotrellis.spark.io.s3.{AmazonS3Client, S3Client}
-import geotrellis.vector.io._
+import geotrellis.store.s3._
 import geotrellis.vector.io.json.JsonFeatureCollectionMap
+import geotrellis.vector.io.json.Implicits._
 import geotrellis.vector.{Feature, Geometry}
-import io.circe.generic.auto._
-import io.circe.{yaml, _}
+
+import vectorpipe.model.{AugmentedDiff, ElementWithSequence}
+
 import org.apache.commons.io.IOUtils
 import org.apache.spark.internal.Logging
 import org.apache.spark.sql.Column
 import org.apache.spark.sql.functions.{floor, from_unixtime, to_timestamp, unix_timestamp}
+
+import io.circe._
+import io.circe.generic.auto._
+import cats.implicits._
+
+import com.amazonaws.services.s3.model.AmazonS3Exception
+import software.amazon.awssdk.services.s3.model.GetObjectRequest
+import software.amazon.awssdk.services.s3.S3Client
+import com.softwaremill.macmemo.memoize
 import org.joda.time.DateTime
-import vectorpipe.model.{AugmentedDiff, ElementWithSequence}
 
 import scala.concurrent.duration.{Duration, _}
 
+
 object AugmentedDiffSource extends Logging {
-  private lazy val s3: AmazonS3Client = S3Client.DEFAULT
+  private lazy val s3: S3Client = S3ClientProducer.get()
   val Delay: Duration = 15.seconds
 
   private implicit val dateTimeDecoder: Decoder[DateTime] =
@@ -42,8 +49,13 @@ object AugmentedDiffSource extends Logging {
     logDebug(s"Fetching sequence $sequence")
 
     try {
-      val bais = new ByteArrayInputStream(s3.readBytes(bucket, key))
-      val gzis = new GZIPInputStream(bais)
+      val request = GetObjectRequest.builder()
+        .bucket(bucket)
+        .key(key)
+        .build()
+
+      val response = s3.getObjectAsBytes(request)
+      val gzis = new GZIPInputStream(response.asInputStream)
 
       try {
         IOUtils
@@ -61,7 +73,6 @@ object AugmentedDiffSource extends Logging {
           .toSeq
       } finally {
         gzis.close()
-        bais.close()
       }
     } catch {
       case e: AmazonS3Exception if e.getStatusCode == 404 || e.getStatusCode == 403 =>
@@ -89,8 +100,14 @@ object AugmentedDiffSource extends Logging {
     val key = prefix.resolve("state.yaml").toString
 
     try {
+      val request = GetObjectRequest.builder()
+        .bucket(bucket)
+        .key(key)
+        .build()
+      val response = s3.getObjectAsBytes(request)
+
       val body = IOUtils
-        .toString(s3.readBytes(bucket, key), StandardCharsets.UTF_8.toString)
+        .toString(response.asInputStream, StandardCharsets.UTF_8.toString)
 
       val state = yaml.parser
         .parse(body)

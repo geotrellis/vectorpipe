@@ -1,6 +1,5 @@
 package vectorpipe.sources
 
-import org.apache.spark.sql.Row
 import org.scalatest.{FunSpec, Matchers}
 import vectorpipe.TestEnvironment
 

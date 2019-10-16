@@ -1,93 +1,91 @@
 package vectorpipe.vectortile
 
-import geotrellis.spark.SpatialKey
-import geotrellis.spark.tiling.LayoutLevel
+import geotrellis.layer.SpatialKey
+import geotrellis.layer.LayoutLevel
 import geotrellis.vector._
-import org.locationtech.jts.{geom => jts}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
 object Clipping {
-    def byLayoutCell(geom: jts.Geometry, key: SpatialKey, layoutLevel: LayoutLevel): jts.Geometry = {
-      val gtg = Geometry(geom)
+    def byLayoutCell(geom: Geometry, key: SpatialKey, layoutLevel: LayoutLevel): Geometry = {
       val ex = layoutLevel.layout.mapTransform.keyToExtent(key)
 
       // Preserve dimension of resultant geometry
-      val clipped = gtg match {
-        case p: Point => p.jtsGeom  // points with the current key intersect the extent by definition
+      val clipped = geom match {
+        case p: Point => p // points with the current key intersect the extent by definition
         case mp: MultiPoint =>
           timedIntersect(mp, ex) match {
-            case PointResult(pr) => pr.jtsGeom
-            case MultiPointResult(mpr) => mpr.jtsGeom
+            case PointResult(pr) => pr
+            case MultiPointResult(mpr) => mpr
             case NoResult =>
-              logger.warn(s"$gtg was keyed to layout cell $key, but did not intersect $ex [zoom=${layoutLevel.zoom}]")
+              logger.warn(s"$geom was keyed to layout cell $key, but did not intersect $ex [zoom=${layoutLevel.zoom}]")
               geom
             case _ => // should never match here; just shut the compiler up
               geom
           }
-        case l: Line =>
+        case l: LineString =>
           timedIntersect(l, ex) match {
-            case LineResult(lr) => lr.jtsGeom
-            case MultiLineResult(mlr) => mlr.jtsGeom
+            case LineStringResult(lr) => lr
+            case MultiLineStringResult(mlr) => mlr
             case GeometryCollectionResult(gcr) =>
-              gcr.lines.length match {
-                case 0 => MultiLine().jtsGeom
-                case 1 => gcr.lines(0).jtsGeom
-                case _ => MultiLine(gcr.lines).jtsGeom
+              gcr.getAll[LineString].length match {
+                case 0 => MultiLineString()
+                case 1 => gcr.getAll[LineString].head
+                case _ => MultiLineString(gcr.getAll[LineString])
               }
             case NoResult =>
-              logger.warn(s"$gtg was keyed to layout cell $key, but did not intersect $ex [zoom=${layoutLevel.zoom}]")
+              logger.warn(s"$geom was keyed to layout cell $key, but did not intersect $ex [zoom=${layoutLevel.zoom}]")
               geom
             case _ =>
-              MultiLine().jtsGeom // Discard (multi-)point results
+              MultiLineString() // Discard (multi-)point results
           }
-        case ml: MultiLine =>
+        case ml: MultiLineString =>
           timedIntersect(ml, ex) match {
-            case LineResult(lr) => lr.jtsGeom
-            case MultiLineResult(mlr) => mlr.jtsGeom
+            case LineStringResult(lr) => lr
+            case MultiLineStringResult(mlr) => mlr
             case GeometryCollectionResult(gcr) =>
-              (gcr.lines.length, gcr.multiLines.length) match {
-                case (0, 0) => MultiLine().jtsGeom
-                case (1, 0) => gcr.lines(0).jtsGeom
-                case (0, 1) => gcr.multiLines(0).jtsGeom
-                case _ => MultiLine(gcr.lines ++ gcr.multiLines.flatMap(_.lines.toSeq)).jtsGeom
+              (gcr.getAll[LineString].length, gcr.getAll[MultiLineString].length) match {
+                case (0, 0) => MultiLineString()
+                case (1, 0) => gcr.getAll[LineString].head
+                case (0, 1) => gcr.getAll[MultiLineString].head
+                case _ => MultiLineString(gcr.getAll[LineString] ++ gcr.getAll[MultiLineString].flatMap(_.lines.toSeq))
               }
             case NoResult =>
-              logger.warn(s"$gtg was keyed to layout cell $key, but did not intersect $ex [zoom=${layoutLevel.zoom}]")
+              logger.warn(s"$geom was keyed to layout cell $key, but did not intersect $ex [zoom=${layoutLevel.zoom}]")
               geom
             case _ =>
-              MultiLine().jtsGeom // Discard (multi-)point results
+              MultiLineString() // Discard (multi-)point results
           }
         case poly: Polygon =>
           timedIntersect(poly, ex) match {
-            case PolygonResult(pr) => pr.jtsGeom
-            case MultiPolygonResult(mpr) => mpr.jtsGeom
+            case PolygonResult(pr) => pr
+            case MultiPolygonResult(mpr) => mpr
             case GeometryCollectionResult(gcr) =>
-              gcr.polygons.length match {
-                case 0 => MultiPolygon().jtsGeom
-                case 1 => gcr.polygons(0).jtsGeom
-                case _ => MultiPolygon(gcr.polygons).jtsGeom
+              gcr.getAll[Polygon].length match {
+                case 0 => MultiPolygon()
+                case 1 => gcr.getAll[Polygon].head
+                case _ => MultiPolygon(gcr.getAll[Polygon])
               }
             case NoResult =>
-              logger.warn(s"$gtg was keyed to layout cell $key, but did not intersect $ex [zoom=${layoutLevel.zoom}]")
+              logger.warn(s"$geom was keyed to layout cell $key, but did not intersect $ex [zoom=${layoutLevel.zoom}]")
               geom
-            case _ => MultiPolygon().jtsGeom // ignore point/line results
+            case _ => MultiPolygon() // ignore point/line results
           }
         case mp: MultiPolygon =>
           timedIntersect(mp, ex) match {
-            case PolygonResult(pr) => pr.jtsGeom
-            case MultiPolygonResult(mpr) => mpr.jtsGeom
+            case PolygonResult(pr) => pr
+            case MultiPolygonResult(mpr) => mpr
             case GeometryCollectionResult(gcr) =>
-              (gcr.polygons.length, gcr.multiPolygons.length) match {
-                case (0, 0) => MultiPolygon().jtsGeom
-                case (1, 0) => gcr.polygons(0).jtsGeom
-                case (0, 1) => gcr.multiPolygons(0).jtsGeom
-                case _ => MultiPolygon(gcr.polygons ++ gcr.multiPolygons.flatMap(_.polygons.toSeq)).jtsGeom
+              (gcr.getAll[Polygon].length, gcr.getAll[MultiPolygon].length) match {
+                case (0, 0) => MultiPolygon()
+                case (1, 0) => gcr.getAll[Polygon].head
+                case (0, 1) => gcr.getAll[MultiPolygon].head
+                case _ => MultiPolygon(gcr.getAll[Polygon] ++ gcr.getAll[MultiPolygon].flatMap(_.polygons.toSeq))
               }
             case NoResult =>
-              logger.warn(s"$gtg was keyed to layout cell $key, but did not intersect $ex [zoom=${layoutLevel.zoom}]")
+              logger.warn(s"$geom was keyed to layout cell $key, but did not intersect $ex [zoom=${layoutLevel.zoom}]")
               geom
-            case _ => MultiPolygon().jtsGeom // ignore point/line results
+            case _ => MultiPolygon() // ignore point/line results
           }
       }
       clipped

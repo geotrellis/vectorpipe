@@ -1,4 +1,5 @@
 package vectorpipe.relations
+
 import org.locationtech.jts.geom.CoordinateSequence
 
 package object utils {

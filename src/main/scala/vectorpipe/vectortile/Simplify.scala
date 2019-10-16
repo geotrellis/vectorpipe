@@ -1,7 +1,7 @@
 package vectorpipe.vectortile
 
-import geotrellis.spark.tiling.LayoutDefinition
-import org.locationtech.jts.{geom => jts}
+import geotrellis.vector._
+import geotrellis.layer._
 import org.locationtech.jts.simplify.TopologyPreservingSimplifier
 
 object Simplify {
@@ -13,7 +13,7 @@ object Simplify {
    * JTS documentation.  Faster simplifiers with fewer guarantees are available
    * there as well.
    */
-  def withJTS(g: jts.Geometry, ld: LayoutDefinition): jts.Geometry = {
+  def withJTS(g: Geometry, ld: LayoutDefinition): Geometry = {
     TopologyPreservingSimplifier.simplify(g, ld.cellSize.resolution)
   }
 

@@ -1,10 +1,14 @@
 package vectorpipe.model
 
-import java.sql.Timestamp
+import vectorpipe.model
 
 import org.joda.time.format.ISODateTimeFormat
-import spray.json.{DeserializationException, JsArray, JsBoolean, JsNumber, JsObject, JsString, JsValue, RootJsonReader}
-import vectorpipe.model
+
+import io.circe._
+import cats.syntax.either._
+
+import java.sql.Timestamp
+
 
 // TODO is this an AugmentedDiff or an OSM Element w/ a sequence property?
 // an AugmentedDiff may be (Option[Element with Sequence], Element with Sequence)
@@ -29,147 +33,44 @@ case class ElementWithSequence(id: Long,
 }
 
 object ElementWithSequence {
+  implicit val decodeFoo: Decoder[ElementWithSequence] = new Decoder[ElementWithSequence] {
+    final def apply(c: HCursor): Decoder.Result[ElementWithSequence] =
+      for {
+        id <- c.downField("id").as[Long]
+        `type` <- c.downField("type").as[String]
+        tags <- c.downField("tags").as[Map[String, String]]
+        nds <- c.downField("nds").as[Seq[Long]]
+        changeset <- c.downField("changeset").as[Long]
+        timestampS <- c.downField("timestamp").as[String]
+        uid <- c.downField("uid").as[Long]
+        user <- c.downField("user").as[String]
+        version <- c.downField("version").as[Int]
+        visible <- c.downField("visible").as[Option[Boolean]]
+        sequence <- c.downField("augmentedDiff").as[Option[Long]]
 
-  implicit object AugmentedDiffFormat
-    extends RootJsonReader[ElementWithSequence] {
-    def read(value: JsValue): ElementWithSequence =
-      value match {
-        case obj: JsObject =>
-          val fields = obj.fields
-
-          val changeset = fields.get("changeset") match {
-            case Some(JsString(v)) => v.toLong
-            case Some(JsNumber(v)) => v.toLong
-            case Some(v) =>
-              throw DeserializationException(
-                s"'changeset' must be a number, got $v"
-              )
-            case None =>
-              throw DeserializationException(s"'changeset' is required")
-          }
-
-          val id = fields.get("id") match {
-            case Some(JsString(v)) => v.toLong
-            case Some(JsNumber(v)) => v.toLong
-            case Some(v) =>
-              throw DeserializationException(s"'id' must be a number, got $v")
-            case None => throw DeserializationException(s"'id' is required")
-          }
-
-          val `type` = fields.get("type") match {
-            case Some(JsString(v)) => v
-            case Some(v) =>
-              throw DeserializationException(s"'type' must be a string, got $v")
-            case None => throw DeserializationException(s"'type' is required")
-          }
-
-          val timestamp = fields.get("timestamp") match {
-            case Some(JsString(v)) =>
-              Timestamp.from(
-                ISODateTimeFormat
-                  .dateTimeParser()
-                  .parseDateTime(v)
-                  .toDate
-                  .toInstant
-              )
-            case Some(v) =>
-              throw DeserializationException(s"'type' must be a string, got $v")
-            case None =>
-              throw DeserializationException(s"'timestamp' is required")
-          }
-
-          val uid = fields.get("uid") match {
-            case Some(JsString(v)) => v.toLong
-            case Some(JsNumber(v)) => v.toLong
-            case Some(v) =>
-              throw DeserializationException(s"'uid' must be a number, got $v")
-            case None => throw DeserializationException(s"'uid' is required")
-          }
-
-          val user = fields.get("user") match {
-            case Some(JsString(v)) => v
-            case Some(v) =>
-              throw DeserializationException(s"'user' must be a string, got $v")
-            case None => throw DeserializationException(s"'uid' is required")
-          }
-
-          val version = fields.get("version") match {
-            case Some(JsString(v)) => v.toInt
-            case Some(JsNumber(v)) => v.toInt
-            case Some(v) =>
-              throw DeserializationException(
-                s"'version' must be a number, got $v"
-              )
-            case None =>
-              throw DeserializationException(s"'version' is required")
-          }
-
-          val visible = fields.get("visible") match {
-            case Some(JsBoolean(v)) => Some(v)
-            case Some(v) =>
-              throw DeserializationException(
-                s"'visible' must be a boolean, got $v"
-              )
-            case None => None
-          }
-
-          val tags = fields.get("tags") match {
-            case Some(JsObject(o)) =>
-              o.mapValues {
-                case JsString(v) => v
-                case v =>
-                  throw DeserializationException(
-                    s"tag value must be a string, got $v"
-                  )
-              }
-            case Some(v) =>
-              throw DeserializationException(
-                s"'tags' must be an object, got $v"
-              )
-            case None => throw DeserializationException(s"'tags' is required")
-          }
-
-          val nds = fields.get("nds") match {
-            case Some(JsArray(o)) =>
-              o.map {
-                case JsString(v) => v.toLong
-                case JsNumber(v) => v.toLong
-                case v =>
-                  throw DeserializationException(s"nd value must be a number, got $v")
-              }
-
-            case Some(v) =>
-              throw DeserializationException(s"nds must be an array, got $v")
-
-
-            case None => Seq.empty
-          }
-
-          val sequence = fields.get("augmentedDiff") match {
-            case Some(JsString(v)) => Some(v.toLong)
-            case Some(JsNumber(v)) => Some(v.toLong)
-            case Some(v) =>
-              throw DeserializationException(
-                s"'augmentedDiff' must be a number, got $v"
-              )
-            case None => None
-          }
-
-          model.ElementWithSequence(
-            id,
-            `type`,
-            tags,
-            nds,
-            changeset,
-            timestamp,
-            uid,
-            user,
-            version,
-            visible,
-            sequence
+      } yield {
+        val timestamp = 
+          Timestamp.from(
+            ISODateTimeFormat
+              .dateTimeParser()
+              .parseDateTime(timestampS)
+              .toDate
+              .toInstant
           )
-        case _ => throw DeserializationException(s"'properties' is required")
+
+        model.ElementWithSequence(
+          id,
+          `type`,
+          tags,
+          nds,
+          changeset,
+          timestamp,
+          uid,
+          user,
+          version,
+          visible,
+          sequence
+        )
       }
   }
-
 }

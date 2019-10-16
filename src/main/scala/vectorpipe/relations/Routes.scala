@@ -1,7 +1,8 @@
 package vectorpipe.relations
 import java.sql.Timestamp
 
-import org.locationtech.jts.geom.{Geometry, TopologyException}
+import geotrellis.vector._
+import org.locationtech.jts.geom.TopologyException
 import org.apache.log4j.Logger
 import vectorpipe.internal.WayType
 

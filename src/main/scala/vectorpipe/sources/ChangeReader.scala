@@ -3,16 +3,16 @@ package vectorpipe.sources
 import java.net.URI
 import java.util
 
-import org.apache.spark.sql.Row
+import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.sources.v2.DataSourceOptions
-import org.apache.spark.sql.sources.v2.reader.DataReaderFactory
+import org.apache.spark.sql.sources.v2.reader.InputPartition
 import vectorpipe.model.Change
 
 import scala.collection.JavaConverters._
 import scala.util.Random
 
 case class ChangeReader(options: DataSourceOptions) extends ReplicationReader[Change](options) {
-  override def createDataReaderFactories(): util.List[DataReaderFactory[Row]] = {
+  override def planInputPartitions(): util.List[InputPartition[InternalRow]] = {
     // prevent sequential diffs from being assigned to the same task
     val sequences = Random.shuffle((startSequence to endSequence).toList)
 
@@ -21,7 +21,7 @@ case class ChangeReader(options: DataSourceOptions) extends ReplicationReader[Ch
       .toList
       .map(
         ChangeStreamBatchTask(baseURI, _)
-          .asInstanceOf[DataReaderFactory[Row]]
+          .asInstanceOf[InputPartition[InternalRow]]
       )
       .asJava
   }

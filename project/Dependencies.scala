@@ -35,7 +35,6 @@ object Dependencies {
   val circeOptics    = "io.circe"                    %% "circe-optics"                 % Version.circe
   val circeJava8     = "io.circe"                    %% "circe-java8"                  % Version.circe
   val circeYaml      = "io.circe"                    %% "circe-yaml"                   % "0.9.0"
-  val logging        = "com.typesafe.scala-logging"  %% "scala-logging"                % Version.scalaLogging
   val commonsIO      = "commons-io"                  %  "commons-io"                   % Version.commonsIO
   val scalaj         = "org.scalaj"                  %% "scalaj-http"                  % Version.scalaj
 }

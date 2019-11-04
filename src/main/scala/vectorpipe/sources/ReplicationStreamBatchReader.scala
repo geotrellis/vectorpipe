@@ -3,9 +3,9 @@ package vectorpipe.sources
 import java.net.URI
 
 import org.apache.spark.internal.Logging
-import org.apache.spark.sql.Row
+import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.encoders.{ExpressionEncoder, RowEncoder}
-import org.apache.spark.sql.sources.v2.reader.DataReader
+import org.apache.spark.sql.sources.v2.reader.InputPartitionReader
 
 import scala.collection.parallel.ForkJoinTaskSupport
 import scala.concurrent.forkjoin.ForkJoinPool
@@ -13,7 +13,7 @@ import scala.reflect.runtime.universe.TypeTag
 
 abstract class ReplicationStreamBatchReader[T <: Product: TypeTag](baseURI: URI,
                                                                    sequences: Seq[Int])
-    extends DataReader[Row]
+    extends InputPartitionReader[InternalRow]
     with Logging {
   org.apache.spark.sql.jts.registerTypes()
   private lazy val rowEncoder = RowEncoder(encoder.schema).resolveAndBind()
@@ -44,7 +44,7 @@ abstract class ReplicationStreamBatchReader[T <: Product: TypeTag](baseURI: URI,
   //
   // DataReader changes to InputPartitionReader in Spark 2.4 and T is further constrained to InternalRow (allowing
   // rowEncoder to be removed)
-  override def get(): Row = rowEncoder.fromRow(encoder.toRow(items(index)))
+  override def get(): InternalRow = encoder.toRow(items(index))
 
   override def close(): Unit = Unit
 

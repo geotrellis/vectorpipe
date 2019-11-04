@@ -3,17 +3,17 @@ package vectorpipe.sources
 import java.net.URI
 import java.util
 
-import org.apache.spark.sql.Row
+import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.sources.v2.DataSourceOptions
-import org.apache.spark.sql.sources.v2.reader.{DataReader, DataReaderFactory}
+import org.apache.spark.sql.sources.v2.reader.{InputPartition, InputPartitionReader}
 import vectorpipe.model.AugmentedDiff
 
 import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters._
 
 case class AugmentedDiffStreamBatchTask(baseURI: URI, sequences: Seq[Int])
-    extends DataReaderFactory[Row] {
-  override def createDataReader(): DataReader[Row] =
+    extends InputPartition[InternalRow] {
+  override def createPartitionReader(): InputPartitionReader[InternalRow] =
     AugmentedDiffStreamBatchReader(baseURI, sequences)
 }
 
@@ -41,9 +41,9 @@ case class AugmentedDiffMicroBatchReader(options: DataSourceOptions, checkpointL
         )
       )
 
-  override def createDataReaderFactories(): util.List[DataReaderFactory[Row]] =
+  override def planInputPartitions(): util.List[InputPartition[InternalRow]] =
     sequenceRange
       .map(seq =>
-        AugmentedDiffStreamBatchTask(baseURI, Seq(seq)).asInstanceOf[DataReaderFactory[Row]])
+        AugmentedDiffStreamBatchTask(baseURI, Seq(seq)).asInstanceOf[InputPartition[InternalRow]])
       .asJava
 }

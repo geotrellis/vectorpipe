@@ -3,16 +3,16 @@ package vectorpipe.sources
 import java.net.URI
 import java.util
 
-import org.apache.spark.sql.Row
+import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.sources.v2.DataSourceOptions
-import org.apache.spark.sql.sources.v2.reader.{DataReader, DataReaderFactory}
+import org.apache.spark.sql.sources.v2.reader.{InputPartition, InputPartitionReader}
 import vectorpipe.model.Changeset
 
 import scala.collection.JavaConverters._
 
 case class ChangesetStreamBatchTask(baseURI: URI, sequences: Seq[Int])
-    extends DataReaderFactory[Row] {
-  override def createDataReader(): DataReader[Row] =
+    extends InputPartition[InternalRow] {
+  override def createPartitionReader(): InputPartitionReader[InternalRow] =
     new ChangesetStreamBatchReader(baseURI, sequences)
 }
 
@@ -34,10 +34,10 @@ class ChangesetMicroBatchReader(options: DataSourceOptions, checkpointLocation: 
   override def getCurrentSequence: Option[Int] =
     ChangesetSource.getCurrentSequence(baseURI).map(_.sequence.toInt)
 
-  override def createDataReaderFactories(): util.List[DataReaderFactory[Row]] =
+  override def planInputPartitions(): util.List[InputPartition[InternalRow]] =
     sequenceRange
       .map(
-        seq => ChangesetStreamBatchTask(baseURI, Seq(seq)).asInstanceOf[DataReaderFactory[Row]]
+        seq => ChangesetStreamBatchTask(baseURI, Seq(seq)).asInstanceOf[InputPartition[InternalRow]]
       )
       .asJava
 }

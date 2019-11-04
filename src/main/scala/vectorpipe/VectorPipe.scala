@@ -52,7 +52,7 @@ object VectorPipe {
   def apply(input: DataFrame, pipeline: vectortile.Pipeline, options: Options): Unit = {
     val geomColumn = pipeline.geometryColumn
     assert(input.columns.contains(geomColumn) &&
-           input.schema(geomColumn).dataType.isInstanceOf[org.apache.spark.sql.jts.AbstractGeometryUDT[Geometry]],
+           input.schema(geomColumn).dataType.isInstanceOf[org.apache.spark.sql.jts.AbstractGeometryUDT[_]],
            s"Input DataFrame must contain a column `${geomColumn}` of JTS Geometry")
 
     val srcCRS = options.srcCRS

@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-This is the first release to depend on GeoTrellis 3.0.
+This is the first release to depend on GeoTrellis 3.x
 
 ### Added
 

@@ -38,12 +38,6 @@ abstract class ReplicationStreamBatchReader[T <: Product: TypeTag](baseURI: URI,
     index < items.length
   }
 
-  // as of Spark 2.3.x, T in DataReader[T] must be Row
-  // ReplicationStreamBatchReader subclasses are currently wired up to produce Product instances with the belief that
-  // this constraint will be dropped/changed in the future (plus, they're easier to create)
-  //
-  // DataReader changes to InputPartitionReader in Spark 2.4 and T is further constrained to InternalRow (allowing
-  // rowEncoder to be removed)
   override def get(): InternalRow = encoder.toRow(items(index))
 
   override def close(): Unit = Unit

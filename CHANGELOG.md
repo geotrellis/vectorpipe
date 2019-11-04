@@ -1,3 +1,4 @@
+<!-- markdownlint-disable MD024 -->
 # Changelog
 
 All notable changes to this project will be documented in this file.
@@ -15,6 +16,8 @@ This is the first release to depend on GeoTrellis 3.0.
 
 - Streaming sources now fallback to the current remote sequence if no database
   checkpoint or option can be found
+- Depend on Spark 2.4.4
+- Depend on GeoTrellis 3.1.0
 
 ### Fixed
 

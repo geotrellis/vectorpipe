@@ -23,7 +23,9 @@ lazy val commonSettings = Seq(
 
   cancelable in Global := true,
 
-  scalaVersion in ThisBuild := Version.scala,
+  scalaVersion in ThisBuild := Version.scala2_11,
+
+  crossScalaVersions := Seq(Version.scala2_11, Version.scala2_12),
 
   scalacOptions := Seq(
     "-deprecation",

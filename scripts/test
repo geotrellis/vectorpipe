@@ -18,6 +18,6 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
         usage
     else
         echo "Executing Scala test suite"
-        docker-compose run --rm sbt "++${SCALA_VERSION:-2.11.12}" test
+        ./sbt "++${SCALA_VERSION:-2.11.12}" test
     fi
 fi

@@ -79,6 +79,7 @@ workflows:
                 - develop
                 - /release\/.*/
                 - /hotfix\/.*/
+                - feature/circleci
       #- "openjdk8-scala2.12.8":
       #    filters: # required since `openjdk8-scala2.12.8_deploy` has tag filters AND requires `openjdk8-scala2.12.8`
       #      tags:

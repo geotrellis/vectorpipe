@@ -1,15 +1,25 @@
+import xerial.sbt.Sonatype._
+import Dependencies._
+
 name := "vectorpipe"
 
 description := "Import OSM data and output to VectorTiles with GeoTrellis."
-
-import Dependencies._
 
 lazy val commonSettings = Seq(
   organization := "com.azavea",
 
   organizationName := "Azavea",
 
-  version := Version.vectorpipe,
+  // We are overriding the default behavior of sbt-git which, by default,
+  // only appends the `-SNAPSHOT` suffix if there are uncommitted
+  // changes in the workspace.
+  version := {
+    // Avoid Cyclic reference involving error
+    if (git.gitCurrentTags.value.isEmpty || git.gitUncommittedChanges.value)
+      git.gitDescribedVersion.value.get + "-SNAPSHOT"
+    else
+      git.gitDescribedVersion.value.get
+  },
 
   cancelable in Global := true,
 
@@ -38,6 +48,7 @@ lazy val commonSettings = Seq(
   addCompilerPlugin("org.scalamacros" %% "paradise" % "2.1.0" cross CrossVersion.full),
 
   resolvers ++= Seq(
+    Resolver.sonatypeRepo("releases"),
     Resolver.bintrayRepo("lonelyplanet", "maven"),
     Resolver.bintrayRepo("kwark", "maven"), // Required for Slick 3.1.1.2, see https://github.com/azavea/raster-foundry/pull/1576
     Resolver.bintrayRepo("bkirwi", "maven"), // Required for `decline` dependency
@@ -77,16 +88,56 @@ lazy val commonSettings = Seq(
   }
 )
 
-val release = Seq(
-  bintrayOrganization := Some("azavea"),
-  bintrayRepository := "maven",
-  bintrayVcsUrl := Some("https://github.com/geotrellis/vectorpipe.git"),
-  publishMavenStyle := true,
-  publishArtifact in Test := false,
-  pomIncludeRepository := { _ => false },
-  licenses += ("Apache-2.0", url("http://apache.org/licenses/LICENSE-2.0")),
-  homepage := Some(url("https://geotrellis.github.io/vectorpipe/"))
+lazy val noPublishSettings = Seq(
+  publish := {},
+  publishLocal := {},
+  publishArtifact := false
 )
+
+lazy val publishSettings = Seq(
+  publishArtifact in Test := false
+) ++ sonatypeSettings ++ credentialSettings
+
+lazy val sonatypeSettings = Seq(
+  publishMavenStyle := true,
+
+  sonatypeProfileName := "com.azavea",
+  sonatypeProjectHosting := Some(GitHubHosting(user="geotrellis", repository="vectorpipe", email="systems@azavea.com")),
+  developers := List(
+    Developer(id = "jpolchlo", name = "Justin Polchlopek", email = "jpolchlopek@azavea.com", url = url("https://github.com/jpolchlo")),
+    Developer(id = "mojodna", name = "Seth Fitzsimmons", email = "seth@mojodna.net", url = url("https://github.com/mojodna"))
+  ),
+  licenses := Seq("Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0.txt")),
+
+  publishTo := sonatypePublishTo.value
+)
+
+lazy val credentialSettings = Seq(
+  credentials += Credentials(
+    "GnuPG Key ID",
+    "gpg",
+    System.getenv().get("GPG_KEY_ID"),
+    "ignored"
+  ),
+
+  credentials += Credentials(
+    "Sonatype Nexus Repository Manager",
+    "oss.sonatype.org",
+    System.getenv().get("SONATYPE_USERNAME"),
+    System.getenv().get("SONATYPE_PASSWORD")
+  )
+)
+
+// val release = Seq(
+//   bintrayOrganization := Some("azavea"),
+//   bintrayRepository := "maven",
+//   bintrayVcsUrl := Some("https://github.com/geotrellis/vectorpipe.git"),
+//   publishMavenStyle := true,
+//   publishArtifact in Test := false,
+//   pomIncludeRepository := { _ => false },
+//   licenses += ("Apache-2.0", url("http://apache.org/licenses/LICENSE-2.0")),
+//   homepage := Some(url("https://geotrellis.github.io/vectorpipe/"))
+// )
 
 val vpExtraSettings = Seq(
   libraryDependencies ++= Seq(
@@ -151,7 +202,7 @@ val vpExtraSettings = Seq(
 /* Main project */
 lazy val vectorpipe = project
   .in(file("."))
-  .settings(commonSettings, vpExtraSettings, release)
+  .settings(commonSettings, publishSettings, vpExtraSettings/*, release*/)
 
 /* Benchmarking suite.
  * Benchmarks can be executed by first switching to the `bench` project and then by running:
@@ -162,20 +213,3 @@ lazy val bench = project
   .settings(commonSettings)
   .dependsOn(vectorpipe)
   .enablePlugins(JmhPlugin)
-
-
-
-
-// assemblyShadeRules in assembly := {
-//   val shadePackage = "com.azavea.shaded.demo"
-//   Seq(
-//     ShadeRule.rename("com.google.common.**" -> s"$shadePackage.google.common.@1")
-//       .inLibrary("com.azavea.geotrellis" %% "geotrellis-cassandra" % Version.geotrellis).inAll,
-//     ShadeRule.rename("io.netty.**" -> s"$shadePackage.io.netty.@1")
-//       .inLibrary("com.azavea.geotrellis" %% "geotrellis-hbase" % Version.geotrellis).inAll,
-//     ShadeRule.rename("com.fasterxml.jackson.**" -> s"$shadePackage.com.fasterxml.jackson.@1")
-//       .inLibrary("com.networknt" % "json-schema-validator" % "0.1.7").inAll,
-//     ShadeRule.rename("org.apache.avro.**" -> s"$shadePackage.org.apache.avro.@1")
-//       .inLibrary("com.azavea.geotrellis" %% "geotrellis-spark" % Version.geotrellis).inAll
-//   )
-// }

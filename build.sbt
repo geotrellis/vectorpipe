@@ -1,15 +1,7 @@
 import xerial.sbt.Sonatype._
 import Dependencies._
 
-name := "vectorpipe"
-
-description := "Import OSM data and output to VectorTiles with GeoTrellis."
-
 lazy val commonSettings = Seq(
-  organization := "com.azavea",
-
-  organizationName := "Azavea",
-
   // We are overriding the default behavior of sbt-git which, by default,
   // only appends the `-SNAPSHOT` suffix if there are uncommitted
   // changes in the workspace.
@@ -97,6 +89,10 @@ lazy val noPublishSettings = Seq(
 )
 
 lazy val publishSettings = Seq(
+  organization := "com.azavea.geotrellis",
+  organizationName := "GeoTrellis",
+  organizationHomepage := Some(new URL("https://geotrellis.io/")),
+  description := "Import OSM data and output to VectorTiles with GeoTrellis.",
   publishArtifact in Test := false
 ) ++ sonatypeSettings ++ credentialSettings
 
@@ -218,7 +214,7 @@ val vpExtraSettings = Seq(
 /* Main project */
 lazy val vectorpipe = project
   .in(file("."))
-  .settings(commonSettings, publishSettings, vpExtraSettings/*, release*/)
+  .settings(moduleName := "vectorpipe", commonSettings, publishSettings, vpExtraSettings/*, release*/)
 
 /* Benchmarking suite.
  * Benchmarks can be executed by first switching to the `bench` project and then by running:

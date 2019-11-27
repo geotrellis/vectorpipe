@@ -18,7 +18,6 @@ object Dependencies {
   val gtVector       = "org.locationtech.geotrellis" %% "geotrellis-vector"           % Version.geotrellis
   val gtShapefile    = "org.locationtech.geotrellis" %% "geotrellis-shapefile"        % Version.geotrellis
   val gtVectorTile   = "org.locationtech.geotrellis" %% "geotrellis-vectortile"       % Version.geotrellis
-  val vectorpipe     = "com.azavea"                  %% "vectorpipe"                  % Version.vectorpipe
   val cats           = "org.typelevel"               %% "cats-core"                   % Version.cats
   val scalactic      = "org.scalactic"               %% "scalactic"                   % Version.scalactic
   val scalatest      = "org.scalatest"               %%  "scalatest"                  % Version.scalatest % "test"

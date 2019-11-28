@@ -111,19 +111,16 @@ lazy val sonatypeSettings = Seq(
 )
 
 lazy val credentialSettings = Seq(
-  credentials += Credentials(
-    "GnuPG Key ID",
-    "gpg",
-    System.getenv().get("GPG_KEY_ID"),
-    "ignored"
-  ),
-
-  credentials += Credentials(
-    "Sonatype Nexus Repository Manager",
-    "oss.sonatype.org",
-    System.getenv().get("SONATYPE_USERNAME"),
-    System.getenv().get("SONATYPE_PASSWORD")
-  )
+  credentials ++= List(
+    for {
+      id <- sys.env.get("GPG_KEY_ID")
+    } yield Credentials("GnuPG Key ID", "gpg", id, "ignored")
+    ,
+    for {
+      user <- sys.env.get("SONATYPE_USERNAME")
+      pass <- sys.env.get("SONATYPE_PASSWORD")
+    } yield Credentials("Sonatype Nexus Repository Manager", "oss.sonatype.org", user, pass)
+  ).flatten
 )
 
 val vpExtraSettings = Seq(

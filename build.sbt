@@ -82,12 +82,6 @@ lazy val commonSettings = Seq(
   }
 )
 
-lazy val noPublishSettings = Seq(
-  publish := {},
-  publishLocal := {},
-  publishArtifact := false
-)
-
 lazy val publishSettings = Seq(
   organization := "com.azavea.geotrellis",
   organizationName := "GeoTrellis",

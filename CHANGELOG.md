@@ -8,9 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-This is the first release to depend on GeoTrellis 3.0.
-
 ### Added
+
+### Changed
+
+### Fixed
+
+## [2.0.0] - 2019-11-29
+
+This is the first release to depend on GeoTrellis 3.0.
 
 ### Changed
 
@@ -18,8 +24,6 @@ This is the first release to depend on GeoTrellis 3.0.
   checkpoint or option can be found
 - Depend on Spark 2.4.4
 - Depend on GeoTrellis 3.1.0
-
-### Fixed
 
 ## [1.1.0] - 2019-09-26
 

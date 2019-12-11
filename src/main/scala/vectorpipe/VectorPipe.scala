@@ -5,15 +5,19 @@ import vectorpipe.vectortile.export._
 
 import geotrellis.proj4.{CRS, LatLng, WebMercator}
 import geotrellis.layer._
+import geotrellis.spark.store.kryo.KryoRegistrator
 import geotrellis.vector._
 import geotrellis.vectortile._
 
+import org.apache.spark.SparkConf
 import org.apache.spark.rdd.RDD
+import org.apache.spark.serializer.KryoSerializer
 import org.apache.spark.sql._
 import org.apache.spark.sql.catalyst.expressions.GenericRowWithSchema
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.StringType
 import org.apache.spark.storage.StorageLevel
+import org.locationtech.geomesa.spark.jts.SparkSessionWithJTS
 
 object VectorPipe {
 
@@ -151,7 +155,34 @@ object VectorPipe {
       saveVectorTiles(vts, zoom, pipeline.baseOutputURI)
       prepared.withColumn(keyColumn, reduceKeys(col(keyColumn)))
     }
-
   }
 
+  /** Construct a SparkSession with defaults tailored for use with VectorPipe
+   *  This session enables:
+   *   - Hive support
+   *   - JTS support
+   *   - Kryo serialization
+   *   - spark master local[*] if unset for local testing
+   *
+   *  If you need more control over config, you'll need to construct your own session
+   */
+  def defaultSparkSessionWithJTS(appName: String): SparkSession = {
+    val conf = new SparkConf()
+      .setIfMissing("spark.master", "local[*]")
+      .setAppName(appName)
+      .set("spark.sql.orc.impl", "native")
+      .set("spark.sql.orc.filterPushdown", "true")
+      .set("spark.sql.parquet.mergeSchema", "false")
+      .set("spark.sql.parquet.filterPushdown", "true")
+      .set("spark.sql.hive.metastorePartitionPruning", "true")
+      .set("spark.ui.showConsoleProgress", "true")
+      .set("spark.serializer", classOf[KryoSerializer].getName)
+      .set("spark.kryo.registrator", classOf[KryoRegistrator].getName)
+
+    SparkSession.builder
+      .config(conf)
+      .enableHiveSupport
+      .getOrCreate
+      .withJTS
+  }
 }

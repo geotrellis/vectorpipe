@@ -30,7 +30,7 @@ object TestEnvironment {
 trait TestEnvironment extends BeforeAndAfterAll { self: Suite with BeforeAndAfterAll =>
   implicit val ss: SparkSession = SparkSession.builder
     .master("local[*]")
-    .appName("OSMesa Test")
+    .appName("VectorPipe Test")
     .config("spark.ui.enabled", "false")
     .config("spark.default.parallelism","8")
     .config("spark.serializer", classOf[KryoSerializer].getName)

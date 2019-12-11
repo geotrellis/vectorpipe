@@ -124,6 +124,7 @@ val vpExtraSettings = Seq(
     gtGeotools exclude ("com.google.protobuf", "protobuf-java"),
     awscala,
     scalaj,
+    sparkHive % Provided,
     sparkSql % Provided,
     sparkJts,
     gtS3 exclude ("com.google.protobuf", "protobuf-java") exclude ("com.amazonaws", "aws-java-sdk-s3"),

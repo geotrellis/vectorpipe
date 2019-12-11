@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `vectorpipe.examples`: VectorPipe examples moved from https://github.com/azavea/osmesa
+- `VectorPipe.defaultSparkSessionWithJTS` method to construct a VectorPipe tailored `SparkSession`. Users with more complicated use cases will still want to manually construct their own session.
+
 ### Changed
 
 ### Fixed

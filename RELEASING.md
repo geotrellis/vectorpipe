@@ -1,20 +1,12 @@
-# Releasing
+# Publishing a release
 
-When releasing, ensure you have write access to the `azavea` 
-bintray organization. You can configure your credentials by
-following the prompts after running `./sbt bintrayChangeCredentials`
-
-## Publishing a release
-
-1. Create a new release branch from up-to-date master, e.g. `release/x.y.z`
-1. Bump version refs in README
-1. Bump version ref in `project/Version.scala`
-1. Review CHANGELOG.md. Move `[Unreleased]` header to empty section and replace with `[x.y.z]` header plus release date. 
+1. Create a new release branch from up-to-date master named `release/x.y.z`
+1. Review CHANGELOG.md. Move `[Unreleased]` header to empty section and replace with `[x.y.z]` header plus release date.
+1. Update the version numbers in the build.sbt and spark-shell examples in the README's "Getting Started" section.
 1. Commit these changes as a single commit, with the message "Release vx.y.z"
 1. Push branch and make a PR on GitHub
 1. Ensure CI succeeds
-1. Ensure there are no new commits on master, then merge. If there are new commits, rebase this branch on master and start over at step 2 if you wish to include them.
-1. Tag the merge commit: `git tag -a vx.y.z -m "Release x.y.z"`
-1. Publish the tagged commit as a new release: `./sbt publish`
+1. Ensure there are no new commits on master. If there are new commits, rebase this branch on master and start over at step 2 if you wish to include them. Otherwise, merge.
+1. Tag the merge commit on the master branch: `git tag -a vx.y.z -m "Release x.y.z"`
 1. Push the new tag: `git push --tags`
-
+1. Review the CircleCI build status to ensure that the tag was successfully published to SonaType.

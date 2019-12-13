@@ -39,7 +39,7 @@ object ElementWithSequence {
         id <- c.downField("id").as[Long]
         `type` <- c.downField("type").as[String]
         tags <- c.downField("tags").as[Map[String, String]]
-        nds <- c.downField("nds").as[Seq[Long]]
+        nds <- c.downField("nds").as[Option[Seq[Long]]]
         changeset <- c.downField("changeset").as[Long]
         timestampS <- c.downField("timestamp").as[String]
         uid <- c.downField("uid").as[Long]
@@ -47,9 +47,8 @@ object ElementWithSequence {
         version <- c.downField("version").as[Int]
         visible <- c.downField("visible").as[Option[Boolean]]
         sequence <- c.downField("augmentedDiff").as[Option[Long]]
-
       } yield {
-        val timestamp = 
+        val timestamp =
           Timestamp.from(
             ISODateTimeFormat
               .dateTimeParser()
@@ -57,12 +56,11 @@ object ElementWithSequence {
               .toDate
               .toInstant
           )
-
         model.ElementWithSequence(
           id,
           `type`,
           tags,
-          nds,
+          nds.getOrElse(Seq.empty[Long]),
           changeset,
           timestamp,
           uid,

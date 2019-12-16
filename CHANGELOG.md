@@ -14,6 +14,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+## [2.1.1] - 2019-12-16
+
+### Fixed
+
+- AugmentedDiffSource failed to properly decode from JSON sources
+- MicroBatchReader null pointer exception when reading baseURI from DataSourceOptions
+
 ## [2.1.0] - 2019-12-12
 
 ### Added

@@ -24,7 +24,7 @@ class ChangeStreamBatchReader(baseURI: URI, sequences: Seq[Int])
 
 case class ChangeMicroBatchReader(options: DataSourceOptions, checkpointLocation: String)
     extends ReplicationStreamMicroBatchReader[Change](options, checkpointLocation) {
-  private val baseURI = new URI(
+  private lazy val baseURI = new URI(
     options
       .get(Source.BaseURI)
       .orElse("https://planet.osm.org/replication/minute/")

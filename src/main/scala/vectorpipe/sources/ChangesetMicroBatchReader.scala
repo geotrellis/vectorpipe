@@ -25,7 +25,7 @@ class ChangesetStreamBatchReader(baseURI: URI, sequences: Seq[Int])
 
 class ChangesetMicroBatchReader(options: DataSourceOptions, checkpointLocation: String)
     extends ReplicationStreamMicroBatchReader[Changeset](options, checkpointLocation) {
-  private val baseURI = new URI(
+  private lazy val baseURI = new URI(
     options
       .get(Source.BaseURI)
       .orElse("https://planet.osm.org/replication/changesets/")

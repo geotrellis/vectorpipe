@@ -1,12 +1,12 @@
 # VectorPipe #
 
-[![Build Status](https://travis-ci.org/geotrellis/vectorpipe.svg?branch=master)](https://travis-ci.org/geotrellis/vectorpipe)
-[![Bintray](https://img.shields.io/bintray/v/azavea/maven/vectorpipe.svg)](https://bintray.com/azavea/maven/vectorpipe)
+[![CircleCI](https://circleci.com/gh/geotrellis/vectorpipe/tree/master.svg?style=svg)](https://circleci.com/gh/geotrellis/vectorpipe/tree/master)
+[![SonaType Releases](https://img.shields.io/nexus/r/com.azavea.geotrellis/vectorpipe_2.11?label=SonaType%20Nexus&logo=vectorpipe&server=https%3A%2F%2Foss.sonatype.org)](https://oss.sonatype.org/#nexus-search;quick~vectorpipe)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/447170921bc94b3fb494bb2b965c2235)](https://www.codacy.com/app/fosskers/vectorpipe?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=geotrellis/vectorpipe&amp;utm_campaign=Badge_Grade)
 
 VectorPipe (VP) is a library for working with OpenStreetMap (OSM) vector
-data. Powered by [Geotrellis](http://geotrellis.io) and [Apache
-Spark](http://spark.apache.org/).
+data and writing geometries to vector tile layers. Powered by [Geotrellis](http://geotrellis.io)
+and [Apache Spark](http://spark.apache.org/).
 
 OSM provides a wealth of data which has broad coverage and a deep history.
 This comes at the price of very large size which can make accessing the power
@@ -29,10 +29,18 @@ package.
 
 ## Getting Started ##
 
-The fastest way to get started with VectorPipe is to invoke `spark-shell` and
-load the package jars from the Bintray repository:
+Add the following to your `build.sbt`:
+```
+libraryDependencies += "com.azavea.geotrellis" %% "vectorpipe" % "2.1.1"
+```
+
+**Note:** VectorPipe releases for version 2.0.0+ are hosted on SonaType. If you need earlier releases, they can be found on [Bintray](https://bintray.com/azavea/maven/vectorpipe). If using SBT for older releases, you will also need to include `resolvers ++= Resolver.bintrayRepo("azavea", "maven")` in your `build.sbt`.
+
+### With a REPL
+
+The fastest way to get started with VectorPipe in a REPL is to invoke `spark-shell`:
 ```bash
-spark-shell --packages com.azavea:vectorpipe_2.11:1.1.0 --repositories http://dl.bintray.com/azavea/maven
+spark-shell --packages com.azavea.geotrellis:vectorpipe_2.11:2.1.1
 ```
 
 This will download the required components and set up a REPL with VectorPipe

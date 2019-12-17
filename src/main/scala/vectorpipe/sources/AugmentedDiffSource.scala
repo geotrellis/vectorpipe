@@ -23,8 +23,7 @@ import io.circe._
 import io.circe.generic.auto._
 import cats.implicits._
 
-import com.amazonaws.services.s3.model.AmazonS3Exception
-import software.amazon.awssdk.services.s3.model.GetObjectRequest
+import software.amazon.awssdk.services.s3.model.{GetObjectRequest, NoSuchKeyException}
 import software.amazon.awssdk.services.s3.S3Client
 import com.softwaremill.macmemo.memoize
 import org.joda.time.DateTime
@@ -75,7 +74,7 @@ object AugmentedDiffSource extends Logging {
         gzis.close()
       }
     } catch {
-      case e: AmazonS3Exception if e.getStatusCode == 404 || e.getStatusCode == 403 =>
+      case _: NoSuchKeyException =>
         getCurrentSequence(baseURI) match {
           case Some(s) if s > sequence =>
             logInfo("Encountered missing sequence, comparing with current for validity")

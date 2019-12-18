@@ -31,7 +31,7 @@ package.
 
 Add the following to your `build.sbt`:
 ```
-libraryDependencies += "com.azavea.geotrellis" %% "vectorpipe" % "2.1.2"
+libraryDependencies += "com.azavea.geotrellis" %% "vectorpipe" % "2.1.3"
 ```
 
 **Note:** VectorPipe releases for version 2.0.0+ are hosted on SonaType. If you need earlier releases, they can be found on [Bintray](https://bintray.com/azavea/maven/vectorpipe). If using SBT for older releases, you will also need to include `resolvers ++= Resolver.bintrayRepo("azavea", "maven")` in your `build.sbt`.
@@ -40,7 +40,7 @@ libraryDependencies += "com.azavea.geotrellis" %% "vectorpipe" % "2.1.2"
 
 The fastest way to get started with VectorPipe in a REPL is to invoke `spark-shell`:
 ```bash
-spark-shell --packages com.azavea.geotrellis:vectorpipe_2.11:2.1.2
+spark-shell --packages com.azavea.geotrellis:vectorpipe_2.11:2.1.3
 ```
 
 This will download the required components and set up a REPL with VectorPipe

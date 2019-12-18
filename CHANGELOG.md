@@ -14,6 +14,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+## [2.1.3] - 2019-12-18
+
+### Fixed
+
+- Catch 403 S3Exceptions when checking minutely diffs in AugmentedDiffSource
+
 ## [2.1.2] - 2019-12-17
 
 ### Fixed

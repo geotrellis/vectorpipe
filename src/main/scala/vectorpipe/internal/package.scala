@@ -136,10 +136,11 @@ package object internal {
     } else {
       @transient val idByUpdated = Window.partitionBy('id).orderBy('version)
 
+      val relations = ensureCompressedMembers(history.where('type === "relation"))
+
       // when an element has been deleted, it doesn't include any tags; use a window function to retrieve the last tags
       // present and use those
-      history
-        .where('type === "relation")
+      relations
         .repartition('id)
         .select(
           'id,

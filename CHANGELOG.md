@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `VectorPipe.Options` to support for any square layout level (not just from ZoomedLayoutScheme)
+
 ### Fixed
 
 ## [2.1.3] - 2019-12-18

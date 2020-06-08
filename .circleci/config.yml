@@ -40,22 +40,11 @@ aliases:
     environment:
       SCALA_VERSION: 2.11.12
 
-  - &machine-openjdk8-scala2_12_8-environment
-    machine:
-      image: ubuntu-1604:201903-01
-    environment:
-      SCALA_VERSION: 2.12.8
   - &openjdk8-scala2_11_12-environment
     docker:
       - image: circleci/openjdk:8-jdk
     environment:
       SCALA_VERSION: 2.11.12
-
-  - &openjdk8-scala2_12_8-environment
-    docker:
-      - image: circleci/openjdk:8-jdk
-    environment:
-      SCALA_VERSION: 2.12.8
 
 version: 2
 workflows:
@@ -74,29 +63,6 @@ workflows:
             tags:
               only:
                 - /^(.*)$/
-            branches:
-              only:
-                - develop
-                - /release\/.*/
-                - /hotfix\/.*/
-                - feature/circleci
-      #- "openjdk8-scala2.12.8":
-      #    filters: # required since `openjdk8-scala2.12.8_deploy` has tag filters AND requires `openjdk8-scala2.12.8`
-      #      tags:
-      #        only:
-      #          - /^(.*)$/
-      #- "openjdk8-scala2.12.8_deploy":
-      #    requires:
-      #      - "openjdk8-scala2.12.8"
-      #    filters:
-      #      tags:
-      #        only:
-      #          - /^(.*)$/
-      #      branches:
-      #        only:
-      #          - develop
-      #          - /release\/.*/
-      #          - /hotfix\/.*/
 
 jobs:
   # Execute cibuild in machine executor so we can use our existing
@@ -105,14 +71,6 @@ jobs:
     <<: *machine-openjdk8-scala2_11_12-environment
     steps: *run_cibuild
 
-  #"openjdk8-scala2.12.8":
-  #  <<: *machine-openjdk8-scala2_12_8-environment
-  #  steps: *run_cibuild
-
   "openjdk8-scala2.11.12_deploy":
     <<: *openjdk8-scala2_11_12-environment
     steps: *run_cipublish
-
-  #"openjdk8-scala2.12.8_deploy":
-  #  <<: *openjdk8-scala2_12_8-environment
-  #  steps: *run_cipublish

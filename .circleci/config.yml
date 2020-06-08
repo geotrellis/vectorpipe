@@ -63,6 +63,9 @@ workflows:
             tags:
               only:
                 - /^(.*)$/
+            branches:
+              only:
+                - jrb/receive-gpg-key
 
 jobs:
   # Execute cibuild in machine executor so we can use our existing

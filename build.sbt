@@ -50,7 +50,6 @@ lazy val commonSettings = Seq(
     "eclipse-snapshots" at "https://repo.eclipse.org/content/groups/snapshots",
     "geosolutions" at "http://maven.geo-solutions.it/",
     "osgeo-releases" at "https://repo.osgeo.org/repository/release/",
-    "osgeo" at "http://download.osgeo.org/webdav/geotools/",
     "apache.commons.io" at "https://mvnrepository.com/artifact/commons-io/commons-io"
   ),
 

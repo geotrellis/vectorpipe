@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Receive GPG key while publishing artifacts [#138](https://github.com/geotrellis/vectorpipe/pull/138)
+
 ### Changed
 
 - `VectorPipe.Options` to support for any square layout level (not just from ZoomedLayoutScheme)

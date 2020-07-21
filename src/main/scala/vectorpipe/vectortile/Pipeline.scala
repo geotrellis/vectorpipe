@@ -1,8 +1,12 @@
 package vectorpipe.vectortile
 
+import java.net.URI
+
 import geotrellis.layer._
 import geotrellis.vector._
-
+import vectorpipe.vectortile.export._
+import geotrellis.vectortile.VectorTile
+import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{DataFrame, Row}
 
 /**
@@ -96,7 +100,7 @@ trait Pipeline {
    */
   def reduce(input: DataFrame, layoutLevel: LayoutLevel, keyColumn: String): DataFrame = input
 
-  /*
+  /**
    * Lower complexity of geometry while moving to less resolute zoom levels.
    *
    * While moving from finer to coarser levels of the pyramid, it may not be
@@ -148,4 +152,17 @@ trait Pipeline {
    */
   def pack(row: Row, zoom: Int): VectorTileFeature[Geometry] =
     Feature(row.getAs[Geometry](geometryColumn), Map.empty)
+
+  /**
+    * Save the final RDD of generated vector tiles.
+    *
+    * By Default,
+    * when the URI scheme matches "s3", we use [[geotrellis.spark.store.s3.SaveToS3 SaveToS3]]
+    * to upload gzip-compressed MVT objects at `s3://${bucket}/${prefix}/${zoom}/${col}/${row}.mvt`.
+    * Otherwise we use [[geotrellis.spark.store.hadoop.SaveToHadoop SaveToHadoop]]
+    * to upload MVT files at `${uri}/${zoom}/${col}/${row}.mvt`
+    */
+  def persist(vectorTiles: RDD[(SpatialKey, VectorTile)], zoom: Int, uri: URI): Unit =
+    saveVectorTiles(vectorTiles, zoom, uri)
+
 }

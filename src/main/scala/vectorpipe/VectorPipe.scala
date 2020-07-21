@@ -1,7 +1,6 @@
 package vectorpipe
 
 import vectorpipe.vectortile._
-import vectorpipe.vectortile.export._
 
 import geotrellis.proj4.{CRS, LatLng, WebMercator}
 import geotrellis.layer._
@@ -78,7 +77,7 @@ object VectorPipe {
     def forAllZoomsWithSrcProjection(zoom: Int, crs: CRS) = Options(zoom, Some(0), crs)
   }
 
-  def apply(input: DataFrame, pipeline: vectortile.Pipeline, options: Options): Unit = {
+  def apply(input: DataFrame, pipeline: vectortile.Pipeline, options: Options): Map[Int, RDD[(SpatialKey, VectorTile)]] = {
     val geomColumn = pipeline.geometryColumn
     assert(input.columns.contains(geomColumn) &&
            input.schema(geomColumn).dataType.isInstanceOf[org.apache.spark.sql.jts.AbstractGeometryUDT[_]],
@@ -168,7 +167,7 @@ object VectorPipe {
     // 6.   Simplify
     // 7.   Re-key
 
-    layoutLevels.foldLeft(reprojected){ (df, level) =>
+    layoutLevels.foldLeft((reprojected, Map.empty[Int, RDD[(SpatialKey, VectorTile)]])){ case ((df, acc), level) =>
       val working =
         if (level.zoom == maxZoom) {
           df.withColumn(keyColumn, keyTo(level.layout)(col(geomColumn)))
@@ -182,9 +181,10 @@ object VectorPipe {
       val prepared = persisted
         .withColumn(geomColumn, simplify(col(geomColumn)))
       val vts = generateVectorTiles(prepared, level)
-      saveVectorTiles(vts, level.zoom, pipeline.baseOutputURI)
-      prepared.withColumn(keyColumn, reduceKeys(col(keyColumn)))
-    }
+      pipeline.persist(vts, level.zoom, pipeline.baseOutputURI)
+
+      (prepared.withColumn(keyColumn, reduceKeys(col(keyColumn))), acc + (level.zoom -> vts))
+    }._2
   }
 
   /** Construct a SparkSession with defaults tailored for use with VectorPipe

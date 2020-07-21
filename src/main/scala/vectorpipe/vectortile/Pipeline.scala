@@ -156,13 +156,12 @@ trait Pipeline {
   /**
     * Save the final RDD of generated vector tiles.
     *
-    * By Default,
-    * when the URI scheme matches "s3", we use [[geotrellis.spark.store.s3.SaveToS3 SaveToS3]]
+    * By Default, when the `baseOutputURI` scheme matches "s3", we use [[geotrellis.spark.store.s3.SaveToS3 SaveToS3]]
     * to upload gzip-compressed MVT objects at `s3://${bucket}/${prefix}/${zoom}/${col}/${row}.mvt`.
-    * Otherwise we use [[geotrellis.spark.store.hadoop.SaveToHadoop SaveToHadoop]]
+    * Otherwise, we use [[geotrellis.spark.store.hadoop.SaveToHadoop SaveToHadoop]]
     * to upload MVT files at `${uri}/${zoom}/${col}/${row}.mvt`
     */
-  def persist(vectorTiles: RDD[(SpatialKey, VectorTile)], zoom: Int, uri: URI): Unit =
-    saveVectorTiles(vectorTiles, zoom, uri)
+  def persist(vectorTiles: RDD[(SpatialKey, VectorTile)], zoom: Int): Unit =
+    saveVectorTiles(vectorTiles, zoom, baseOutputURI)
 
 }

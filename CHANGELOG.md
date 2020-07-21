@@ -11,10 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Receive GPG key while publishing artifacts [#138](https://github.com/geotrellis/vectorpipe/pull/138)
+- `persist(vectorTiles, zoom)` method to Pipeline to allow override of default implementation as `saveVectorTiles(vectorTiles, zoom, pipeline.baseOutputURI)`
 
 ### Changed
 
 - `VectorPipe.Options` to support for any square layout level (not just from ZoomedLayoutScheme)
+- Return type of `VectorPipe.apply()` from `Unit` to `Map[Int, RDD[(SpatialKey, VectorTile)]]` as a map the generated VectorTile RDDs keyed by the zoom level for all layoutLevels defined in the options
 
 ### Fixed
 

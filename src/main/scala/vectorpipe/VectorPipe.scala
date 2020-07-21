@@ -181,7 +181,7 @@ object VectorPipe {
       val prepared = persisted
         .withColumn(geomColumn, simplify(col(geomColumn)))
       val vts = generateVectorTiles(prepared, level)
-      pipeline.persist(vts, level.zoom, pipeline.baseOutputURI)
+      pipeline.persist(vts, level.zoom)
 
       (prepared.withColumn(keyColumn, reduceKeys(col(keyColumn))), acc + (level.zoom -> vts))
     }._2

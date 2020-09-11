@@ -175,7 +175,7 @@ object VectorPipe {
     // 6.   Simplify
     // 7.   Re-key
 
-    layoutLevels.foldLeft(reprojected){ case (df, level) =>
+    layoutLevels.foldLeft(reprojected){ (df, level) =>
       val working =
         if (level.zoom == maxZoom) {
           df.withColumn(keyColumn, keyTo(level.layout)(col(geomColumn)))

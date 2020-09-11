@@ -77,7 +77,15 @@ object VectorPipe {
     def forAllZoomsWithSrcProjection(zoom: Int, crs: CRS) = Options(zoom, Some(0), crs)
   }
 
-  def apply(input: DataFrame, pipeline: vectortile.Pipeline, options: Options): Map[Int, RDD[(SpatialKey, VectorTile)]] = {
+  /**
+    * Run VectorPipe.
+    *
+    * @param input       Input OSM geometries DataFrame (See: [[vectorpipe.OSM#toGeometry]])
+    * @param pipeline    Pipeline implementation called for each step of the data processing
+    * @param options     Vectortile conversion options
+    * @return
+    */
+  def apply(input: DataFrame, pipeline: vectortile.Pipeline, options: Options): Unit = {
     val geomColumn = pipeline.geometryColumn
     assert(input.columns.contains(geomColumn) &&
            input.schema(geomColumn).dataType.isInstanceOf[org.apache.spark.sql.jts.AbstractGeometryUDT[_]],
@@ -167,7 +175,7 @@ object VectorPipe {
     // 6.   Simplify
     // 7.   Re-key
 
-    layoutLevels.foldLeft((reprojected, Map.empty[Int, RDD[(SpatialKey, VectorTile)]])){ case ((df, acc), level) =>
+    layoutLevels.foldLeft(reprojected){ case (df, level) =>
       val working =
         if (level.zoom == maxZoom) {
           df.withColumn(keyColumn, keyTo(level.layout)(col(geomColumn)))
@@ -181,10 +189,11 @@ object VectorPipe {
       val prepared = persisted
         .withColumn(geomColumn, simplify(col(geomColumn)))
       val vts = generateVectorTiles(prepared, level)
-      pipeline.persist(vts, level.zoom)
 
-      (prepared.withColumn(keyColumn, reduceKeys(col(keyColumn))), acc + (level.zoom -> vts))
-    }._2
+      pipeline.finalize(vts, level.zoom)
+
+      prepared.withColumn(keyColumn, reduceKeys(col(keyColumn)))
+    }
   }
 
   /** Construct a SparkSession with defaults tailored for use with VectorPipe

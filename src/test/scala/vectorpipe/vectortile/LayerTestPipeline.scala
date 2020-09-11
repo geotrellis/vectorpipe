@@ -8,7 +8,7 @@ import org.apache.spark.sql.functions.when
 import vectorpipe._
 import vectorpipe.functions.osm._
 
-case class LayerTestPipeline(geometryColumn: String, baseOutputURI: java.net.URI) extends Pipeline {
+case class LayerTestPipeline(geometryColumn: String, baseOutputURI: java.net.URI) extends Pipeline with Pipeline.Output {
   val layerMultiplicity = LayerNamesInColumn("layers")
 
   override def select(wayGeoms: DataFrame, targetZoom: Int, keyColumn: String): DataFrame = {

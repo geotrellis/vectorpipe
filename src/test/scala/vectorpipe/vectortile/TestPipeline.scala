@@ -17,7 +17,7 @@ object Bin {
   def apply(tup: (Int, Int)): Bin = Bin(tup._1, tup._2)
 }
 
-case class TestPipeline(geometryColumn: String, baseOutputURI: java.net.URI, gridResolution: Int) extends Pipeline {
+case class TestPipeline(geometryColumn: String, baseOutputURI: java.net.URI, gridResolution: Int) extends Pipeline with Pipeline.Output {
   val weightedCentroid = new WeightedCentroid
 
   val layerMultiplicity = SingleLayer("points")

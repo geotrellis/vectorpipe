@@ -1,7 +1,6 @@
 package vectorpipe
 
 import vectorpipe.vectortile._
-import vectorpipe.vectortile.export._
 
 import geotrellis.proj4.{CRS, LatLng, WebMercator}
 import geotrellis.layer._
@@ -78,6 +77,14 @@ object VectorPipe {
     def forAllZoomsWithSrcProjection(zoom: Int, crs: CRS) = Options(zoom, Some(0), crs)
   }
 
+  /**
+    * Run VectorPipe.
+    *
+    * @param input       Input OSM geometries DataFrame (See: [[vectorpipe.OSM#toGeometry]])
+    * @param pipeline    Pipeline implementation called for each step of the data processing
+    * @param options     Vectortile conversion options
+    * @return
+    */
   def apply(input: DataFrame, pipeline: vectortile.Pipeline, options: Options): Unit = {
     val geomColumn = pipeline.geometryColumn
     assert(input.columns.contains(geomColumn) &&
@@ -182,7 +189,9 @@ object VectorPipe {
       val prepared = persisted
         .withColumn(geomColumn, simplify(col(geomColumn)))
       val vts = generateVectorTiles(prepared, level)
-      saveVectorTiles(vts, level.zoom, pipeline.baseOutputURI)
+
+      pipeline.finalize(vts, level.zoom)
+
       prepared.withColumn(keyColumn, reduceKeys(col(keyColumn)))
     }
   }

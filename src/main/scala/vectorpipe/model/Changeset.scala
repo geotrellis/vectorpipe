@@ -51,8 +51,8 @@ object Changeset {
 
     val maxLon = node \@ "max_lon"
     val minLon = node \@ "min_lon"
-    val maxLat = node \@ "max_lon"
-    val minLat = node \@ "min_lon"
+    val maxLat = node \@ "max_lat"
+    val minLat = node \@ "min_lat"
     val tags =
       (node \ "tag").map(tag => (tag \@ "k", tag \@ "v")).toMap
     val comments = (node \ "discussion" \ "comment").map(ChangesetComment.fromXML)

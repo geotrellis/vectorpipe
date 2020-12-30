@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `VectorPipe.Options` to support for any square layout level (not just from ZoomedLayoutScheme)
 - `Pipeline#baseOutputURI` moved to `Pipeline.Output#baseOutputURI`
+- Updated Geotrellis dependency to 3.5.1
 
 ### Fixed
 

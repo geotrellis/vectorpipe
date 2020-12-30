@@ -1,8 +1,8 @@
 object Version {
   val awscala = "0.8.1"
-  val geotrellis = "3.1.0"
+  val geotrellis = "3.5.1"
   val scala2_11 = "2.11.12"
-  val scala2_12 = "2.12.8"
+  val scala2_12 = "2.12.12"
   val geomesa = "2.2.1"
   val decline = "0.6.1"
   val cats = "1.6.1"

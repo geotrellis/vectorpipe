@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `RobustFeature` infrastructure added to allow handling of diffs containing bad geometries.
+
 ### Changed
 
 ### Fixed

@@ -3,10 +3,12 @@ package vectorpipe.sources
 import java.net.URI
 import java.util
 
+import geotrellis.vector.Geometry
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.sources.v2.DataSourceOptions
 import org.apache.spark.sql.sources.v2.reader.DataReaderFactory
-import vectorpipe.model.AugmentedDiff
+import vectorpipe.model.{AugmentedDiff, ElementWithSequence}
+import vectorpipe.util.RobustFeature
 
 import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters._
@@ -22,7 +24,7 @@ case class AugmentedDiffReader(options: DataSourceOptions)
       .grouped(Math.max(1, sequences.length / partitionCount))
       .toList
       .map(
-        AugmentedDiffStreamBatchTask(baseURI, _)
+        AugmentedDiffStreamBatchTask(baseURI, _, errorHandler.handle)
           .asInstanceOf[DataReaderFactory[Row]]
       )
       .asJava
@@ -39,5 +41,22 @@ case class AugmentedDiffReader(options: DataSourceOptions)
         )
       )
 
+  private def errorHandler: AugmentedDiffSourceErrorHandler = {
+    val handlerClass = options
+      .get(Source.ErrorHandler)
+      .asScala
+      .getOrElse("vectorpipe.sources.AugmentedDiffSourceErrorHandler")
+
+    val handler = Class.forName(handlerClass).newInstance.asInstanceOf[AugmentedDiffSourceErrorHandler]
+    handler.setOptions(options.asMap.asScala.toMap)
+    handler
+  }
+
   override def getCurrentSequence: Option[Int] = AugmentedDiffSource.getCurrentSequence(baseURI)
+}
+
+class AugmentedDiffSourceErrorHandler extends Serializable {
+  def setOptions(options: Map[String, String]): Unit = ()
+
+  def handle(sequence: Int, feature: RobustFeature[Geometry, ElementWithSequence]): Unit = ()
 }

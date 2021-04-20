@@ -76,12 +76,6 @@ object AugmentedDiffSource extends Logging {
    * file is available.
    */
   def getSequence(baseURI: URI, sequence: Int, badGeometryHandler: (Int, RF) => Unit, waitUntilAvailable: Boolean): Seq[AugmentedDiff] = {
-    val bucket = baseURI.getHost
-    val prefix = new File(baseURI.getPath.drop(1)).toPath
-    // left-pad sequence
-    val s = f"$sequence%09d"
-    val key = prefix.resolve(s"${s.slice(0, 3)}/${s.slice(3, 6)}/${s.slice(6, 9)}.json.gz").toString
-
     logDebug(s"Fetching sequence $sequence")
 
     try {

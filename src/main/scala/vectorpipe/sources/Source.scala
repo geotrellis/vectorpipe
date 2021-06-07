@@ -13,5 +13,6 @@ object Source {
   val StartSequence: String = "start_sequence"
   val EndSequence: String = "end_sequence"
 
+  val ErrorHandler: String = "error_handler"
   val ErrorCodes: Set[Int] = Set(403, 404)
 }

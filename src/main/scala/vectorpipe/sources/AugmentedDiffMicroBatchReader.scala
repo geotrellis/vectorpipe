@@ -3,6 +3,7 @@ package vectorpipe.sources
 import java.net.URI
 import java.util
 
+import org.apache.spark.internal.Logging
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.sources.v2.DataSourceOptions
 import org.apache.spark.sql.sources.v2.reader.{InputPartition, InputPartitionReader}
@@ -11,21 +12,22 @@ import vectorpipe.model.AugmentedDiff
 import scala.collection.JavaConverters._
 import scala.compat.java8.OptionConverters._
 
-case class AugmentedDiffStreamBatchTask(baseURI: URI, sequences: Seq[Int])
+case class AugmentedDiffStreamBatchTask(baseURI: URI, sequences: Seq[Int], handler: (Int, AugmentedDiffSource.RF) => Unit)
     extends InputPartition[InternalRow] {
   override def createPartitionReader(): InputPartitionReader[InternalRow] =
-    AugmentedDiffStreamBatchReader(baseURI, sequences)
+    AugmentedDiffStreamBatchReader(baseURI, sequences, handler)
 }
 
-case class AugmentedDiffStreamBatchReader(baseURI: URI, sequences: Seq[Int])
+case class AugmentedDiffStreamBatchReader(baseURI: URI, sequences: Seq[Int], handler: (Int, AugmentedDiffSource.RF) => Unit)
     extends ReplicationStreamBatchReader[AugmentedDiff](baseURI, sequences) {
 
   override def getSequence(baseURI: URI, sequence: Int): Seq[AugmentedDiff] =
-    AugmentedDiffSource.getSequence(baseURI, sequence)
+    AugmentedDiffSource.getSequence(baseURI, sequence, handler)
 }
 
 case class AugmentedDiffMicroBatchReader(options: DataSourceOptions, checkpointLocation: String)
-    extends ReplicationStreamMicroBatchReader[AugmentedDiff](options, checkpointLocation) {
+    extends ReplicationStreamMicroBatchReader[AugmentedDiff](options, checkpointLocation)
+    with Logging {
 
   override def getCurrentSequence: Option[Int] =
     AugmentedDiffSource.getCurrentSequence(baseURI)
@@ -41,9 +43,20 @@ case class AugmentedDiffMicroBatchReader(options: DataSourceOptions, checkpointL
         )
       )
 
+  private def errorHandler: AugmentedDiffSourceErrorHandler = {
+    val handlerClass = options
+      .get(Source.ErrorHandler)
+      .asScala
+      .getOrElse("vectorpipe.sources.AugmentedDiffSourceErrorHandler")
+
+    val handler = Class.forName(handlerClass).newInstance.asInstanceOf[AugmentedDiffSourceErrorHandler]
+    handler.setOptions(options.asMap.asScala.toMap)
+    handler
+  }
+
   override def planInputPartitions(): util.List[InputPartition[InternalRow]] =
     sequenceRange
       .map(seq =>
-        AugmentedDiffStreamBatchTask(baseURI, Seq(seq)).asInstanceOf[InputPartition[InternalRow]])
+        AugmentedDiffStreamBatchTask(baseURI, Seq(seq), errorHandler.handle).asInstanceOf[InputPartition[InternalRow]])
       .asJava
 }

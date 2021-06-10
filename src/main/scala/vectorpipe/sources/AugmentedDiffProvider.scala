@@ -33,6 +33,7 @@ class AugmentedDiffProvider
   }
 
   override def shortName(): String = Source.AugmentedDiffs
-  override def createReader(options: DataSourceOptions): DataSourceReader =
+  override def createReader(options: DataSourceOptions): DataSourceReader = {
     AugmentedDiffReader(options)
+  }
 }

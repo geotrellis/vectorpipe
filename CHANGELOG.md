@@ -10,6 +10,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+### Changed
+
+### Fixed
+
+## [2.2.0]
+
+### Added
+
+- Feature parsing in `AugmentedDiffSource` uses `vectorpipe.util.RobustFeature` to tolerate bad geometries in the stream [#148](https://github.com/geotrellis/vectorpipe/pull/148).
 - Receive GPG key while publishing artifacts [#138](https://github.com/geotrellis/vectorpipe/pull/138)
 - `Pipeline#finalize(vectorTiles, zoom)` method to receive the final RDD of generated vector tiles for a zoom level
 - `Pipeline.Output` mixin trait that overrides `finalize` with default implementation using `saveVectorTiles(vectorTiles, zoom, pipeline.baseOutputURI)`

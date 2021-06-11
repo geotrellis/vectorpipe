@@ -16,11 +16,10 @@ object Dependencies {
   val gtVector       = "org.locationtech.geotrellis" %% "geotrellis-vector"           % Version.geotrellis
   val gtShapefile    = "org.locationtech.geotrellis" %% "geotrellis-shapefile"        % Version.geotrellis
   val gtVectorTile   = "org.locationtech.geotrellis" %% "geotrellis-vectortile"       % Version.geotrellis
-  val vectorpipe     = "com.azavea"                  %% "vectorpipe"                  % Version.vectorpipe
   val cats           = "org.typelevel"               %% "cats-core"                   % Version.cats
   val scalactic      = "org.scalactic"               %% "scalactic"                   % Version.scalactic
   val scalatest      = "org.scalatest"               %%  "scalatest"                  % Version.scalatest % "test"
-  val jaiCore        = "javax.media"                 % "jai_core"                     % "1.1.3"
+  val jaiCore        = "javax.media"                 % "jai_core"                     % "1.1.3" from "https://repo.osgeo.org/repository/release/javax/media/jai_core/1.1.3/jai_core-1.1.3.jar"
   val hbaseCommon    = "org.apache.hbase" % "hbase-common" % "1.3.1"
   val hbaseClient    = "org.apache.hbase" % "hbase-client" % "1.3.1"
   val hbaseServer    = "org.apache.hbase" % "hbase-server" % "1.3.1"
@@ -33,7 +32,6 @@ object Dependencies {
   val circeOptics    = "io.circe"                    %% "circe-optics"                 % Version.circe
   val circeJava8     = "io.circe"                    %% "circe-java8"                  % Version.circe
   val circeYaml      = "io.circe"                    %% "circe-yaml"                   % "0.9.0"
-  val logging        = "com.typesafe.scala-logging"  %% "scala-logging"                % Version.scalaLogging
   val commonsIO      = "commons-io"                  %  "commons-io"                   % Version.commonsIO
   val scalaj         = "org.scalaj"                  %% "scalaj-http"                  % Version.scalaj
 }

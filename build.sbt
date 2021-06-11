@@ -37,6 +37,7 @@ lazy val commonSettings = Seq(
   ),
 
   scalacOptions in (Compile, doc) += "-groups",
+  scalacOptions in (Compile, console) ~= { _.filterNot(Set("-Ywarn-unused-import", "-Ywarn-unused:imports")) },
 
   /* For Monocle's Lens auto-generation */
   addCompilerPlugin("org.scalamacros" %% "paradise" % "2.1.0" cross CrossVersion.full),
@@ -166,7 +167,7 @@ val vpExtraSettings = Seq(
   Test / fork := true,
   Test / baseDirectory := (baseDirectory.value).getParentFile,
   Test / parallelExecution := false,
-  Test / testOptions += Tests.Argument("-oDF")
+  Test / testOptions += Tests.Argument("-oDF"),
 
 )
 

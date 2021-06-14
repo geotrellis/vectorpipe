@@ -4,6 +4,7 @@ import java.sql.Timestamp
 
 import geotrellis.vector._
 import org.apache.log4j.Logger
+import org.apache.spark.internal.Logging
 import org.apache.spark.sql._
 import org.apache.spark.sql.expressions.Window
 import org.apache.spark.sql.functions._
@@ -14,13 +15,11 @@ import vectorpipe.functions.asDouble
 import vectorpipe.functions.osm._
 import vectorpipe.relations.{MultiPolygons, Routes}
 
-package object internal {
+package object internal extends Logging {
   val NodeType: Byte = 1
   val WayType: Byte = 2
   val RelationType: Byte = 3
   val MultiPolygonRoles: Seq[String] = Set("", "outer", "inner").toSeq
-
-  @transient lazy val logger: Logger = Logger.getLogger(getClass)
 
   /**
     * Pre-process nodes.
@@ -294,6 +293,16 @@ package object internal {
             }
           val geometry = geom match {
             case Some(g) if g.isValid => g
+            case Some(g) if !g.isEmpty =>
+              val buffered = g.buffer(0)
+
+              if (buffered.isValid) {
+                logWarning(s"Invalid way geometry, fixed by buffering: $id@$version ($updated): $g)")
+                buffered
+              } else {
+                logWarning(s"Invalid way geometry: $id@$version ($updated): $g)")
+                null
+              }
             case _ => null
           }
           (changeset, id, version, updated, geometry)

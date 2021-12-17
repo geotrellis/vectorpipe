@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - GitHub actions config
+- Upgrade to Scala 2.12; GT 3.7.0-SNAPSHOT; Geomesa Spark JTS 3.2.2 (this standardizes on JTS 1.17.0)
 
 ### Changed
 

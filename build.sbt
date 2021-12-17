@@ -15,9 +15,9 @@ lazy val commonSettings = Seq(
 
   cancelable in Global := true,
 
-  scalaVersion in ThisBuild := Version.scala2_11,
+  scalaVersion in ThisBuild := Version.scala2_12,
 
-  crossScalaVersions := Seq(Version.scala2_11, Version.scala2_12),
+  //crossScalaVersions := Seq(Version.scala2_12),
 
   scalacOptions := Seq(
     "-deprecation",
@@ -40,13 +40,10 @@ lazy val commonSettings = Seq(
   scalacOptions in (Compile, console) ~= { _.filterNot(Set("-Ywarn-unused-import", "-Ywarn-unused:imports")) },
 
   /* For Monocle's Lens auto-generation */
-  addCompilerPlugin("org.scalamacros" %% "paradise" % "2.1.0" cross CrossVersion.full),
+  addCompilerPlugin("org.scalamacros" %% "paradise" % "2.1.1" cross CrossVersion.full),
 
   resolvers ++= Seq(
     Resolver.sonatypeRepo("releases"),
-    Resolver.bintrayRepo("lonelyplanet", "maven"),
-    Resolver.bintrayRepo("kwark", "maven"), // Required for Slick 3.1.1.2, see https://github.com/azavea/raster-foundry/pull/1576
-    Resolver.bintrayRepo("bkirwi", "maven"), // Required for `decline` dependency
     "eclipse-releases" at "https://repo.eclipse.org/content/groups/releases",
     "eclipse-snapshots" at "https://repo.eclipse.org/content/groups/snapshots",
     "geosolutions" at "http://maven.geo-solutions.it/",

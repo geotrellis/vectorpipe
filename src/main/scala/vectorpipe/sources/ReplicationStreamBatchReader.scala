@@ -8,7 +8,7 @@ import org.apache.spark.sql.catalyst.encoders.{ExpressionEncoder, RowEncoder}
 import org.apache.spark.sql.sources.v2.reader.InputPartitionReader
 
 import scala.collection.parallel.ForkJoinTaskSupport
-import scala.concurrent.forkjoin.ForkJoinPool
+import java.util.concurrent.ForkJoinPool
 import scala.reflect.runtime.universe.TypeTag
 
 abstract class ReplicationStreamBatchReader[T <: Product: TypeTag](baseURI: URI,

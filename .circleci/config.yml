@@ -33,13 +33,7 @@ aliases:
         name: Executing cipublish
         command: ./scripts/cipublish
 
-  # Build environments
-  - &machine-openjdk8-scala2_12_12-environment
-    machine:
-      image: ubuntu-1604:201903-01
-    environment:
-      SCALA_VERSION: 2.12.12
-
+  # Build environment
   - &openjdk8-scala2_12_12-environment
     docker:
       - image: circleci/openjdk:8-jdk

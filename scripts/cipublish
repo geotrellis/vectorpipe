@@ -17,12 +17,12 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     if [[ "${1:-}" == "--help" ]]; then
         usage
     else
-        if [[ -n "${CIRCLE_TAG}" ]]; then
+        if [[ -n "${BUILD_NUMBER}" ]]; then
             echo "Publishing artifacts to Sonatype"
-            ./sbt ";++${SCALA_VERSION:-2.11.12};sonatypeOpen ${CIRCLE_BUILD_NUM};publish;sonatypeRelease"
+            ./sbt ";++${SCALA_VERSION:-2.12.7};sonatypeOpen ${BUILD_NUMBER};publish;sonatypeRelease"
         else
             echo "Publishing artifacts to default location"
-            ./sbt "++${SCALA_VERSION:-2.11.12}" publish
+            ./sbt "++${SCALA_VERSION:-2.12.7}" publish
         fi
     fi
 fi

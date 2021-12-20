@@ -1,0 +1,13 @@
+version: "3.7"
+
+services:
+  test:
+    image: openjdk:8-jdk
+    working_dir: /usr/local/src
+    command: ./sbt ++$SCALA_VERSION test
+    environment:
+      - CI
+      - SCALA_VERSION
+    volumes:
+      - ./../:/usr/local/src
+    network_mode: host

@@ -2,22 +2,23 @@ import xerial.sbt.Sonatype._
 import Dependencies._
 
 lazy val commonSettings = Seq(
-  // We are overriding the default behavior of sbt-git which, by default,
-  // only appends the `-SNAPSHOT` suffix if there are uncommitted
-  // changes in the workspace.
-  version := {
-    // Avoid Cyclic reference involving error
-    if (git.gitCurrentTags.value.isEmpty || git.gitUncommittedChanges.value)
-      git.gitDescribedVersion.value.get + "-SNAPSHOT"
-    else
-      git.gitDescribedVersion.value.get
-  },
+  scalaVersion := Version.scala.head,
+  crossScalaVersions := Version.scala,
 
+  description := "Import OSM data and output to VectorTiles with GeoTrellis.",
+  organization := "com.azavea.geotrellis",
+  organizationName := "GeoTrellis",
+  organizationHomepage := Some(new URL("https://geotrellis.io/")),
+  homepage := Some(url("https://github.com/geotrellis/vectorpipe")),
+  versionScheme := Some("semver-spec"),
+
+  developers := List(
+    Developer(id = "jpolchlo", name = "Justin Polchlopek", email = "jpolchlopek@azavea.com", url = url("https://github.com/jpolchlo")),
+    Developer(id = "mojodna", name = "Seth Fitzsimmons", email = "seth@mojodna.net", url = url("https://github.com/mojodna"))
+  ),
+  licenses := Seq("Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0.txt")),
   cancelable in Global := true,
-
-  scalaVersion in ThisBuild := Version.scala2_12,
-
-  //crossScalaVersions := Seq(Version.scala2_12),
+  //publishArtifact in Test := false,
 
   scalacOptions := Seq(
     "-deprecation",
@@ -36,26 +37,19 @@ lazy val commonSettings = Seq(
     "-Ywarn-unused-import"
   ),
 
-  scalacOptions in (Compile, doc) += "-groups",
-  scalacOptions in (Compile, console) ~= { _.filterNot(Set("-Ywarn-unused-import", "-Ywarn-unused:imports")) },
+  Compile / doc / scalacOptions += "-groups",
+  Compile / console / scalacOptions ~= { _.filterNot(Set("-Ywarn-unused-import", "-Ywarn-unused:imports")) },
 
   /* For Monocle's Lens auto-generation */
   addCompilerPlugin("org.scalamacros" %% "paradise" % "2.1.1" cross CrossVersion.full),
 
-  resolvers ++= Seq(
-    Resolver.sonatypeRepo("releases"),
-    "eclipse-releases" at "https://repo.eclipse.org/content/groups/releases",
-    "eclipse-snapshots" at "https://repo.eclipse.org/content/groups/snapshots",
-    "geosolutions" at "http://maven.geo-solutions.it/",
-    "osgeo-releases" at "https://repo.osgeo.org/repository/release/",
-    "apache.commons.io" at "https://mvnrepository.com/artifact/commons-io/commons-io"
-  ),
+  externalResolvers := Repositories.all,
 
   updateOptions := updateOptions.value.withGigahorse(false),
 
   shellPrompt := { s => Project.extract(s).currentProject.id + " > " },
 
-  assemblyMergeStrategy in assembly := {
+  assembly / assemblyMergeStrategy := {
     case "reference.conf" | "application.conf"  => MergeStrategy.concat
     case PathList("META-INF", xs@_*) =>
       xs match {
@@ -79,41 +73,6 @@ lazy val commonSettings = Seq(
   }
 )
 
-lazy val publishSettings = Seq(
-  organization := "com.azavea.geotrellis",
-  organizationName := "GeoTrellis",
-  organizationHomepage := Some(new URL("https://geotrellis.io/")),
-  description := "Import OSM data and output to VectorTiles with GeoTrellis.",
-  publishArtifact in Test := false
-) ++ sonatypeSettings ++ credentialSettings
-
-lazy val sonatypeSettings = Seq(
-  publishMavenStyle := true,
-
-  sonatypeProfileName := "com.azavea",
-  sonatypeProjectHosting := Some(GitHubHosting(user="geotrellis", repository="vectorpipe", email="systems@azavea.com")),
-  developers := List(
-    Developer(id = "jpolchlo", name = "Justin Polchlopek", email = "jpolchlopek@azavea.com", url = url("https://github.com/jpolchlo")),
-    Developer(id = "mojodna", name = "Seth Fitzsimmons", email = "seth@mojodna.net", url = url("https://github.com/mojodna"))
-  ),
-  licenses := Seq("Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0.txt")),
-
-  publishTo := sonatypePublishTo.value
-)
-
-lazy val credentialSettings = Seq(
-  credentials ++= List(
-    for {
-      id <- sys.env.get("GPG_KEY_ID")
-    } yield Credentials("GnuPG Key ID", "gpg", id, "ignored")
-    ,
-    for {
-      user <- sys.env.get("SONATYPE_USERNAME")
-      pass <- sys.env.get("SONATYPE_PASSWORD")
-    } yield Credentials("Sonatype Nexus Repository Manager", "oss.sonatype.org", user, pass)
-  ).flatten
-)
-
 val vpExtraSettings = Seq(
   libraryDependencies ++= Seq(
     //  gtGeomesa exclude("com.google.protobuf", "protobuf-java") exclude("org.locationtech.geomesa",
@@ -129,7 +88,7 @@ val vpExtraSettings = Seq(
     gtSpark exclude ("com.google.protobuf", "protobuf-java"),
     gtVectorTile exclude ("com.google.protobuf", "protobuf-java"),
     decline,
-    jaiCore from "http://download.osgeo.org/webdav/geotools/javax/media/jai_core/1.1.3/jai_core-1.1.3.jar",
+    //jaiCore from "http://download.osgeo.org/webdav/geotools/javax/media/jai_core/1.1.3/jai_core-1.1.3.jar",
     gtVector,
     cats,
     scalactic,
@@ -158,8 +117,8 @@ val vpExtraSettings = Seq(
     }
   },
 
-  test in assembly := {},
-  assemblyJarName in assembly := "vectorpipe.jar",
+  assembly / test := {},
+  assembly / assemblyJarName := "vectorpipe.jar",
 
   Test / fork := true,
   Test / baseDirectory := (baseDirectory.value).getParentFile,
@@ -192,7 +151,7 @@ val vpExtraSettings = Seq(
 /* Main project */
 lazy val vectorpipe = project
   .in(file("."))
-  .settings(moduleName := "vectorpipe", commonSettings, publishSettings, vpExtraSettings/*, release*/)
+  .settings(moduleName := "vectorpipe", commonSettings, vpExtraSettings)
 
 /* Benchmarking suite.
  * Benchmarks can be executed by first switching to the `bench` project and then by running:

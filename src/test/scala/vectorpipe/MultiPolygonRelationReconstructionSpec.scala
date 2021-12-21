@@ -122,7 +122,7 @@ class MultiPolygonRelationReconstructionSpec extends PropSpec with TableDrivenPr
         val expected = fixture.wkt.map(wktReader.read)
 
         try {
-          actual should ===(expected)
+          actual.zip(expected).forall{ case (act, exp) => if (act.isEmpty) exp.isEmpty else exp.buffer(1e-6).contains(act) } should be (true)
         } catch {
           case e: Throwable =>
             println(s"${fixture.id} actual:")

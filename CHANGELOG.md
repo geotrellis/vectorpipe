@@ -109,6 +109,8 @@ This is the first release to depend on GeoTrellis 3.0.
 - Adds `riverbank`, `stream_end`, `dam`, `weir`, `waterfall`, and `pressurised`
   to the list of waterway features
 - Populates `nds` and `members` for deleted elements from the previous version
+- Attempt to fix invalid way geometries by buffering them (this will result in
+  more way geometries for certain datasets)
 
 ### Fixed
 
